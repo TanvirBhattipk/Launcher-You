@@ -788,6 +788,7 @@ class AppsSearch(
     }
 
     private fun updateEnterTarget() {
+        private fun updateEnterTarget() {
         val target = if (field.text.isNullOrBlank()) null
         else firstEnterable(appsRow) ?: firstEnterable(contactsListLayout) ?: firstEnterable(suggestionsListLayout)
         if (target === enterTarget) return
@@ -857,7 +858,7 @@ class AppsSearch(
     private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(10f)
     private fun withOpacity(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * barOpacity).toInt() shl 24)
 
-    private fun layoutPill() {
+        private fun layoutPill() {
         if (!::origin.isInitialized) return
         val o = origin
         val h = dp.searchBarHeight
@@ -870,9 +871,12 @@ class AppsSearch(
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        pillBg.setColor(withOpacity(glassFillColor))
-        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
+        pillBg.setColor(withOpacity(o.fill))
+        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(o.stroke))
         pillGlass = barGlass ?: o.glass
+        appsCard.syncWithBar()
+        contactsCard.syncWithBar()
+        suggestionsCard.syncWithBar()
         glyph.color = 0xCCFFFFFF.toInt()
         field.setHintTextColor(0x8CFFFFFF.toInt())
         pill.elevation = 0f
