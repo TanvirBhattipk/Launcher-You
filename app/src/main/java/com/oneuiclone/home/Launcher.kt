@@ -799,7 +799,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             val f = com.oneuiclone.home.ui.WidgetResizeFrame(activity, dp, m, wc.item,
                 if ((info.resizeMode and android.appwidget.AppWidgetProviderInfo.RESIZE_HORIZONTAL) != 0) minX else wc.item.sx,
                 if ((info.resizeMode and android.appwidget.AppWidgetProviderInfo.RESIZE_VERTICAL) != 0) minY else wc.item.sy,
-                { bindWorkspace() }, { resizeFrame = null })
+                { animateWorkspaceRebind() }, { resizeFrame = null })
             overlay.addView(f, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
             resizeFrame = f
         }
@@ -812,6 +812,43 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         p.showFor(Rect(loc[0], loc[1], loc[0] + wc.width, loc[1] + wc.height), false)
         popup = p
     }
+   /** Rebinds the workspace while smoothly sliding existing icons from their old cell positions to their new ones. */
+    private fun animateWorkspaceRebind() {
+        val oldPositions = HashMap<Long, Pair<Float, Float>>()
+        for (p in 0 until workspace.childCount) {
+            val page = workspace.getChildAt(p) as? ViewGroup ?: continue
+            for (i in 0 until page.childCount) {
+                val v = page.getChildAt(i) as? IconView ?: continue
+                val id = v.item?.id ?: continue
+                oldPositions[id] = (p * workspace.width + v.left.toFloat()) to v.top.toFloat()
+            }
+        }
+        bindWorkspace()
+        workspace.post {
+            for (p in 0 until workspace.childCount) {
+                val page = workspace.getChildAt(p) as? ViewGroup ?: continue
+                for (i in 0 until page.childCount) {
+                    val v = page.getChildAt(i) as? IconView ?: continue
+                    val id = v.item?.id ?: continue
+                    val old = oldPositions[id] ?: continue
+                    val newX = p * workspace.width + v.left.toFloat()
+                    val newY = v.top.toFloat()
+                    val dx = old.first - newX
+                    val dy = old.second - newY
+                    if (dx != 0f || dy != 0f) {
+                        v.translationX = dx
+                        v.translationY = dy
+                        v.animate()
+                            .translationX(0f)
+                            .translationY(0f)
+                            .setDuration(220L)
+                            .setInterpolator(Easing.STANDARD)
+                            .start()
+                    }
+                }
+            }
+        }
+    } 
 
     private fun configureWidget(appWidgetId: Int) {
         try { widgets.host.startAppWidgetConfigureActivityForResult(activity, appWidgetId, 0, 0, null) } catch (_: Exception) {}
@@ -2199,9 +2236,9 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
             // One UI returns to the Home screen after an app is left with the home gesture.
             if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
-            homeLayer.pivotX = homeLayer.width / 2f
+homeLayer.pivotX = homeLayer.width / 2f
             homeLayer.pivotY = homeLayer.height / 2f
-            homeLayer.scaleX = OPEN_SCALE; homeLayer.scaleY = OPEN_SCALE
+            homeLayer.scaleX = 1f; homeLayer.scaleY = 1f
             appsLayer.scaleX = 1f; appsLayer.scaleY = 1f; centrePivot(appsLayer)
             // The way back is drawn by the system (recents / back) over the real wallpaper, so keep our copy at
             // rest while away; playReturnAnimation() brings the zoom back in step with the close.
@@ -2336,7 +2373,12 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         if (!shown) markClosing("return animation")
         AnimLog.log("return animation to ${(landing?.view as? com.oneuiclone.home.ui.WidgetContainer)?.let { "widget " + it.item.provider.packageName } ?: landing?.view?.contentDescription ?: "screen centre"}")
         // The folder is still open only if Home was never stopped (a translucent app); it un-zooms in place.
-        animateContentScale(if (folders.isOpen) overlay else homeLayer, 1f, 450, Easing.APP_CLOSE_POSITION)
+        contentAnim?.cancel()
+        if (folders.isOpen) {
+            overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
+        } else {
+            homeLayer.scaleX = 1f; homeLayer.scaleY = 1f; centrePivot(homeLayer)
+        }
 // Recents may have left the real wallpaper at another offset: re-centre it now, while our copy covers it.
         centerWallpaper()
         zoomAnim?.cancel()
