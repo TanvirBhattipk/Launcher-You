@@ -2138,7 +2138,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             wallpaperZoom = 1f
             wallpaper.setZoom(1f)
             // Launchii's live wallpaper waits, out of sight, at the open zoom, so every close zooms it back
-            if (com.oneuiclone.home.ui.LiveWallpaper.drives) com.oneuiclone.home.ui.LiveWallpaper.park(wallpaperOpenZoom)
+            if (com.oneuiclone.home.ui.LiveWallpaper.drives) com.oneuiclone.home.ui.LiveWallpaper.park(1f)
             homeCovered = true
         }
     }
@@ -2200,7 +2200,6 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         if (state.state == StateController.State.HOME && !state.isTransitioning && search == null && !edit.isActive && !folders.isOpen && quickOpen == null) {
             background.set(BackgroundController.Kind.NONE, 0f)
         }
-        // Home is showing with no close to play (a new instance after a recreate, or a return already under way
         // Home is showing with no close to play (a new instance after a recreate, or a return already under way):
         // Launchii's live wallpaper follows Home's zoom rather than a parked one.
         if (!pendingReturnAnim && com.oneuiclone.home.ui.LiveWallpaper.drives) com.oneuiclone.home.ui.LiveWallpaper.setZoom(wallpaperZoom)
@@ -2267,46 +2266,16 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         AnimLog.log("return animation to ${(landing?.view as? com.oneuiclone.home.ui.WidgetContainer)?.let { "widget " + it.item.provider.packageName } ?: landing?.view?.contentDescription ?: "screen centre"}")
         // The folder is still open only if Home was never stopped (a translucent app); it un-zooms in place.
         animateContentScale(if (folders.isOpen) overlay else homeLayer, 1f, 450, Easing.APP_CLOSE_POSITION)
-        // Recents may have left the real wallpaper at another offset: re-centre it now, while our copy covers it.
+// Recents may have left the real wallpaper at another offset: re-centre it now, while our copy covers it.
         centerWallpaper()
+        zoomAnim?.cancel()
+        settleWallpaper()
         if (com.oneuiclone.home.ui.LiveWallpaper.drives) {
-            // Launchii's live wallpaper is the real one: parked at the open zoom while the app covered it, it zooms
-            // back with Home (from wherever it is; a return from Recents without an app has nothing to undo).
-            wallpaperZoom = com.oneuiclone.home.ui.LiveWallpaper.zoom
-            AnimLog.log("live wallpaper close zoom from $wallpaperZoom")
-            animateWallpaperZoom(1f, 600, Easing.CUBIC_OUT)
-        } else if (!CLOSE_ZOOMS_WALLPAPER) {
-            // Already at rest once Home was stopped; a translucent app leaves the open zoom up, which follows Home back.
-            animateWallpaperZoom(1f, 450, Easing.APP_CLOSE_POSITION)
-        } else if (wallpaper.available) {
-            zoomAnim?.cancel()
-            wallpaperZoom = wallpaperOpenZoom
-            wallpaper.copyAlpha = 0f
-            wallpaper.holdCopy = true
-            wallpaper.setZoom(wallpaperZoom)
-            zoomAnim = ValueAnimator.ofFloat(0f, 1f).apply {
-                // 600 ms zoom-out, then the copy fades off the real wallpaper (250 ms) rather than being cut
-                duration = 850
-                addUpdateListener {
-                    val ms = it.animatedFraction * 850f
-                    val z = (ms / 600f).coerceAtMost(1f)
-                    wallpaperZoom = wallpaperOpenZoom + (1f - wallpaperOpenZoom) * Easing.CUBIC_OUT.getInterpolation(z)
-                    wallpaper.setZoom(if (z >= 1f) 1f else wallpaperZoom)
-                    wallpaper.copyAlpha = if (ms < 600f) (ms / 150f).coerceAtMost(1f) else 1f - ((ms - 600f) / 250f).coerceIn(0f, 1f)
-                }
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: android.animation.Animator) = settleWallpaper()
-                    override fun onAnimationCancel(animation: android.animation.Animator) = settleWallpaper()
-                })
-                start()
-            }
+            com.oneuiclone.home.ui.LiveWallpaper.setZoom(1f)
         }
         // REVERSE ripple from the icon the app returns to, or the screen centre (AppCloseAnimationDelegate.itemTouchEvent)
         val r = Rect()
-        if (landing != null) landing.boundsOnScreen(r) else r.set(0, 0, root.width, root.height)
-        returnRipple?.let { root.removeCallbacks(it) }
-        returnRipple = Runnable { returnRipple = null; ripple.pulse(homeSiblings(), r.exactCenterX(), r.exactCenterY()) }
-            .also { root.postDelayed(it, 120) }
+        returnRipple?.let { root.removeCallbacks(it); returnRipple = null }
         lastLaunchedApp = null
     }
 
