@@ -1434,16 +1434,37 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         if (rebind) bindWorkspace()
     }
 
-    /** Home screen apps: every app is on a Home page (the ones not placed yet go to the first free spots, A–Z). */
+   /**
+     * Home screen apps: every app is on a Home page. System apps come first, followed by user-installed
+     * apps sorted by install date (oldest first, newest/last installed on the very last cell).
+     */
     private fun fillHome(m: WorkspaceModel, apps: List<AppInfo>, first: HomeItem? = null) {
         if (!prefs.homeOnly) {
             // turned off: Home is as it was before every app was put on it
             if (m.hasBackup() && m.restoreBackup()) m.prune()
             return
         }
-        if (!m.hasBackup()) m.backup()
+        val pm = activity.packageManager
+        fun isSystem(app: AppInfo) =
+            (app.activityInfo.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+        fun installTime(app: AppInfo) = try {
+            pm.getPackageInfo(app.key.component.packageName, 0).firstInstallTime
+        } catch (_: Exception) { 0L }
+
+        val sortedApps = apps.sortedWith(
+            compareBy<AppInfo> { !isSystem(it) }
+                .thenBy { if (isSystem(it)) 0L else installTime(it) }
+                .thenBy { it.label.toString().lowercase() }
+        )
+
+        if (!m.hasBackup()) {
+            m.backup()
+            // Fresh switch to Home screen apps: clear existing workspace apps and re-place in sorted order
+            m.items.removeAll { it is HomeItem.App && it.container == Container.WORKSPACE }
+            m.pageCount = 1
+        }
         val onHome = m.items.mapNotNullTo(HashSet()) { (it as? HomeItem.App)?.key }
-        val missing = apps.filter { it.key !in onHome }
+        val missing = sortedApps.filter { it.key !in onHome }
         missing.forEach { addToHome(it, rebind = false, save = false) }
         // the icons close ranks: a cell left empty (an icon moved or removed) is taken by the next icon
         val moved = prefs.fillEmptyCells && m.compactHome(dp.homeCols, dp.homeRows, first)
