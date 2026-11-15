@@ -172,14 +172,22 @@ class WidgetManager(private val activity: Activity) {
         (v.parent as? android.view.ViewGroup)?.removeView(v)
         // the size it's really drawn at, inside WidgetContainer's padding: widgets that build their layout for the
         // reported size (Glance, Google Weather) otherwise lay out for more room than they get and cut text off
-        val pad = 2 * dp.widgetPaddingPx
-        val size = SizeF((spanX * dp.cellWidth - pad) / dp.density, (spanY * dp.cellHeight - pad) / dp.density)
+        val padX = 2 * dp.widgetPadXPx
+        val padY = 2 * dp.widgetPadYPx
+        val wDp = ((spanX * dp.cellWidth - padX) / dp.density).coerceAtLeast(1f)
+        val hDp = ((spanY * dp.cellHeight - padY) / dp.density).coerceAtLeast(1f)
+        val size = SizeF(wDp, hDp)
         if (sizes[appWidgetId] != size) {
-            v.updateAppWidgetSize(Bundle(), listOf(size))
+            val opts = Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, wDp.roundToInt())
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, wDp.roundToInt())
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, hDp.roundToInt())
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, hDp.roundToInt())
+            }
+            v.updateAppWidgetSize(opts, listOf(size))
             sizes[appWidgetId] = size
         }
         return v
-    }
 
     /**
      * Drop every cached host view so the next bind inflates the widgets' RemoteViews again. Needed on a light/dark
