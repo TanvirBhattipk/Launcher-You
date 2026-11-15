@@ -787,19 +787,9 @@ class AppsSearch(
         return null
     }
 
-    private fun updateEnterTarget() {
         private fun updateEnterTarget() {
-        val target = if (field.text.isNullOrBlank()) null
+        enterTarget = if (field.text.isNullOrBlank()) null
         else firstEnterable(appsRow) ?: firstEnterable(contactsListLayout) ?: firstEnterable(suggestionsListLayout)
-        if (target === enterTarget) return
-        enterTarget?.let { it.background = rowRipple() }
-        enterTarget = target
-        if (target != null) {
-            target.background = GradientDrawable().apply {
-                cornerRadius = dp.dp(12f)
-                setColor(0x1FFFFFFF)
-            }
-        }
     }
 
     // ---------------------------------------------------------------------------------------------
