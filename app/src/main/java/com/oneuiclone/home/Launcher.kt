@@ -1441,13 +1441,23 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
      * Google apps into a "Google" folder right after the "Social" folder, and places all remaining apps starting on
      * Page 2 (system apps first, followed by user-installed apps sorted by install date, newest on the last cell).
      */
+/**
+     * Home screen apps: keeps Page 1 (`screen == 0`) identical to Drawer mode, puts all extra Google apps
+     * into a "Google" folder at the start of Page 2 (`screen == 1`), and places all remaining apps right after it
+     * (system apps first, then user-installed apps sorted by install date, newest/last installed on the last cell).
+     */
     private fun fillHome(m: WorkspaceModel, apps: List<AppInfo>, first: HomeItem? = null) {
         if (!prefs.homeOnly) {
-            // turned off: Home is as it was before every app was put on it
+            // turned off: restores the exact Drawer-mode layout
             if (m.hasBackup() && m.restoreBackup()) m.prune()
             return
         }
-        if (!m.hasBackup()) m.backup()
+        if (!m.hasBackup()) {
+            m.backup()
+            // Clear sample Page 2+ items from Drawer mode so Page 2+ starts cleanly with Google folder + sorted apps
+            m.items.removeAll { it.container == Container.WORKSPACE && it.screen >= 1 }
+            m.pageCount = 2
+        }
 
         val pm = activity.packageManager
         fun isSystem(app: AppInfo) =
@@ -1462,46 +1472,35 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
                 pkg == "com.android.chrome"
         }
 
-        // Collect all apps already on the workspace, dock, or inside folders
+        // All apps already on Page 1, the dock, or inside folders (such as Social)
         val onHome = m.items.mapNotNullTo(HashSet()) { (it as? HomeItem.App)?.key }
+        if (m.pageCount < 2) m.pageCount = 2
 
-        // Put all extra Google apps (not already placed on Page 1 / dock / Social folder) into a "Google" folder after "Social"
+        // 1. Group all extra Google apps into a "Google" folder at (0, 0) on Page 2 (screen == 1)
         val extraGoogle = apps.filter { it.key !in onHome && isExtraGoogleApp(it) }
             .sortedBy { it.label.toString().lowercase() }
         if (extraGoogle.isNotEmpty()) {
             var googleFolder = m.items.filterIsInstance<HomeItem.Folder>()
                 .firstOrNull { it.title.equals("Google", ignoreCase = true) }
             if (googleFolder == null) {
-                val social = m.items.filterIsInstance<HomeItem.Folder>()
-                    .firstOrNull { it.title.equals("Social", ignoreCase = true) }
-                val targetScreen = social?.screen ?: 0
-                val spot = m.findSpace(targetScreen, 1, 1, dp.homeCols, dp.homeRows)
-                    ?: m.findSpace(0, 1, 1, dp.homeCols, dp.homeRows)
-                if (spot != null) {
-                    googleFolder = HomeItem.Folder(m.newId(), "Google", Container.WORKSPACE, targetScreen, spot.first, spot.second)
-                    // Insert right after the Social folder so compactHome keeps it positioned immediately after Social
-                    val socialIdx = if (social != null) m.items.indexOf(social) else -1
-                    if (socialIdx >= 0) m.items.add(socialIdx + 1, googleFolder) else m.items.add(googleFolder)
-                }
+                val spot = m.findSpace(1, 1, 1, dp.homeCols, dp.homeRows) ?: (0 to 0)
+                googleFolder = HomeItem.Folder(m.newId(), "Google", Container.WORKSPACE, 1, spot.first, spot.second)
+                m.items += googleFolder
             }
-            if (googleFolder != null) {
-                var rank = m.appsInFolder(googleFolder.id).size
-                for (gApp in extraGoogle) {
-                    m.items += HomeItem.App(m.newId(), gApp.key, Container.FOLDER, 0, 0, 0, googleFolder.id, rank++)
-                    onHome += gApp.key
-                }
+            var rank = m.appsInFolder(googleFolder.id).size
+            for (gApp in extraGoogle) {
+                m.items += HomeItem.App(m.newId(), gApp.key, Container.FOLDER, 0, 0, 0, googleFolder.id, rank++)
+                onHome += gApp.key
             }
         }
 
-        // Remaining non-Google apps: system apps first, then downloaded apps sorted by install date (last installed on last cell)
+        // 2. Remaining apps on Page 2+: system apps first, then downloaded apps sorted by install date (newest last)
         val sortedRemaining = apps.filter { it.key !in onHome }.sortedWith(
             compareBy<AppInfo> { !isSystem(it) }
                 .thenBy { if (isSystem(it)) 0L else installTime(it) }
                 .thenBy { it.label.toString().lowercase() }
         )
 
-        // Place remaining apps starting from Page 2 (screen >= 1) so Page 1's clean layout stays intact
-        if (sortedRemaining.isNotEmpty() && m.pageCount < 2) m.pageCount = 2
         for (app in sortedRemaining) {
             var placed = false
             for (page in 1 until m.pageCount) {
