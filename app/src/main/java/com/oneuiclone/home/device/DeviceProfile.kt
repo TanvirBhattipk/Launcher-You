@@ -139,5 +139,8 @@ class DeviceProfile(
     val cornerRadius = dp(26f)
 
     /** Inset of a widget inside its cells on every side (WidgetContainer's padding). */
-    val widgetPaddingPx = ((cellWidth - iconSizePx) / 2f).roundToInt()
+   /** Symmetrical horizontal & vertical insets so widget outer edges match icon outer edges on all 4 sides. */
+    val widgetPadXPx = ((cellWidth - iconSizePx) / 2f).roundToInt()
+    val widgetPadYPx = iconBlockOffset.roundToInt().coerceAtLeast(0)
+    val widgetPaddingPx = widgetPadXPx
 }
