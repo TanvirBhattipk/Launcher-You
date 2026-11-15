@@ -130,7 +130,11 @@ class Prefs(context: Context) {
         const val OPEN_SCAN = "scan"
         const val OPEN_MIST = "mist"
 
-        /** Keys applied live by the launcher (no view rebuild when only these change). */
-        fun isLive(key: String) = key.startsWith("home_blur") || key == "open_animation"
+       /** Keys applied live by the launcher (no view rebuild when only these change). */
+        fun isLive(key: String) = key.startsWith("home_blur") ||
+            key.startsWith("blur_") ||
+            key.startsWith("refraction_") ||
+            key == "liquid_glass" ||
+            key == "open_animation"
     }
 }
