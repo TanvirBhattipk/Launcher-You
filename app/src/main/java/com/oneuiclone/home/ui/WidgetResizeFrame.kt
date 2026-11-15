@@ -125,17 +125,20 @@ private fun snap() {
             it !== item && it.container == com.oneuiclone.home.model.Container.WORKSPACE && it.screen == item.screen &&
                 x0 < it.x + it.spanX && x0 + newSx > it.x && y0 < it.y + it.spanY && y0 + newSy > it.y
         }
-        // Block only if overlapping another widget or enlarged 2x2 folder; moveable icons will flow into remaining empty cells
-        val ok = inBounds && overlapping.all { isMoveableIcon(it) }
+        val changed = x0 != item.x || y0 != item.y || newSx != item.sx || newSy != item.sy
+        val ok = inBounds && changed && overlapping.all { isMoveableIcon(it) }
 
         if (ok) {
             item.x = x0; item.y = y0; item.sx = newSx; item.sy = newSy
             if (overlapping.isNotEmpty()) {
-                // Push displaced icons after existing icons on this page so compactHome flows them into the next free cells
                 val maxY = dp.homeRows + 1
                 overlapping.forEachIndexed { idx, icon ->
                     icon.y = maxY + idx
                 }
+            }
+            // Always compact after expanding OR shrinking so icons flow into newly freed empty cells
+            val prefs = com.oneuiclone.home.settings.Prefs(context)
+            if (prefs.fillEmptyCells || prefs.homeOnly) {
                 model.compactHome(dp.homeCols, dp.homeRows)
             }
             model.save()
