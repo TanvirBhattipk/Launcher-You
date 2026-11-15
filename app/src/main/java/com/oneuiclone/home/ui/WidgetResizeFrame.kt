@@ -107,7 +107,7 @@ class WidgetResizeFrame(
         return true
     }
 
-    private fun snap() {
+private fun snap() {
         val g = dp.workspaceGrid
         var x0 = ((rect.left - g.left) / dp.cellWidth).roundToInt().coerceIn(0, dp.homeCols - 1)
         var y0 = ((rect.top - g.top) / dp.cellHeight).roundToInt().coerceIn(0, dp.homeRows - 1)
@@ -115,10 +115,29 @@ class WidgetResizeFrame(
         var y1 = ((rect.bottom - g.top) / dp.cellHeight).roundToInt().coerceIn(y0 + 1, dp.homeRows)
         if (x1 - x0 < minSpanX) { if (handle == 0) x0 = x1 - minSpanX else x1 = x0 + minSpanX }
         if (y1 - y0 < minSpanY) { if (handle == 1) y0 = y1 - minSpanY else y1 = y0 + minSpanY }
-        val ok = x0 >= 0 && y0 >= 0 && x1 <= dp.homeCols && y1 <= dp.homeRows &&
-            !model.isOccupied(item.screen, x0, y0, x1 - x0, y1 - y0, item)
+        val newSx = x1 - x0
+        val newSy = y1 - y0
+
+        fun isMoveableIcon(it: HomeItem) = it is HomeItem.App || (it is HomeItem.Folder && !it.large)
+
+        val inBounds = x0 >= 0 && y0 >= 0 && x1 <= dp.homeCols && y1 <= dp.homeRows
+        val overlapping = if (!inBounds) emptyList() else model.items.filter {
+            it !== item && it.container == com.oneuiclone.home.model.Container.WORKSPACE && it.screen == item.screen &&
+                x0 < it.x + it.spanX && x0 + newSx > it.x && y0 < it.y + it.spanY && y0 + newSy > it.y
+        }
+        // Block only if overlapping another widget or enlarged 2x2 folder; moveable icons will flow into remaining empty cells
+        val ok = inBounds && overlapping.all { isMoveableIcon(it) }
+
         if (ok) {
-            item.x = x0; item.y = y0; item.sx = x1 - x0; item.sy = y1 - y0
+            item.x = x0; item.y = y0; item.sx = newSx; item.sy = newSy
+            if (overlapping.isNotEmpty()) {
+                // Push displaced icons after existing icons on this page so compactHome flows them into the next free cells
+                val maxY = dp.homeRows + 1
+                overlapping.forEachIndexed { idx, icon ->
+                    icon.y = maxY + idx
+                }
+                model.compactHome(dp.homeCols, dp.homeRows)
+            }
             model.save()
             onCommit()
         }
