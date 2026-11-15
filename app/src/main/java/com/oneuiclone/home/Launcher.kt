@@ -731,7 +731,9 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
                     else if (quick != null) quickOpenView(quick)
                     else if (item.provider == quickPairProvider) quickPairView(item.appWidgetId)
                     else widgets.createView(activity, item.appWidgetId, dp, item.sx, item.sy)) ?: continue
-                val wc = com.oneuiclone.home.ui.WidgetContainer(activity, item, hv, dp.widgetPaddingPx)
+                    val wc = com.oneuiclone.home.ui.WidgetContainer(activity, item, hv, dp.widgetPaddingPx).apply {
+                    setPadding(dp.widgetPadXPx, dp.widgetPadYPx, dp.widgetPadXPx, dp.widgetPadYPx)
+                }
                 applyWidgetStyle(wc)
                 wc.onLongPress = { showWidgetOptions(it) }
                 wc.onDragStart = { c, x, y ->
@@ -1434,9 +1436,10 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         if (rebind) bindWorkspace()
     }
 
-   /**
-     * Home screen apps: every app is on a Home page. System apps come first, followed by user-installed
-     * apps sorted by install date (oldest first, newest/last installed on the very last cell).
+/**
+     * Home screen apps: keeps your existing workspace (dock, widgets, folders, and Page 1 layout), puts any extra
+     * Google apps into a "Google" folder right after the "Social" folder, and places all remaining apps starting on
+     * Page 2 (system apps first, followed by user-installed apps sorted by install date, newest on the last cell).
      */
     private fun fillHome(m: WorkspaceModel, apps: List<AppInfo>, first: HomeItem? = null) {
         if (!prefs.homeOnly) {
@@ -1444,31 +1447,79 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             if (m.hasBackup() && m.restoreBackup()) m.prune()
             return
         }
+        if (!m.hasBackup()) m.backup()
+
         val pm = activity.packageManager
         fun isSystem(app: AppInfo) =
             (app.activityInfo.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
         fun installTime(app: AppInfo) = try {
             pm.getPackageInfo(app.key.component.packageName, 0).firstInstallTime
         } catch (_: Exception) { 0L }
+        fun isExtraGoogleApp(app: AppInfo): Boolean {
+            val pkg = app.key.component.packageName
+            return pkg.startsWith("com.google.android.") ||
+                pkg == "com.android.vending" ||
+                pkg == "com.android.chrome"
+        }
 
-        val sortedApps = apps.sortedWith(
+        // Collect all apps already on the workspace, dock, or inside folders
+        val onHome = m.items.mapNotNullTo(HashSet()) { (it as? HomeItem.App)?.key }
+
+        // Put all extra Google apps (not already placed on Page 1 / dock / Social folder) into a "Google" folder after "Social"
+        val extraGoogle = apps.filter { it.key !in onHome && isExtraGoogleApp(it) }
+            .sortedBy { it.label.toString().lowercase() }
+        if (extraGoogle.isNotEmpty()) {
+            var googleFolder = m.items.filterIsInstance<HomeItem.Folder>()
+                .firstOrNull { it.title.equals("Google", ignoreCase = true) }
+            if (googleFolder == null) {
+                val social = m.items.filterIsInstance<HomeItem.Folder>()
+                    .firstOrNull { it.title.equals("Social", ignoreCase = true) }
+                val targetScreen = social?.screen ?: 0
+                val spot = m.findSpace(targetScreen, 1, 1, dp.homeCols, dp.homeRows)
+                    ?: m.findSpace(0, 1, 1, dp.homeCols, dp.homeRows)
+                if (spot != null) {
+                    googleFolder = HomeItem.Folder(m.newId(), "Google", Container.WORKSPACE, targetScreen, spot.first, spot.second)
+                    // Insert right after the Social folder so compactHome keeps it positioned immediately after Social
+                    val socialIdx = if (social != null) m.items.indexOf(social) else -1
+                    if (socialIdx >= 0) m.items.add(socialIdx + 1, googleFolder) else m.items.add(googleFolder)
+                }
+            }
+            if (googleFolder != null) {
+                var rank = m.appsInFolder(googleFolder.id).size
+                for (gApp in extraGoogle) {
+                    m.items += HomeItem.App(m.newId(), gApp.key, Container.FOLDER, 0, 0, 0, googleFolder.id, rank++)
+                    onHome += gApp.key
+                }
+            }
+        }
+
+        // Remaining non-Google apps: system apps first, then downloaded apps sorted by install date (last installed on last cell)
+        val sortedRemaining = apps.filter { it.key !in onHome }.sortedWith(
             compareBy<AppInfo> { !isSystem(it) }
                 .thenBy { if (isSystem(it)) 0L else installTime(it) }
                 .thenBy { it.label.toString().lowercase() }
         )
 
-        if (!m.hasBackup()) {
-            m.backup()
-            // Fresh switch to Home screen apps: clear existing workspace apps and re-place in sorted order
-            m.items.removeAll { it is HomeItem.App && it.container == Container.WORKSPACE }
-            m.pageCount = 1
+        // Place remaining apps starting from Page 2 (screen >= 1) so Page 1's clean layout stays intact
+        if (sortedRemaining.isNotEmpty() && m.pageCount < 2) m.pageCount = 2
+        for (app in sortedRemaining) {
+            var placed = false
+            for (page in 1 until m.pageCount) {
+                val pos = m.findSpace(page, 1, 1, dp.homeCols, dp.homeRows)
+                if (pos != null) {
+                    m.items += HomeItem.App(m.newId(), app.key, Container.WORKSPACE, page, pos.first, pos.second)
+                    placed = true
+                    break
+                }
+            }
+            if (!placed) {
+                val newPage = m.pageCount++
+                m.items += HomeItem.App(m.newId(), app.key, Container.WORKSPACE, newPage, 0, 0)
+            }
         }
-        val onHome = m.items.mapNotNullTo(HashSet()) { (it as? HomeItem.App)?.key }
-        val missing = sortedApps.filter { it.key !in onHome }
-        missing.forEach { addToHome(it, rebind = false, save = false) }
-        // the icons close ranks: a cell left empty (an icon moved or removed) is taken by the next icon
+
         val moved = prefs.fillEmptyCells && m.compactHome(dp.homeCols, dp.homeRows, first)
-        if (missing.isNotEmpty() || moved) m.save()
+        if (extraGoogle.isNotEmpty() || sortedRemaining.isNotEmpty() || moved) m.save()
     }
 
     /** Icons › Apply to Apps screen and search: there (and in the Bubble and Split panels) apps get Home's icons, not their own. */
