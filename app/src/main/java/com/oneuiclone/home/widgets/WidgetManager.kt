@@ -18,7 +18,6 @@ import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
-import android.graphics.Rect
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
 import android.graphics.Shader
@@ -33,9 +32,9 @@ import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
 import android.widget.ImageView
 import android.widget.RemoteViews
+import com.oneuiclone.home.device.DeviceProfile
 import com.oneuiclone.home.ui.GlassPaint
 import com.oneuiclone.home.ui.WidgetGlass
-import com.oneuiclone.home.device.DeviceProfile
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -166,12 +165,10 @@ class WidgetManager(private val activity: Activity) {
         val theme = WidgetStyles.theme(activity, appWidgetId, info.provider.packageName)
         val v = views[appWidgetId]?.takeIf { it.appWidgetInfo?.provider == info.provider && themes[appWidgetId] == theme }
             ?: host.createView(LaunchContext(context, appWidgetId, theme), appWidgetId, info).also {
-                views[appWidgetId]?.let { old -> (old.parent as? android.view.ViewGroup)?.removeView(old) }
+                views[appWidgetId]?.let { old -> (old.parent as? ViewGroup)?.removeView(old) }
                 views[appWidgetId] = it; themes[appWidgetId] = theme; sizes.remove(appWidgetId)
             }
-        (v.parent as? android.view.ViewGroup)?.removeView(v)
-        // the size it's really drawn at, inside WidgetContainer's padding: widgets that build their layout for the
-        // reported size (Glance, Google Weather) otherwise lay out for more room than they get and cut text off
+        (v.parent as? ViewGroup)?.removeView(v)
         val padX = 2 * dp.widgetPadXPx
         val padY = 2 * dp.widgetPadYPx
         val wDp = ((spanX * dp.cellWidth - padX) / dp.density).coerceAtLeast(1f)
@@ -188,13 +185,14 @@ class WidgetManager(private val activity: Activity) {
             sizes[appWidgetId] = size
         }
         return v
+    }
 
     /**
      * Drop every cached host view so the next bind inflates the widgets' RemoteViews again. Needed on a light/dark
      * switch: the activity handles uiMode itself, and an existing view keeps the layout it inflated in the old mode.
      */
     fun clearViews() {
-        views.values.forEach { (it.parent as? android.view.ViewGroup)?.removeView(it) }
+        views.values.forEach { (it.parent as? ViewGroup)?.removeView(it) }
         views.clear(); sizes.clear()
     }
 
@@ -264,7 +262,7 @@ class WidgetManager(private val activity: Activity) {
         private val wrapped = ArrayList<GlassDrawable>()
         private val keepStyled = ViewTreeObserver.OnPreDrawListener { applyStyle(); true }
 
-override fun updateAppWidget(remoteViews: RemoteViews?) {
+        override fun updateAppWidget(remoteViews: RemoteViews?) {
             super.updateAppWidget(remoteViews)
             getChildAt(0)?.layoutParams = LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             keyDirty = true
@@ -308,18 +306,8 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
         }
 
         // ---- colour-key fallback ----------------------------------------------------------------------------
-        // Widgets with no background view to wrap (drawn as one surface, e.g. RemoteCompose on Android 16): the
-        // background colour, read at the middle of the top edge, is replaced by glass in a GPU shader on the whole
-        // widget. Pixels near that colour blend over by how close they are. (A RenderEffect shader can't read its
-        // input anywhere but the pixel it draws, so the colour is read beforehand: from the widget's own content,
-        // drawn off screen without the effect, again after every update, re-creation or resize, as a light/dark
-        // switch or new data can change it.) For [ColourKey.CLEAR_INNER] widgets the inner card's colour (Pixel
-        // Weather's black/white hourly strip) is keyed out the same way.
-
         private var keyed = false
-        /** Background colour read for the key: 0 when there's no opaque one; stale when [keyDirty]. */
         private var keyColor = 0
-        /** The inner card's colour keyed out with it, 0 for none. */
         private var keyInner = 0
         private var keyDirty = true
         private var keyApplied = 0
@@ -341,8 +329,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
                 val k = readKey()
                 when {
                     k != null -> { keyColor = k.first; keyInner = k.second; keyDirty = false; keyRetries = 0 }
-                    // An update's new views aren't laid out (or drawn) yet: keep the colour it had, so the widget
-                    // stays see-through, and read again shortly. Give up after a few seconds (no solid background).
                     keyRetries < ColourKey.KEY_RETRIES -> { keyRetries++; removeCallbacks(keyRetry); postDelayed(keyRetry, 300) }
                     else -> { keyDirty = false; keyRetries = 0; if (keyColor == 0) return }
                 }
@@ -358,7 +344,7 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             keyApplied = key; keyInnerApplied = inner
             val sh = keyShader ?: RuntimeShader(ColourKey.AGSL).also { keyShader = it }
             val glassShader = if (bmp != null && keyToWindow.invert(keyGlassMatrix)) {
-                keyGlassMatrix.preScale(g.scale, g.scale)                 // glass pixels → window → this view
+                keyGlassMatrix.preScale(g.scale, g.scale)
                 BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply { setLocalMatrix(keyGlassMatrix) }
             } else ColourKey.NO_GLASS
             sh.setInputShader("glass", glassShader)
@@ -372,10 +358,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             keyed = true
         }
 
-        /**
-         * Down the column from the top edge: the first opaque colour that holds for a few pixels (past the
-         * background's anti-aliased edge), i.e. the widget's background. Null if there's none.
-         */
         private fun firstSolid(col: Bitmap): Int? {
             val run = 4
             for (y in 0 until col.height - run) {
@@ -387,21 +369,16 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
         }
 
         private fun clearKey() {
-            keyDirty = true                                  // read afresh next time, from the widget as it is
+            keyDirty = true
             removeCallbacks(keyRetry)
             if (!keyed) return
             keyed = false
             setRenderEffect(null)
         }
 
-        /**
-         * The inner card's colour in [col] below the background: the most common neutral near-black or near-white
-         * colour (Pixel Weather's hourly strip, black in dark mode and white in light) that's clearly not [key] and
-         * holds for [ColourKey.INNER_RUN_DP] in one piece, so text and icons don't count. 0 when there's none.
-         */
         private fun innerSolid(col: Bitmap, key: Int): Int {
             val minRun = (ColourKey.INNER_RUN_DP * resources.displayMetrics.density).toInt().coerceAtLeast(4)
-            val runs = HashMap<Int, Int>()                   // colour → total length of its long runs
+            val runs = HashMap<Int, Int>()
             var y = 0
             while (y < col.height) {
                 val c = col.getPixel(0, y)
@@ -413,12 +390,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             return runs.maxByOrNull { it.value }?.key ?: 0
         }
 
-        /**
-         * The widget's background colour, from its own content: the top of the middle column drawn off screen
-         * (so without the effect, and whatever is on screen), rendered by the GPU since widgets can hold hardware
-         * bitmaps, paired with the inner card's colour to clear too (0 for none; only [ColourKey.CLEAR_INNER]
-         * widgets, read down the whole column). Null when there's no opaque background there.
-         */
         private fun readKey(): Pair<Int, Int>? {
             val root = getChildAt(0) ?: return null
             if (root.width == 0 || root.height == 0) return null
@@ -444,7 +415,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             }
         }
 
-        /** The widget's view tree as text, for working out how a widget draws its background (Style's diagnostic file). */
         fun describe(): String {
             val sb = StringBuilder()
             val root = getChildAt(0)
@@ -485,15 +455,8 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             else -> d.javaClass.name.substringAfterLast('.') + " " + d.intrinsicWidth + "x" + d.intrinsicHeight
         }
 
-        /** Sets [v]'s background (its image for an ImageView). Clearing it first detaches the old drawable, so a
-         * wrapper made around it keeps the drawable's callback. */
         private fun setDrawable(v: View, d: Drawable?) = if (v is ImageView) v.setImageDrawable(d) else v.background = d
 
-        /**
-         * The view drawing the widget's background, found as Launcher3's RoundedCornerEnforcement does: the one
-         * tagged @android:id/background (Android 12+ widgets), else the first view with a background down the
-         * chain of single children from the widget's root.
-         */
         private fun backgroundView(root: View): View? {
             root.findViewById<View>(android.R.id.background)?.takeIf { it.background != null }?.let { return it }
             var v: View = root
@@ -501,10 +464,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             return v
         }
 
-        /**
-         * Older widgets (Google's search bar) draw their background as images instead: the ImageViews that fill
-         * their parent before any content, at the first level down the single-child chain that has several views.
-         */
         private fun backgroundImages(root: View): List<ImageView> {
             var g = root as? ViewGroup ?: return emptyList()
             while (g.childCount == 1) g = g.getChildAt(0) as? ViewGroup ?: return emptyList()
@@ -522,23 +481,14 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
 
     /** The colour-key fallback's shader ([RoundedWidgetView] with no background view to wrap). */
     private object ColourKey {
-        /** Reads of the background colour that may come up empty after an update before the widget counts as having none. */
         const val KEY_RETRIES = 10
-        /** How far down from the middle of the top edge the colour-key fallback looks for the background colour. */
         const val DEPTH_DP = 28f
-        /** How long a run of one colour must be to count as an inner card rather than text or an icon. */
         const val INNER_RUN_DP = 12f
-        /** Widgets whose inner card is keyed out along with the background (the user asked for Pixel Weather's). */
         private val CLEAR_INNER = setOf("com.google.android.apps.weather")
 
         fun clearsInner(provider: ComponentName?): Boolean = provider != null && (provider.packageName in CLEAR_INNER ||
-            // the same widget, when the Google app still hosts it
             provider.packageName == "com.google.android.googlequicksearchbox" && provider.className.contains("weather", true))
 
-        /**
-         * Opaque, grey (no tint) near-black or near-white, and not the background [key], on its far side
-         * from the text: darker than a dark background, lighter than a light one (so white text on dark isn't it).
-         */
         fun isInnerCard(c: Int, key: Int): Boolean {
             if (android.graphics.Color.alpha(c) < 250) return false
             val r = android.graphics.Color.red(c); val g = android.graphics.Color.green(c); val b = android.graphics.Color.blue(c)
@@ -547,8 +497,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             if (lum in 40..215) return false
             val keyLum = (android.graphics.Color.red(key) + android.graphics.Color.green(key) + android.graphics.Color.blue(key)) / 3
             if (if (keyLum < 128) lum > keyLum else lum < keyLum) return false
-            // Only needs to not be the key itself: light mode's background (Material tone 94, e.g. #F3EDF7) is
-            // just ~23 away from its white cards, which a wider margin missed.
             val dr = r - android.graphics.Color.red(key); val dg = g - android.graphics.Color.green(key); val db = b - android.graphics.Color.blue(key)
             return dr * dr + dg * dg + db * db > 6 * 6
         }
@@ -566,16 +514,13 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             half4 main(float2 p) {
                 half4 c = content.eval(p);
                 if (key.a < 0.9 || c.a < 0.004) return c;
-                float3 u = float3(c.rgb) / float(c.a);       // unpremultiplied
-                // the nearest background colour: the key, or with an inner card, anywhere between the two (its
-                // anti-aliased edge blends them, and would otherwise stay as an outline)
+                float3 u = float3(c.rgb) / float(c.a);
                 float t = 0.0;
                 if (inner.a > 0.9) {
                     float3 e = inner.rgb - key.rgb;
                     t = clamp(dot(u - key.rgb, e) / dot(e, e), 0.0, 1.0);
                 }
                 float3 k = mix(key.rgb, inner.rgb, t);
-                // how close this pixel is to it
                 float w = 1.0 - smoothstep(0.015, 0.08, distance(u, k));
                 half4 g = hasGlass > 0.5 ? glass.eval(p) : half4(0.0);
                 half4 bg = half4(half3(k), 1.0) * opacity + g * (1.0 - opacity);
@@ -585,9 +530,7 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
     }
 
     /**
-     * A widget background ([owner]'s background or image) drawn at [opacity] over [glass]. The glass is cut to the
-     * background's own pixels (its shape, corners and edge), and placed in window coordinates so it lines up with
-     * the real wallpaper. Layers, so overlapping parts of the background don't add up.
+     * A widget background ([owner]'s background or image) drawn at [opacity] over [glass].
      */
     private class GlassDrawable(inner: Drawable, private val owner: View, private val host: View) : DrawableWrapper(inner) {
         private val rim = com.oneuiclone.home.ui.LiquidRim()
@@ -599,7 +542,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
         private var drawnBitmap: Bitmap? = null
         private val glassPaint = GlassPaint().apply { paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN) }
 
-        /** Redraws when the style changed, the glass was rebuilt, or the widget moved on screen. */
         fun update(opacity: Float, glass: WidgetGlass?) {
             var dirty = opacity != this.opacity || glass !== this.glass
             this.opacity = opacity; this.glass = glass
@@ -610,7 +552,6 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             if (dirty) invalidateSelf()
         }
 
-        /** Drawable coordinates → window. */
         private fun locate(m: Matrix) {
             m.reset()
             owner.transformMatrixToGlobal(m)
@@ -625,14 +566,13 @@ override fun updateAppWidget(remoteViews: RemoteViews?) {
             val r = bounds.right.toFloat(); val b = bounds.bottom.toFloat()
             drawnBitmap = glass?.bitmap
             locate(drawnAt)
-            // the widget's own background (not a card inside it) gets liquid glass in the widget's 26dp corners
             val density = owner.resources.displayMetrics.density
             val whole = host.width > 0 && (r - l) >= host.width * 0.9f && (b - t) >= host.height * 0.9f
             box.set(l, t, r, b)
             val aimed = if (whole) glassPaint.aimLiquid(canvas, glass, drawnAt, box, 26f * density, density) else glassPaint.aim(glass, drawnAt)
             if (aimed) {
                 val sc = canvas.saveLayer(l, t, r, b, null)
-                super.draw(canvas)                                       // the mask: the background itself
+                super.draw(canvas)
                 canvas.drawRect(l, t, r, b, glassPaint.paint)
                 canvas.restoreToCount(sc)
             }
