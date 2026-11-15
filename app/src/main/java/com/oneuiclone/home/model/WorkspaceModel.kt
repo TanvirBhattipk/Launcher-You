@@ -260,7 +260,7 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
      * only if it's installed (else it stays empty); the dock closes up. Rows count from the bottom on a shorter grid,
      * and anything that no longer fits is left out.
      */
-    fun createDefault(cols: Int, rows: Int) {
+   fun createDefault(cols: Int, rows: Int) {
         items.clear()
         nextId = 1
         pageCount = 2
@@ -269,14 +269,14 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
             (pkgs.firstNotNullOfOrNull { repo.findByPackage(it) }
                 ?: label?.let { l -> repo.apps.firstOrNull { it.label.equals(l, ignoreCase = true) } })
                 ?.takeIf { it.key !in used }
-        val top = rows - 6                                              // the 4×6 layout's row 0 on this grid
+        val top = rows - 6
         fun fits(x: Int, y: Int, sx: Int = 1, sy: Int = 1) = y + top >= 0 && x + sx <= cols && y + top + sy <= rows
 
         val dock = listOfNotNull(
-            app("com.google.android.dialer") ?: resolve(Intent(Intent.ACTION_DIAL)),
-            app("com.google.android.apps.messaging") ?: Telephony.Sms.getDefaultSmsPackage(context)?.let { app(it) },
-            app("com.google.android.youtube"),
-            app("com.derek.arrudaledger"),
+            app("com.google.android.dialer", "com.android.dialer", "com.samsung.android.dialer") ?: resolve(Intent(Intent.ACTION_DIAL)),
+            app("com.google.android.apps.messaging", "com.samsung.android.messaging") ?: Telephony.Sms.getDefaultSmsPackage(context)?.let { app(it) },
+            app("com.android.chrome") ?: resolve(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://example.com"))),
+            app("com.google.android.GoogleCamera", "com.android.camera2", "com.sec.android.app.camera") ?: resolve(Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)),
         ).distinctBy { it.key }
         dock.forEachIndexed { i, a -> items += HomeItem.App(newId(), a.key, Container.HOTSEAT, 0, i, 0); used += a.key }
 
@@ -300,27 +300,29 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
             }
         }
 
-        folder("Google", 0, 4, listOf(
-            { app("com.google.android.googlequicksearchbox") }, { app("com.google.android.apps.maps") },
-            { app("com.google.android.apps.docs") }, { app("com.google.android.calendar") },
-            { app("com.google.android.keep") }, { app("com.google.android.gm") }, { app("com.google.android.apps.bard") },
-        ))
-        folder("Social", 1, 4, listOf(
-            { app("com.twitter.android") }, { app("com.instagram.barcelona") }, { app("com.facebook.katana") },
-            { app("com.scopely.monopolygo") }, { app("com.zhiliaoapp.musically", "com.ss.android.ugc.trill") },
-        ))
-        place(app("com.t3tools.t3code", label = "T3 Code"), 2, 4)
-        place(app("com.instagram.android"), 3, 4)
-        place(app("com.waze"), 0, 5)
-        place(app("com.android.chrome"), 1, 5)
-        place(app("com.google.android.apps.photos"), 2, 5)
-        place(app("com.google.android.apps.youtube.music"), 3, 5)
+        // Row 2 (directly below the 4x2 widget): Weather, Clock, Calendar, Photos
+        place(app("com.google.android.apps.weather", "com.sec.android.daemonapp", label = "Weather"), 0, 2)
+        place(app("com.google.android.deskclock", "com.android.deskclock", "com.sec.android.app.clockpackage", label = "Clock"), 1, 2)
+        place(app("com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar", label = "Calendar"), 2, 2)
+        place(app("com.google.android.apps.photos", "com.sec.android.gallery3d", label = "Photos"), 3, 2)
 
+        // Row 3: Social folder, Maps, Play Store, Settings
+        folder("Social", 0, 3, listOf(
+            { app("com.whatsapp") },
+            { app("com.instagram.android") },
+            { app("com.facebook.katana") },
+            { app("com.twitter.android") },
+            { app("com.zhiliaoapp.musically", "com.ss.android.ugc.trill") },
+            { app("org.telegram.messenger") },
+            { app("com.snapchat.android") },
+        ))
+        place(app("com.google.android.apps.maps", label = "Maps"), 1, 3)
+        place(app("com.android.vending", label = "Play Store"), 2, 3)
+        place(app("com.android.settings", label = "Settings"), 3, 3)
+
+        // Top 4x2 widget (rows 0..1)
         defaultWidgets = listOf(
-            DefaultWidget(0, 0, 4, 3, listOf("com.google.android.apps.weather", "com.google.android.googlequicksearchbox"), "weather"),
-            DefaultWidget(0, 3, 2, 1, listOf("com.google.android.settings.intelligence"), "battery"),
-            DefaultWidget(2, 3, 1, 1, listOf(context.packageName), "SplitWidget"),
-            DefaultWidget(3, 3, 1, 1, listOf(context.packageName), "MultiBubbleWidget"),
+            DefaultWidget(0, 0, 4, 2, listOf("com.google.android.apps.weather", "com.google.android.googlequicksearchbox"), "weather"),
         ).filter { fits(it.x, it.y, it.sx, it.sy) }.map { DefaultWidget(it.x, it.y + top, it.sx, it.sy, it.packages, it.classHint) }
 
         // Page 2: a few more apps so paging can be exercised.
