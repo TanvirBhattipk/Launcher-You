@@ -88,9 +88,9 @@ class AppsSearch(
     )
 
     private val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    /** Subtle smoked-glass fill and ultra-faint hairline border matching the mockup in both light & dark modes. */
-    private val glassFillColor = if (isNight) 0x481C1C20 else 0x26FFFFFF
-    private val glassBorderColor = if (isNight) 0x12FFFFFF else 0x1AFFFFFF
+    /** Shared fill and border colors so the Search bar, Apps card, Contacts card, and Suggestions card are identical. */
+    private val glassFillColor get() = SearchColors.of(context).homePill
+    private val glassBorderColor get() = SearchColors.of(context).stroke
     private val dividerLineColor = if (isNight) 0x12FFFFFF else 0x18FFFFFF
 
     private val field = EditText(context)
@@ -127,13 +127,9 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-    /** Smoked glass card container with 24dp corners, live barGlass backdrop, and subtle 0.75dp hairline border (no bright rim). */
+    /** Smoked glass card container matching the search bar's exact fill, border, and blurred glass. */
     private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
-        private val cardBg = GradientDrawable().apply {
-            cornerRadius = dp.dp(24f)
-            setColor(glassFillColor)
-            setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
-        }
+        private val cardBg = GradientDrawable()
         private val glassPaint = GlassPaint()
         private val toWindow = Matrix()
         private val rect = RectF()
@@ -143,10 +139,20 @@ class AppsSearch(
             background = cardBg
             clipToOutline = true
             setWillNotDraw(false)
+            syncWithBar()
+        }
+
+        fun syncWithBar() {
+            val fill = if (::origin.isInitialized) withOpacity(origin.fill) else withOpacity(glassFillColor)
+            val stroke = if (::origin.isInitialized) withOpacity(origin.stroke) else withOpacity(glassBorderColor)
+            cardBg.cornerRadius = dp.dp(24f)
+            cardBg.setColor(fill)
+            cardBg.setStroke(maxOf(1, dp.dpi(0.75f)), stroke)
+            invalidate()
         }
 
         override fun onDraw(canvas: Canvas) {
-            val g = barGlass ?: pillGlass
+            val g = pillGlass ?: barGlass
             if (g != null) {
                 toWindow.reset()
                 transformMatrixToGlobal(toWindow)
@@ -160,6 +166,7 @@ class AppsSearch(
             super.onDraw(canvas)
         }
     }
+
 
     /** Smoked glass search bar pill with subtle 0.75dp border (no double-stacked bright rim). */
     private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
