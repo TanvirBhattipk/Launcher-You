@@ -28,37 +28,36 @@ class DeviceProfile(
     fun dpi(v: Float) = (v * density).roundToInt()
 
     // ---- workspace (home) ----
-    val pageTopPadding = (heightPx * 0.057f).roundToInt()          // page_top_padding_height_ratio
+    val pageTopPadding = insets.top + dpi(22f)
     /**
-     * page_bottom_padding_height_ratio, plus the navigation bar inset: Samsung's ratios are of the area above
-     * its own gesture hint, so on a Pixel the dock would otherwise sit right on the gesture handle.
+     * Symmetrical bottom padding above the gesture navigation inset so the dock sits cleanly above the handle.
      */
-    val pageBottomPadding = (heightPx * 0.007f).roundToInt() + insets.bottom
+    val pageBottomPadding = dpi(10f) + insets.bottom
     val indicatorAreaHeight = (heightPx * 0.041f).roundToInt()     // indicator_area_height_ratio
-    val hotseatHeight = (heightPx * 0.124f).roundToInt()           // hotseat_bar_height_ratio
-    val pageSidePadding = (widthPx * 0.029f).roundToInt()          // wider icon grid (stock: page_left/right_padding_width_ratio 0.038)
+    val hotseatHeight = (heightPx * 0.112f).roundToInt()           // compact dock bar matching reference proportions
+    val pageSidePadding = (widthPx * 0.034f).roundToInt()          // aligns outer icon & widget edges symmetrically (~6.4% outer visual margin)
 
     /** Where the grid would end with no extra bottom padding: the page indicator and the dock stay under it. */
     private val gridBottom = heightPx - pageBottomPadding - hotseatHeight - indicatorAreaHeight
-    /** A little extra space (dp) kept above and below Home's icon rows, so the 4-column cells are closer to square. */
-    private val HOME_GRID_EXTRA_PAD_DP = 16f
+    /** Symmetrical extra space (dp) above and below Home's 6 icon rows for balanced top/bottom breathing room. */
+    private val HOME_GRID_EXTRA_PAD_DP = 22f
     /** Height of the icon grid (the Home top/bottom padding settings shrink it); its position is solved below. */
     private val gridHeight = (gridBottom - dpi(homeBottomPadDp)) - (pageTopPadding + dpi(homeTopPadDp)) - 2 * dpi(HOME_GRID_EXTRA_PAD_DP)
     val cellWidth = (widthPx - 2 * pageSidePadding) / homeCols
     val cellHeight = gridHeight / homeRows
 
-    /** 65.2 % of the cell width (the stock 66 % made 5 % smaller, then 4 % bigger again): the "Icon size" slider's 100 %. Home, the dock and the Apps screen all use it. */
-    val iconSizePx = (cellWidth * 0.652f * iconScale).roundToInt().coerceAtMost((cellHeight * 0.62f).roundToInt()).let { if (it % 2 == 1) it + 1 else it }
+/** ~67% of cell width (~64dp on a 412dp screen), matching the reference icon-to-gutter ratio. */
+    val iconSizePx = (cellWidth * 0.67f * iconScale).roundToInt().coerceAtMost((cellHeight * 0.64f).roundToInt()).let { if (it % 2 == 1) it + 1 else it }
     /**
      * The icon size of the search page's Recents row: Home's 62.7 % of the cell width made 5 % smaller, and fixed, so
      * changing Home's icon size (or its icon scale) never changes it.
      */
     val recentsIconSizePx = (cellWidth * 0.627f * 0.95f).roundToInt().let { if (it % 2 == 1) it + 1 else it }
-    val labelTextSizePx = dp(13f) * 0.855f * labelScale                // 10 % smaller than before (13 dp x 0.95 x 0.9): the "Label size" slider's 100 %; Home and the Apps screen
+    val labelTextSizePx = dp(13f) * 0.855f * labelScale
     val iconLabelGapPx = dp(5.5f)
 
-    /** The dock stays exactly where the stock layout puts it. */
-    private val dockDrop = dpi(12f)
+    /** Keeps the dock symmetrically spaced below the Search pill. */
+    private val dockDrop = dpi(8f)
     private val hotseatTop = gridBottom + indicatorAreaHeight + dockDrop
     val hotseatRect = Rect(
         pageSidePadding,                                             // the dock's icons sit in the same columns as Home's (stock: 0.036 of the width)
@@ -102,7 +101,7 @@ class DeviceProfile(
     val indicatorDotPx = dp(6f)
 
     // ---- apps screen ----
-    val appsSidePadding = (widthPx * 0.029f).roundToInt()          // same grid width as Home (stock: apps_page_side_padding_width_ratio 0.038)
+    val appsSidePadding = pageSidePadding                          // matches Home's horizontal icon columns symmetrically
     /** Side margin of the search bar: its ends line up with the outer edges of the first and last icon columns. */
     val searchBarSide = (appsSidePadding + (((widthPx - 2 * appsSidePadding) / appsCols - iconSizePx) / 2f)).roundToInt()
     val searchBarWidth = widthPx - 2 * searchBarSide
@@ -140,5 +139,5 @@ class DeviceProfile(
     val cornerRadius = dp(26f)
 
     /** Inset of a widget inside its cells on every side (WidgetContainer's padding). */
-    val widgetPaddingPx = (cellWidth * 0.04f).toInt()
+    val widgetPaddingPx = ((cellWidth - iconSizePx) / 2f).roundToInt()
 }
