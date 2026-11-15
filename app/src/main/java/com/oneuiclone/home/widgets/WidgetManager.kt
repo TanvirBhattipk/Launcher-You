@@ -264,10 +264,19 @@ class WidgetManager(private val activity: Activity) {
         private val wrapped = ArrayList<GlassDrawable>()
         private val keepStyled = ViewTreeObserver.OnPreDrawListener { applyStyle(); true }
 
-        override fun updateAppWidget(remoteViews: RemoteViews?) {
+override fun updateAppWidget(remoteViews: RemoteViews?) {
             super.updateAppWidget(remoteViews)
+            getChildAt(0)?.layoutParams = LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             keyDirty = true
             applyStyle()
+        }
+
+        override fun addView(child: View?, index: Int, params: ViewGroup.LayoutParams?) {
+            val lp = (params as? LayoutParams)?.apply {
+                width = ViewGroup.LayoutParams.MATCH_PARENT
+                height = ViewGroup.LayoutParams.MATCH_PARENT
+            } ?: LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            super.addView(child, index, lp)
         }
 
         override fun onAttachedToWindow() {
