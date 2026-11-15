@@ -260,7 +260,7 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
      * only if it's installed (else it stays empty); the dock closes up. Rows count from the bottom on a shorter grid,
      * and anything that no longer fits is left out.
      */
-   fun createDefault(cols: Int, rows: Int) {
+fun createDefault(cols: Int, rows: Int) {
         items.clear()
         nextId = 1
         pageCount = 2
@@ -272,6 +272,7 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
         val top = rows - 6
         fun fits(x: Int, y: Int, sx: Int = 1, sy: Int = 1) = y + top >= 0 && x + sx <= cols && y + top + sy <= rows
 
+        // Dock: Phone, Messages, Chrome, Camera
         val dock = listOfNotNull(
             app("com.google.android.dialer", "com.android.dialer", "com.samsung.android.dialer") ?: resolve(Intent(Intent.ACTION_DIAL)),
             app("com.google.android.apps.messaging", "com.samsung.android.messaging") ?: Telephony.Sms.getDefaultSmsPackage(context)?.let { app(it) },
@@ -300,13 +301,13 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
             }
         }
 
-        // Row 2 (directly below the 4x2 widget): Weather, Clock, Calendar, Photos
+        // Page 1 Row 2 (below 4x2 widget): Weather, Clock, Calendar, Photos
         place(app("com.google.android.apps.weather", "com.sec.android.daemonapp", label = "Weather"), 0, 2)
         place(app("com.google.android.deskclock", "com.android.deskclock", "com.sec.android.app.clockpackage", label = "Clock"), 1, 2)
         place(app("com.google.android.calendar", "com.android.calendar", "com.samsung.android.calendar", label = "Calendar"), 2, 2)
         place(app("com.google.android.apps.photos", "com.sec.android.gallery3d", label = "Photos"), 3, 2)
 
-        // Row 3: Social folder, Maps, Play Store, Settings
+        // Page 1 Row 3: Social folder, Maps, Play Store, Settings
         folder("Social", 0, 3, listOf(
             { app("com.whatsapp") },
             { app("com.instagram.android") },
@@ -325,7 +326,7 @@ class WorkspaceModel(private val context: Context, private val repo: AppReposito
             DefaultWidget(0, 0, 4, 2, listOf("com.google.android.apps.weather", "com.google.android.googlequicksearchbox"), "weather"),
         ).filter { fits(it.x, it.y, it.sx, it.sy) }.map { DefaultWidget(it.x, it.y + top, it.sx, it.sy, it.packages, it.classHint) }
 
-        // Page 2: a few more apps so paging can be exercised.
+        // Page 2: a few sample apps for Drawer mode
         repo.apps.filter { it.key !in used }.take(cols * 2).forEachIndexed { i, a ->
             items += HomeItem.App(newId(), a.key, Container.WORKSPACE, 1, i % cols, i / cols)
         }
