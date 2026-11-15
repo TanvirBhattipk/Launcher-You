@@ -148,13 +148,13 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-/** Search bar palette: light glass with grey ink by day, dark glass with light ink in dark mode. */
+/** Search bar palette: frosted dark-glass pill with subtle specular border matching the Spotlight mockup. */
 class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
-        private val DAY = SearchColors(0xD9FFFFFF.toInt(), 0x99FFFFFF.toInt(), 0xF2FFFFFF.toInt(), 0x33FFFFFF, 0xFF5C5C61.toInt(), 0xFF1C1C1E.toInt())
-        private val NIGHT = SearchColors(0xD92A2A2E.toInt(), 0x992A2A2E.toInt(), 0xF22A2A2E.toInt(), 0x1FFFFFFF, 0xFFA9A9AE.toInt(), 0xFFFAFAFA.toInt())
+        private val DAY = SearchColors(0x522A2A2E.toInt(), 0x472A2A2E.toInt(), 0x662A2A2E.toInt(), 0x3DFFFFFF, 0xCCFAFAFA.toInt(), 0xFFFFFFFF.toInt())
+        private val NIGHT = SearchColors(0x522A2A2E.toInt(), 0x472A2A2E.toInt(), 0x662A2A2E.toInt(), 0x3DFFFFFF, 0xCCFAFAFA.toInt(), 0xFFFFFFFF.toInt())
 
         /** The dark palette, whatever the theme (the search page is dark in light mode too). */
         fun dark() = NIGHT
