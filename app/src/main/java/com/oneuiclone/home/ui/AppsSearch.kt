@@ -7,11 +7,13 @@ import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -20,6 +22,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.ContactsContract
 import android.text.Editable
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
@@ -49,13 +52,6 @@ import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/**
- * Spotlight-style Quick Search matching the reference mockup:
- * - Full-width frosted glass search pill with magnifying glass, "Search anything..." hint, and circular × clear button
- * - "Apps" glass card with "Show All >" and a 5-column row of labeled app icons
- * - "Contacts" glass card with "Show All >", circular photo/two-letter avatars, and Phone + Video action buttons
- * - "Suggestions" glass card with app icons, action labels, and right chevrons (>)
- */
 @SuppressLint("ViewConstructor")
 class AppsSearch(
     context: Context,
@@ -91,12 +87,17 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
+    private val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    /** Subtle smoked-glass fill and ultra-faint hairline border matching the mockup in both light & dark modes. */
+    private val glassFillColor = if (isNight) 0x481C1C20 else 0x26FFFFFF
+    private val glassBorderColor = if (isNight) 0x12FFFFFF else 0x1AFFFFFF
+    private val dividerLineColor = if (isNight) 0x12FFFFFF else 0x18FFFFFF
+
     private val field = EditText(context)
     private val pill = FrameLayout(context)
     private val pillBg = GradientDrawable()
     private val clearBtn = ClearButton(context)
-    private val colors = SearchColors.dark()
-    private val glyph = MagnifierView(context, 0xE6FFFFFF.toInt())
+    private val glyph = MagnifierView(context, 0xCCFFFFFF.toInt())
 
     // Cards
     private val appsCard = GlassCard(context)
@@ -126,15 +127,14 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-    /** Frosted glass card container with 22dp corners, live barGlass backdrop, and 1dp specular border. */
+    /** Smoked glass card container with 24dp corners, live barGlass backdrop, and subtle 0.75dp hairline border (no bright rim). */
     private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         private val cardBg = GradientDrawable().apply {
-            cornerRadius = dp.dp(22f)
-            setColor(0x3828282C)
-            setStroke(dp.dpi(1f), 0x2EFFFFFF)
+            cornerRadius = dp.dp(24f)
+            setColor(glassFillColor)
+            setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
         }
         private val glassPaint = GlassPaint()
-        private val rim = LiquidRim()
         private val toWindow = Matrix()
         private val rect = RectF()
 
@@ -151,24 +151,19 @@ class AppsSearch(
                 toWindow.reset()
                 transformMatrixToGlobal(toWindow)
                 rect.set(0f, 0f, width.toFloat(), height.toFloat())
-                val r = dp.dp(22f)
+                val r = dp.dp(24f)
                 if (glassPaint.aimLiquid(canvas, g, toWindow, rect, r, dp.dp(1f))) {
                     glassPaint.paint.alpha = (255 * barOpacity).toInt()
                     canvas.drawRoundRect(rect, r, r, glassPaint.paint)
                 }
             }
             super.onDraw(canvas)
-            if (g != null && LiquidGlass.enabled) {
-                rect.set(0f, 0f, width.toFloat(), height.toFloat())
-                rim.draw(canvas, rect, dp.dp(22f), dp.dp(LiquidGlass.RIM_DP), 0.55f * barOpacity)
-            }
         }
     }
 
-    /** Frosted glass pill background with 1dp rim border. */
+    /** Smoked glass search bar pill with subtle 0.75dp border (no double-stacked bright rim). */
     private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val glassPaint = GlassPaint()
-        private val rim = LiquidRim()
         private val toWindow = Matrix()
         private val rect = RectF()
 
@@ -182,9 +177,6 @@ class AppsSearch(
                 }
             }
             super.draw(canvas)
-            if (pillGlass != null && LiquidGlass.enabled) {
-                rim.draw(canvas, rect.apply { set(bounds) }, pillBg.cornerRadius, dp.dp(LiquidGlass.RIM_DP), 0.75f * barOpacity)
-            }
         }
     }
 
@@ -197,8 +189,8 @@ class AppsSearch(
     private var ime = 0
     private var imeAnimating = false
 
-    private val openTextStart = dp.dp(16f + 22f + 10f)
-    private val openTextSize = 15.5f * resources.displayMetrics.scaledDensity
+    private val openTextStart = dp.dp(16f + 20f + 10f)
+    private val openTextSize = 16f * resources.displayMetrics.scaledDensity
     private val keyboardPrefs = context.getSharedPreferences("keyboard", Context.MODE_PRIVATE)
     private val keyboardKey = "ime_height_${dp.widthPx}x${dp.heightPx}"
 
@@ -249,7 +241,7 @@ class AppsSearch(
         field.apply {
             background = null
             hint = "Search anything..."
-            setHintTextColor(0xB3FAFAFA.toInt())
+            setHintTextColor(0x8CFFFFFF.toInt())
             setTextColor(0xFFFFFFFF.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_PX, openTextSize)
             typeface = Fonts.ui(context, 400)
@@ -260,7 +252,7 @@ class AppsSearch(
             pivotX = 0f
         }
         pill.addView(field, LayoutParams(dp.searchBarWidth, LayoutParams.MATCH_PARENT))
-        pill.addView(glyph, LayoutParams(dp.dpi(22f), dp.dpi(22f), Gravity.START or Gravity.CENTER_VERTICAL).apply {
+        pill.addView(glyph, LayoutParams(dp.dpi(20f), dp.dpi(20f), Gravity.START or Gravity.CENTER_VERTICAL).apply {
             leftMargin = dp.dpi(16f)
         })
         clearBtn.apply {
@@ -270,7 +262,7 @@ class AppsSearch(
                 if (field.text.isNotEmpty()) field.text = null else onDismiss()
             }
         }
-        pill.addView(clearBtn, LayoutParams(dp.dpi(24f), dp.dpi(24f), Gravity.END or Gravity.CENTER_VERTICAL).apply {
+        pill.addView(clearBtn, LayoutParams(dp.dpi(22f), dp.dpi(22f), Gravity.END or Gravity.CENTER_VERTICAL).apply {
             rightMargin = dp.dpi(14f)
         })
 
@@ -278,15 +270,15 @@ class AppsSearch(
         content.gravity = Gravity.TOP
         content.clipChildren = false
 
-        // Calculator answer banner (shown when typing an expression)
+        // Calculator answer banner
         calcBox.apply {
             visibility = GONE
             setPadding(dp.dpi(18f), dp.dpi(14f), dp.dpi(18f), dp.dpi(14f))
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
-                cornerRadius = dp.dp(20f)
-                setColor(0x3828282C)
-                setStroke(dp.dpi(1f), 0x2EFFFFFF)
+                cornerRadius = dp.dp(22f)
+                setColor(glassFillColor)
+                setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
             }
             isClickable = true
             setOnClickListener {
@@ -299,38 +291,38 @@ class AppsSearch(
         content.addView(calcBox, cardParams(top = 0))
 
         // 1. Apps Card ("Apps" + "Show All >" + 5-column app icon row with labels)
-        appsCard.setPadding(dp.dpi(14f), dp.dpi(12f), dp.dpi(14f), dp.dpi(12f))
-        appsCard.addView(sectionHeader("Apps", showAll = true) { onSwipeUp() })
+        appsCard.setPadding(dp.dpi(12f), dp.dpi(14f), dp.dpi(12f), dp.dpi(14f))
+        appsCard.addView(sectionHeader("Apps", showAll = true, horizontalPadDp = 4f) { onSwipeUp() })
         appsRow.orientation = LinearLayout.HORIZONTAL
-        appsRow.gravity = Gravity.CENTER_VERTICAL
+        appsRow.gravity = Gravity.TOP
         appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp.dpi(10f)
+            topMargin = dp.dpi(12f)
         })
         content.addView(appsCard, cardParams(top = 0))
 
-        // 2. Contacts Card ("Contacts" + "Show All >" + rows with circular avatar + Phone & Video action circles)
-        contactsCard.setPadding(0, dp.dpi(12f), 0, dp.dpi(4f))
+        // 2. Contacts Card ("Contacts" + "Show All >" + rows with full-width dividers)
+        contactsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
         contactsCard.addView(sectionHeader("Contacts", showAll = true, horizontalPadDp = 16f) {
             onOpenIntent(it, Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         })
         contactsListLayout.orientation = LinearLayout.VERTICAL
         contactsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
-        contactsListLayout.dividerDrawable = insetDivider(dp.dpi(68f), dp.dpi(16f))
+        contactsListLayout.dividerDrawable = insetDivider(dp.dpi(16f), dp.dpi(16f))
         contactsCard.addView(contactsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp.dpi(4f)
+            topMargin = dp.dpi(6f)
         })
-        content.addView(contactsCard, cardParams(top = dp.dpi(12f)))
+        content.addView(contactsCard, cardParams(top = dp.dpi(10f)))
 
-        // 3. Suggestions Card ("Suggestions" + icon + action label + right chevron ">")
-        suggestionsCard.setPadding(0, dp.dpi(12f), 0, dp.dpi(4f))
+        // 3. Suggestions Card ("Suggestions" + rows with full-width dividers)
+        suggestionsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
         suggestionsCard.addView(sectionHeader("Suggestions", showAll = false, horizontalPadDp = 16f, onShowAll = null))
         suggestionsListLayout.orientation = LinearLayout.VERTICAL
         suggestionsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
-        suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(54f), dp.dpi(16f))
+        suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(16f), dp.dpi(16f))
         suggestionsCard.addView(suggestionsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp.dpi(4f)
+            topMargin = dp.dpi(6f)
         })
-        content.addView(suggestionsCard, cardParams(top = dp.dpi(12f)))
+        content.addView(suggestionsCard, cardParams(top = dp.dpi(10f)))
 
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply { topMargin = contentTop() })
         addView(pill, LayoutParams(dp.searchBarWidth, dp.searchBarHeight))
@@ -366,8 +358,8 @@ class AppsSearch(
 
     private fun insetDivider(startInsetPx: Int, endInsetPx: Int): android.graphics.drawable.Drawable {
         val line = GradientDrawable().apply {
-            setColor(0x1FFFFFFF)
-            setSize(0, maxOf(1, dp.dpi(0.75f)))
+            setColor(dividerLineColor)
+            setSize(0, 1)
         }
         return android.graphics.drawable.InsetDrawable(line, startInsetPx, 0, endInsetPx, 0)
     }
@@ -380,7 +372,7 @@ class AppsSearch(
             addView(TextView(context).apply {
                 text = title
                 setTextColor(0xFFFFFFFF.toInt())
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
                 typeface = Fonts.ui(context, 600)
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             if (showAll && onShowAll != null) {
@@ -391,11 +383,11 @@ class AppsSearch(
                     setOnClickListener { onShowAll(this) }
                     addView(TextView(context).apply {
                         text = "Show All"
-                        setTextColor(0xD9FFFFFF.toInt())
+                        setTextColor(0xCCFFFFFF.toInt())
                         setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                         typeface = Fonts.ui(context, 400)
                     })
-                    addView(ChevronGlyph(context, 0xD9FFFFFF.toInt()), LinearLayout.LayoutParams(dp.dpi(12f), dp.dpi(12f)).apply {
+                    addView(ChevronGlyph(context, 0xCCFFFFFF.toInt()), LinearLayout.LayoutParams(dp.dpi(11f), dp.dpi(11f)).apply {
                         leftMargin = dp.dpi(4f)
                     })
                 }
@@ -464,7 +456,7 @@ class AppsSearch(
             (appsCard.layoutParams as LinearLayout.LayoutParams).topMargin = 0
             return
         }
-        (appsCard.layoutParams as LinearLayout.LayoutParams).topMargin = dp.dpi(12f)
+        (appsCard.layoutParams as LinearLayout.LayoutParams).topMargin = dp.dpi(10f)
         val typed = field.text.toString().trim()
         val b = android.text.SpannableStringBuilder()
         b.append("$typed = ")
@@ -500,26 +492,38 @@ class AppsSearch(
         v.animate().alpha(1f).setDuration(FADE_MS).setInterpolator(Easing.BASIC).start()
     }
 
+    /** Dedicated 5-column app cell matching the mockup's 56dp squircle icon + crisp 12sp centered label. */
     private fun showApps(list: List<AppInfo>) {
         val keys = list.take(MAX_APPS).map { it.key }
         if (keys == shownApps && appsRow.childCount == keys.size) return
         val old = shownApps
         shownApps = keys
         appsRow.removeAllViews()
-        if (enterTarget is IconView) enterTarget = null
-        val iconPx = dp.dpi(50f)
+        enterTarget = null
+        val iconPx = dp.dpi(54f)
         list.take(MAX_APPS).forEachIndexed { i, a ->
-            val v = IconView(context, dp).apply {
-                showLabel = true
-                darkText = false
-                label = a.label
-                contentDescription = a.label
-                setOnClickListener { onLaunch(this, a) }
-                configureIcon(this, a)
+            val holder = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                isClickable = true
+                setTag(R_ENTERABLE, true)
+                val hiddenIcon = IconView(context, dp).apply { configureIcon(this, a) }
+                setOnClickListener { onLaunch(hiddenIcon, a) }
+                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, dp.dp(13f)), LinearLayout.LayoutParams(iconPx, iconPx))
+                addView(TextView(context).apply {
+                    text = a.label
+                    setTextColor(0xF2FFFFFF.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    typeface = Fonts.ui(context, 400)
+                    isSingleLine = true
+                    ellipsize = TextUtils.TruncateAt.END
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp.dpi(5f)
+                })
             }
-            val cellH = iconPx + dp.dpi(22f)
-            appsRow.addView(v, LinearLayout.LayoutParams(0, cellH, 1f))
-            if (old.getOrNull(i) != a.key) reveal(v)
+            appsRow.addView(holder, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (old.getOrNull(i) != a.key) reveal(holder)
         }
         appsCard.visibility = if (keys.isEmpty()) GONE else VISIBLE
     }
@@ -527,7 +531,7 @@ class AppsSearch(
     private fun initials(s: String) = s.split(' ', '-', '.').filter { it.isNotEmpty() }.joinToString("") { it.take(1) }
 
     // ---------------------------------------------------------------------------------------------
-    // Suggestions (App actions & search suggestions with chevrons)
+    // Suggestions
     // ---------------------------------------------------------------------------------------------
 
     private fun fetchSuggestions(q: String) {
@@ -572,8 +576,8 @@ class AppsSearch(
                 ?: all.firstOrNull { it.label.contains(keyword, ignoreCase = true) }
 
         val out = ArrayList<SuggestionItem>()
-        findApp("com.google.android.youtube", keyword = "YouTube")?.let {
-            out += SuggestionItem("yt", "Open ${it.label}", it, null)
+        findApp("com.google.android.youtube", "com.android.chrome", keyword = "YouTube")?.let {
+            out += SuggestionItem("yt", "Open YouTube", it, null)
         }
         findApp("com.google.android.apps.maps", keyword = "Maps")?.let {
             out += SuggestionItem("maps", "Directions to Office", it, "Directions to Office")
@@ -584,7 +588,6 @@ class AppsSearch(
         findApp("com.google.android.keep", "com.samsung.android.app.notes", keyword = "Notes")?.let {
             out += SuggestionItem("notes", "New Note", it, null)
         }
-        // Top up with top used apps if fewer than 4 matched
         if (out.size < 4) {
             for (a in mostUsed()) {
                 if (out.none { it.app?.key == a.key }) {
@@ -634,14 +637,14 @@ class AppsSearch(
                         webSearch(item.query)
                     }
                 }
-                addView(iconView, LinearLayout.LayoutParams(dp.dpi(26f), dp.dpi(26f)))
+                addView(iconView, LinearLayout.LayoutParams(dp.dpi(28f), dp.dpi(28f)))
                 addView(TextView(context).apply {
                     text = item.title
-                    setTextColor(0xFFFFFFFF.toInt())
+                    setTextColor(0xF2FFFFFF.toInt())
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f)
                     typeface = Fonts.ui(context, 400)
                     isSingleLine = true
-                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    ellipsize = TextUtils.TruncateAt.END
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     leftMargin = dp.dpi(12f)
                 })
@@ -653,7 +656,7 @@ class AppsSearch(
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Contacts (Circular photo / 2-letter avatar + Name + Phone & Video action buttons)
+    // Contacts
     // ---------------------------------------------------------------------------------------------
 
     private fun querySources(raw: String) {
@@ -686,15 +689,15 @@ class AppsSearch(
                 isClickable = true
                 background = rowRipple()
                 setOnClickListener { onRequestContacts() }
-                addView(ContactAvatar(context, null, "", 0xFF3E91FF.toInt()), LinearLayout.LayoutParams(dp.dpi(38f), dp.dpi(38f)))
+                addView(ContactAvatar(context, null, "", 0xFF7B8591.toInt()), LinearLayout.LayoutParams(dp.dpi(40f), dp.dpi(40f)))
                 addView(TextView(context).apply {
                     text = "Allow access to show contacts"
-                    setTextColor(0xFFFFFFFF.toInt())
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14.5f)
+                    setTextColor(0xF2FFFFFF.toInt())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
                     typeface = Fonts.ui(context, 400)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp.dpi(14f) })
             }
-            contactsListLayout.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp.dpi(52f)))
+            contactsListLayout.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp.dpi(54f)))
             return
         }
 
@@ -711,36 +714,34 @@ class AppsSearch(
                     sources.contactOpened(c)
                     onOpenIntent(this, Intent(Intent.ACTION_VIEW, c.uri))
                 }
-                addView(ContactAvatar(context, c.photo, c.name, avatarColor(c.name)), LinearLayout.LayoutParams(dp.dpi(40f), dp.dpi(40f)))
+                addView(ContactAvatar(context, c.photo, c.name, avatarColor(c.name)), LinearLayout.LayoutParams(dp.dpi(42f), dp.dpi(42f)))
                 addView(TextView(context).apply {
                     text = c.name
                     setTextColor(0xFFFFFFFF.toInt())
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f)
                     typeface = Fonts.ui(context, 400)
                     isSingleLine = true
-                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    ellipsize = TextUtils.TruncateAt.END
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    leftMargin = dp.dpi(12f)
+                    leftMargin = dp.dpi(14f)
                     rightMargin = dp.dpi(8f)
                 })
-                // Phone call circular button
                 addView(ActionCircleButton(context, ActionCircleButton.PHONE).apply {
                     contentDescription = "Call ${c.name}"
                     setOnClickListener {
                         sources.contactOpened(c)
                         onOpenIntent(this, Intent(Intent.ACTION_VIEW, c.uri))
                     }
-                }, LinearLayout.LayoutParams(dp.dpi(32f), dp.dpi(32f)).apply { rightMargin = dp.dpi(10f) })
-                // Video call circular button
+                }, LinearLayout.LayoutParams(dp.dpi(34f), dp.dpi(34f)).apply { rightMargin = dp.dpi(10f) })
                 addView(ActionCircleButton(context, ActionCircleButton.VIDEO).apply {
                     contentDescription = "Video call ${c.name}"
                     setOnClickListener {
                         sources.contactOpened(c)
                         onOpenIntent(this, Intent(Intent.ACTION_VIEW, c.uri))
                     }
-                }, LinearLayout.LayoutParams(dp.dpi(32f), dp.dpi(32f)))
+                }, LinearLayout.LayoutParams(dp.dpi(34f), dp.dpi(34f)))
             }
-            contactsListLayout.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp.dpi(52f)))
+            contactsListLayout.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp.dpi(56f)))
             if (old.getOrNull(i) != c.id) reveal(row)
         }
     }
@@ -762,7 +763,7 @@ class AppsSearch(
     private fun avatarColor(name: String) = AVATAR_COLORS[(name.hashCode() and 0x7FFFFFFF) % AVATAR_COLORS.size]
 
     private fun rowRipple() = android.graphics.drawable.RippleDrawable(
-        android.content.res.ColorStateList.valueOf(0x26FFFFFF), null, null
+        android.content.res.ColorStateList.valueOf(0x22FFFFFF), null, null
     )
 
     // ---------------------------------------------------------------------------------------------
@@ -781,12 +782,15 @@ class AppsSearch(
 
     private fun updateEnterTarget() {
         val target = if (field.text.isNullOrBlank()) null
-        else (appsRow.getChildAt(0) as? IconView) ?: firstEnterable(contactsListLayout) ?: firstEnterable(suggestionsListLayout)
+        else firstEnterable(appsRow) ?: firstEnterable(contactsListLayout) ?: firstEnterable(suggestionsListLayout)
         if (target === enterTarget) return
-        enterTarget?.let { if (it !is IconView) it.background = rowRipple() }
+        enterTarget?.let { it.background = rowRipple() }
         enterTarget = target
-        if (target != null && target !is IconView) {
-            target.background = GradientDrawable().apply { setColor(0x24FFFFFF) }
+        if (target != null) {
+            target.background = GradientDrawable().apply {
+                cornerRadius = dp.dp(12f)
+                setColor(0x1FFFFFFF)
+            }
         }
     }
 
@@ -843,7 +847,7 @@ class AppsSearch(
     // ---------------------------------------------------------------------------------------------
 
     private fun barTop() = dp.searchBarTop.toFloat()
-    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(12f)
+    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(10f)
     private fun withOpacity(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * barOpacity).toInt() shl 24)
 
     private fun layoutPill() {
@@ -859,11 +863,11 @@ class AppsSearch(
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        pillBg.setColor(withOpacity(0x472A2A2E))
-        pillBg.setStroke(dp.dpi(1f), withOpacity(0x3DFFFFFF))
+        pillBg.setColor(withOpacity(glassFillColor))
+        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
         pillGlass = barGlass ?: o.glass
-        glyph.color = 0xE6FFFFFF.toInt()
-        field.setHintTextColor(0xB3FAFAFA.toInt())
+        glyph.color = 0xCCFFFFFF.toInt()
+        field.setHintTextColor(0x8CFFFFFF.toInt())
         pill.elevation = 0f
     }
 
@@ -985,7 +989,7 @@ class AppsSearch(
         private val MARKS = Regex("\\p{Mn}+")
         private const val KEY_CONTACTS_DECLINED = "contacts_declined"
         private const val INVITE_ID = -1L
-        private const val MAX_APPS = 5                  // 5 columns matching the mockup
+        private const val MAX_APPS = 5
         private const val MAX_WEB = 4
         const val OPEN_MS = 425L
         private const val OPEN_BAR_MS = 360L
@@ -995,29 +999,30 @@ class AppsSearch(
         private const val FADE_MS = 150L
         private const val KEYBOARD_RETRY_MS = 1500L
         private val R_ENTERABLE = com.oneuiclone.home.R.id.search_enterable
-        private val AVATAR_COLORS = intArrayOf(0xFF838891.toInt(), 0xFF6B7785.toInt(), 0xFF5B8DEF.toInt(), 0xFF3FAE7A.toInt())
+        /** Cool muted slate-grey avatar circles matching "AH" and "MK" in the mockup. */
+        private val AVATAR_COLORS = intArrayOf(0xFF7B8591.toInt(), 0xFF6E7885.toInt(), 0xFF64707D.toInt(), 0xFF737D8A.toInt())
     }
 
-    /** Circular filled × clear button on the right of the search bar. */
+    /** Soft translucent circular × clear button on the right of the search bar. */
     private class ClearButton(context: Context) : View(context) {
-        private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x66FFFFFF }
+        private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x52FFFFFF }
         private val xPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF222225.toInt()
+            color = 0xFF2C2C2E.toInt()
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
-            strokeWidth = 1.8f * context.resources.displayMetrics.density
+            strokeWidth = 1.7f * context.resources.displayMetrics.density
         }
         override fun onDraw(canvas: Canvas) {
             val cx = width / 2f; val cy = height / 2f
             val r = minOf(cx, cy)
             canvas.drawCircle(cx, cy, r, bgPaint)
-            val d = r * 0.42f
+            val d = r * 0.38f
             canvas.drawLine(cx - d, cy - d, cx + d, cy + d, xPaint)
             canvas.drawLine(cx + d, cy - d, cx - d, cy + d, xPaint)
         }
     }
 
-    /** Small right chevron ">" for headers and suggestion rows. */
+    /** Right chevron ">" for headers and suggestion rows. */
     private class ChevronGlyph(context: Context, ink: Int) : View(context) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = ink
@@ -1033,7 +1038,7 @@ class AppsSearch(
         }
     }
 
-    /** Rounded app icon bitmap for Suggestions rows. */
+    /** Rounded app icon bitmap for Apps row and Suggestions rows. */
     private class BitmapIconView(context: Context, private val bmp: Bitmap, private val radius: Float) : View(context) {
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         private val path = Path()
@@ -1047,35 +1052,37 @@ class AppsSearch(
         }
     }
 
-    /** Circular translucent action button (Phone or Video) on Contact rows. */
+    /** Circular translucent action button (Phone handset or Video camera) on Contact rows. */
     private class ActionCircleButton(context: Context, private val kind: Int) : View(context) {
         companion object { const val PHONE = 0; const val VIDEO = 1 }
-        private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x26FFFFFF }
-        private val fg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xF2FFFFFF.toInt(); style = Paint.Style.FILL }
-        private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xF2FFFFFF.toInt()
-            style = Paint.Style.STROKE
-            strokeWidth = 1.6f * context.resources.displayMetrics.density
-            strokeCap = Paint.Cap.ROUND
-            strokeJoin = Paint.Join.ROUND
+        private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x22FFFFFF }
+        private val fg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFFFFFFF.toInt()
+            style = Paint.Style.FILL
         }
         override fun onDraw(canvas: Canvas) {
             val cx = width / 2f; val cy = height / 2f
             val r = minOf(cx, cy)
             canvas.drawCircle(cx, cy, r, bg)
-            val s = r * 0.48f
+            val s = r * 0.46f
             if (kind == PHONE) {
+                val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = 0xFFFFFFFF.toInt()
+                    style = Paint.Style.STROKE
+                    strokeWidth = s * 0.42f
+                    strokeCap = Paint.Cap.ROUND
+                }
                 canvas.save()
-                canvas.rotate(-35f, cx, cy)
-                canvas.drawRoundRect(cx - s * 0.85f, cy - s * 0.3f, cx + s * 0.85f, cy + s * 0.3f, s * 0.25f, s * 0.25f, fg)
+                canvas.rotate(135f, cx, cy)
+                canvas.drawArc(cx - s * 0.85f, cy - s * 0.55f, cx + s * 0.85f, cy + s * 0.55f, 200f, 140f, false, p)
                 canvas.restore()
             } else {
-                canvas.drawRoundRect(cx - s * 0.95f, cy - s * 0.55f, cx + s * 0.35f, cy + s * 0.55f, s * 0.22f, s * 0.22f, fg)
+                canvas.drawRoundRect(cx - s * 0.9f, cy - s * 0.52f, cx + s * 0.3f, cy + s * 0.52f, s * 0.22f, s * 0.22f, fg)
                 val tri = Path().apply {
-                    moveTo(cx + s * 0.45f, cy - s * 0.25f)
-                    lineTo(cx + s * 0.95f, cy - s * 0.45f)
-                    lineTo(cx + s * 0.95f, cy + s * 0.45f)
-                    lineTo(cx + s * 0.45f, cy + s * 0.25f)
+                    moveTo(cx + s * 0.35f, cy - s * 0.2f)
+                    lineTo(cx + s * 0.9f, cy - s * 0.45f)
+                    lineTo(cx + s * 0.9f, cy + s * 0.45f)
+                    lineTo(cx + s * 0.35f, cy + s * 0.2f)
                     close()
                 }
                 canvas.drawPath(tri, fg)
@@ -1083,7 +1090,7 @@ class AppsSearch(
         }
     }
 
-    /** Contact photo in a circle, or two-letter initials ("AH", "MK") matching the mockup. */
+    /** Contact photo in a circle, or two-letter initials ("AH", "MK") on a cool slate circle. */
     private class ContactAvatar(context: Context, private val photo: Bitmap?, name: String, private val color: Int) : View(context) {
         private val letters = name.trim().split(' ').filter { it.isNotEmpty() }.let { parts ->
             when {
@@ -1111,7 +1118,7 @@ class AppsSearch(
                 canvas.drawArc(r * 0.42f, r * 1.18f, r * 1.58f, r * 2.2f, 180f, 180f, true, paint)
                 return
             }
-            paint.textSize = r * 0.78f
+            paint.textSize = r * 0.72f
             paint.textAlign = Paint.Align.CENTER
             paint.typeface = Fonts.ui(context, 500)
             val fm = paint.fontMetrics
