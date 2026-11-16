@@ -14,11 +14,24 @@ import com.oneuiclone.home.device.DeviceProfile
 internal const val SEARCH_GLASS_INK = 0xE6FFFFFF.toInt()
 private const val NIGHT_GLASS_BG = 0xFF1C1C1E.toInt()
 
-/** Tint of a glass pill: always dark charcoal grey even in light mode; [transparency] 0..1. */
-internal fun searchGlassFill(@Suppress("UNUSED_PARAMETER") context: Context, transparency: Float): Int {
-    val base = 0xFF1E1E22.toInt()
-    val alpha = (255 * (1f - transparency * 0.45f)).toInt().coerceIn(135, 220)
-    return (base and 0x00FFFFFF) or (alpha shl 24)
+/** Search bar palette: frosted translucent glass matching the Spotlight mockup. */
+class SearchColors private constructor(
+    val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
+) {
+    companion object {
+        private val FROSTED = SearchColors(
+            pill = 0x2EFFFFFF,
+            homePill = 0x2EFFFFFF,
+            open = 0x2EFFFFFF,
+            stroke = 0x24FFFFFF,
+            hint = 0x99FFFFFF.toInt(),
+            text = 0xFFFFFFFF.toInt()
+        )
+
+        fun dark() = FROSTED
+
+        fun of(@Suppress("UNUSED_PARAMETER") context: Context) = FROSTED
+    }
 }
 
 /**
@@ -120,13 +133,11 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
 
     override fun onDraw(canvas: Canvas) {
         if (menuIcon) {
-            // ⋮ (SupportFloatingMoreMenu), centred in the square it is given
             val cx = width / 2f; val cy = height / 2f
             for (i in -1..1) canvas.drawCircle(cx, cy + i * dp.dp(6f), dp.dp(2.2f), dots)
             return
         }
-        val liquid = glass != null && LiquidGlass.enabled
-        val gap = if (liquid) dp.dp(0.8f) else inset
+        val gap = inset
         rect.set(gap, gap, width - gap, height - gap)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
@@ -135,16 +146,15 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
-        border.strokeWidth = dp.dp(if (liquid) 1.5f else 1f)                   // a slightly thick border with liquid glass
+        border.strokeWidth = maxOf(1f, dp.dp(0.75f))
+        border.color = scaled(0x24FFFFFF)
         canvas.drawRoundRect(rect, r, r, border)
-        if (liquid) rim.draw(canvas, rect, r, dp.dp(LiquidGlass.RIM_DP), 0.75f * backgroundOpacity)
-        // magnifier glyph (24dp box)
-        val box = dp.dp(24f)
+        val box = dp.dp(22f)
         val gx = dp.dp(16f)
         MagnifierView.draw(canvas, gx, (height - box) / 2f, box, glyph)
         val fm = text.fontMetrics
         val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
-        canvas.drawText(hint, gx + box + dp.dp(6f), baseline, text)
+        canvas.drawText(hint, gx + box + dp.dp(8f), baseline, text)
     }
 }
 
