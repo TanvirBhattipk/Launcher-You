@@ -533,7 +533,6 @@ class WidgetManager(private val activity: Activity) {
      * A widget background ([owner]'s background or image) drawn at [opacity] over [glass].
      */
     private class GlassDrawable(inner: Drawable, private val owner: View, private val host: View) : DrawableWrapper(inner) {
-        private val rim = com.oneuiclone.home.ui.LiquidRim()
         private val box = android.graphics.RectF()
         private var opacity = 1f
         private var glass: WidgetGlass? = null
@@ -566,11 +565,8 @@ class WidgetManager(private val activity: Activity) {
             val r = bounds.right.toFloat(); val b = bounds.bottom.toFloat()
             drawnBitmap = glass?.bitmap
             locate(drawnAt)
-            val density = owner.resources.displayMetrics.density
-            val whole = host.width > 0 && (r - l) >= host.width * 0.9f && (b - t) >= host.height * 0.9f
             box.set(l, t, r, b)
-            val aimed = if (whole) glassPaint.aimLiquid(canvas, glass, drawnAt, box, 26f * density, density) else glassPaint.aim(glass, drawnAt)
-            if (aimed) {
+            if (glassPaint.aim(glass, drawnAt)) {
                 val sc = canvas.saveLayer(l, t, r, b, null)
                 super.draw(canvas)
                 canvas.drawRect(l, t, r, b, glassPaint.paint)
@@ -581,7 +577,5 @@ class WidgetManager(private val activity: Activity) {
                 super.draw(canvas)
                 canvas.restoreToCount(sc)
             }
-            if (whole && glass != null) rim.draw(canvas, box, 26f * density, com.oneuiclone.home.ui.LiquidGlass.RIM_DP * density)
         }
     }
-}
