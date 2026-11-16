@@ -87,11 +87,11 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-    /** 15% frosted translucent glass fill (0x26 = 38/255 ≈ 15%) and subtle hairline border. */
-    private val glassFillColor = 0x26FFFFFF
-    private val glassBorderColor = 0x24FFFFFF
-    private val dividerLineColor = 0x1AFFFFFF
-
+/** #BFC4C7 at 30% opacity (0x4D = 77/255 ≈ 30%) with full blur (100) for both search bar and cards. */
+    private val glassFillColor = 0x4DBFC4C7
+    private val glassBorderColor = 0x1FBFC4C7
+    private val dividerLineColor = 0x1FBFC4C7
+    
     private val field = EditText(context)
     private val pill = FrameLayout(context)
     private val pillBg = GradientDrawable()
@@ -155,8 +155,8 @@ class AppsSearch(
                 transformMatrixToGlobal(toWindow)
                 rect.set(0f, 0f, width.toFloat(), height.toFloat())
                 val r = dp.dp(24f)
-                if (glassPaint.aimLiquid(canvas, g, toWindow, rect, r, dp.dp(1f))) {
-                    glassPaint.paint.alpha = (255 * barOpacity).toInt()
+               if (glassPaint.aimLiquid(canvas, g, toWindow, rect, r, dp.dp(1f))) {
+                    glassPaint.paint.alpha = 255
                     canvas.drawRoundRect(rect, r, r, glassPaint.paint)
                 }
             }
@@ -175,8 +175,8 @@ class AppsSearch(
             pillGlass?.let { g ->
                 toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
                 rect.set(bounds)
-                if (glassPaint.aimLiquid(canvas, g, toWindow, rect, pillBg.cornerRadius, dp.dp(1f))) {
-                    glassPaint.paint.alpha = (255 * barOpacity).toInt()
+               if (glassPaint.aimLiquid(canvas, g, toWindow, rect, pillBg.cornerRadius, dp.dp(1f))) {
+                    glassPaint.paint.alpha = 255
                     canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
                 }
             }
@@ -217,7 +217,6 @@ class AppsSearch(
                     retargetKeyboard(end.toFloat(), animation.durationMillis.takeIf { it > 0 } ?: Easing.IME_DURATION)
                 } else {
                     retargetKeyboard(0f, 0L)
-                    if (keyboardComing && SystemClock.uptimeMillis() - openedAt > 700L) post { if (isOpen) onDismiss() }
                 }
             }
             return bounds
@@ -855,16 +854,18 @@ class AppsSearch(
             lp.width = dp.searchBarWidth; lp.height = h
             pill.layoutParams = lp
         }
-        // Darken the blurred wallpaper behind search by 30% (0x4D = 77/255 ≈ 30%)
-        val dimAlpha = (0x4D * f.coerceIn(0f, 1f)).toInt()
-        setBackgroundColor((dimAlpha shl 24) or 0x00000000)
+// Wallpaper dim overlay: color #14171A at 40% opacity (0x66 = 102/255 = 40%)
+        val dimAlpha = (0x66 * f.coerceIn(0f, 1f)).toInt()
+        setBackgroundColor((dimAlpha shl 24) or 0x0014171A)
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        pillBg.setColor(withOpacity(glassFillColor))
-        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
+        // Search bar: #BFC4C7 at 30% opacity (0x4D) + subtle #BFC4C7 border
+        pillBg.setColor(glassFillColor)
+        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
+        
         pillGlass = barGlass ?: o.glass
         appsCard.syncWithBar()
         contactsCard.syncWithBar()
