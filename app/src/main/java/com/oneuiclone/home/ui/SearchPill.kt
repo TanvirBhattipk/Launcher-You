@@ -117,7 +117,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         )
     }
 
-    override fun onDraw(canvas: Canvas) {
+override fun onDraw(canvas: Canvas) {
         if (menuIcon) {
             val cx = width / 2f; val cy = height / 2f
             for (i in -1..1) canvas.drawCircle(cx, cy + i * dp.dp(6f), dp.dp(2.2f), dots)
@@ -127,13 +127,13 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         rect.set(gap, gap, width - gap, height - gap)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
-        if (glassPaint.aimLiquid(canvas, glass, drawnAt, rect, r, dp.dp(1f))) {
+        if (glassPaint.aim(glass, drawnAt)) {
             glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
         border.strokeWidth = maxOf(1f, dp.dp(0.75f))
-        border.color = scaled(0x1FBFC4C7)
+        border.color = scaled(0x1AFFFFFF)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
@@ -144,17 +144,17 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-/** Search bar palette: #BFC4C7 at 30% opacity with subtle border. */
+/** Search bar palette: blur 100 with #808080 at 10% opacity (no Liquid Glass). */
 class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
         private val FROSTED = SearchColors(
-            pill = 0x4DBFC4C7,
-            homePill = 0x4DBFC4C7,
-            open = 0x4DBFC4C7,
-            stroke = 0x1FBFC4C7,
-            hint = 0xCCFFFFFF.toInt(),
+            pill = 0x1A808080,
+            homePill = 0x1A808080,
+            open = 0x1A808080,
+            stroke = 0x1AFFFFFF,
+            hint = 0xB3FFFFFF.toInt(),
             text = 0xFFFFFFFF.toInt()
         )
 
