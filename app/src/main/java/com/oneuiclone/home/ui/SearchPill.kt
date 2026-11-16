@@ -144,15 +144,15 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-/** Search bar palette: frosted translucent glass matching the Spotlight mockup. */
+/** Search bar palette: 15% frosted translucent glass matching the Spotlight cards. */
 class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
         private val FROSTED = SearchColors(
-            pill = 0x2EFFFFFF,
-            homePill = 0x2EFFFFFF,
-            open = 0x2EFFFFFF,
+            pill = 0x26FFFFFF,
+            homePill = 0x26FFFFFF,
+            open = 0x26FFFFFF,
             stroke = 0x24FFFFFF,
             hint = 0x99FFFFFF.toInt(),
             text = 0xFFFFFFFF.toInt()
