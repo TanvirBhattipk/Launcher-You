@@ -122,7 +122,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private val barGlass = com.oneuiclone.home.ui.WidgetGlass()
     private val glasses = listOf(widgetGlass, folderGlass, pillGlass, barGlass)
     init {
-        com.oneuiclone.home.ui.LiquidGlass.enabled = prefs.liquidGlass
+        com.oneuiclone.home.ui.LiquidGlass.enabled = false
         val d = activity.resources.displayMetrics.density
         widgetGlass.radiusPx = prefs.blurWidget * d; folderGlass.radiusPx = prefs.blurFolder * d
         pillGlass.radiusPx = prefs.blurHomePill * d; barGlass.radiusPx = prefs.blurSearchBar * d
@@ -136,7 +136,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     /** Settings › Liquid glass, read again: each glass's blur radius, the Apps screen's and search page's, and the liquid effect. */
     private fun applyGlassPrefs() {
         val d = activity.resources.displayMetrics.density
-        com.oneuiclone.home.ui.LiquidGlass.enabled = prefs.liquidGlass
+        com.oneuiclone.home.ui.LiquidGlass.enabled = false
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
         pillGlass.setRadius(prefs.blurHomePill * d, wallpaper); barGlass.setRadius(prefs.blurSearchBar * d, wallpaper)
         background.appsRadiusPx = prefs.blurAppDrawer * d; background.searchRadiusPx = prefs.blurAppSearch * d
@@ -1768,7 +1768,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             else -> null
         }
         // Aura, Shutter, Orbit… are drawn by Launchii's live wallpaper; with another wallpaper they're Zoom In
-        val effect = if (look != null && !look.translucent && com.oneuiclone.home.ui.LiveWallpaper.drives) prefs.openEffect else null
+        val effect: com.oneuiclone.home.ui.LiveWallpaper.Kind? = null
         val zoomIn = look != null && !look.translucent && effect == null
         AnimLog.log("tap $label " + (if (hold) "during close (window ${closingFor}ms left) -> hold" else "-> start now") +
             if (effect != null) " ($effect)" else if (zoomIn) " (zoom in)" else "")
@@ -2236,9 +2236,11 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
             // One UI returns to the Home screen after an app is left with the home gesture.
             if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
-homeLayer.pivotX = homeLayer.width / 2f
+            homeLayer.pivotX = homeLayer.width / 2f
             homeLayer.pivotY = homeLayer.height / 2f
-            homeLayer.scaleX = 1f; homeLayer.scaleY = 1f
+            homeLayer.alpha = 1f
+            homeLayer.scaleX = 1f; homeLayer.scaleY = 1f; centrePivot(homeLayer)
+            appsLayer.alpha = 1f
             appsLayer.scaleX = 1f; appsLayer.scaleY = 1f; centrePivot(appsLayer)
             // The way back is drawn by the system (recents / back) over the real wallpaper, so keep our copy at
             // rest while away; playReturnAnimation() brings the zoom back in step with the close.
@@ -2302,9 +2304,7 @@ homeLayer.pivotX = homeLayer.width / 2f
             setupProfile(root.width, root.height)
         }
         wallpaper.reloadIfChanged()
-        // back from granting Wallpaper access (All files access): read the wallpaper now
-        if (!wallpaper.available && android.os.Environment.isExternalStorageManager()) wallpaper.reload()
-                syncBlurredWallpaper()
+        if (!wallpaper.available) wallpaper.reload()
         if (state.state == StateController.State.HOME && !state.isTransitioning && search == null && !edit.isActive && !folders.isOpen && quickOpen == null) {
             background.set(BackgroundController.Kind.NONE, 0f)
         }
@@ -2320,12 +2320,8 @@ homeLayer.pivotX = homeLayer.width / 2f
      */
     private var blurRestored = false
     private fun syncBlurredWallpaper() {
-        if (blurRestored) return
-        blurRestored = true
-        // a wallpaper blur baked in by an earlier version is undone once (the sharp original is put back)
-        com.oneuiclone.home.ui.WallpaperBlur.apply(activity, 0f) {
-            if (it == com.oneuiclone.home.ui.WallpaperBlur.Result.DONE) wallpaper.reload()
-        }
+        // Keep the user's existing device wallpaper untouched when Launcher You becomes default Home
+    }
     }
 
     /**
