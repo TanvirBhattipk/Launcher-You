@@ -89,11 +89,6 @@ class SetupActivity : OneUiPage() {
         listOf(
             Step("Make $appName your Home app", "So Home and the home gesture bring you here.", GLYPH_HOME, 0xFF7C4DFF.toInt(),
                 ::isHome, "Set") { askHome() },
-            Step("Wallpaper access", "Lets $appName read your wallpaper itself, so it can blur it behind the Apps screen with no need to set it again. Turn on All files access.",
-                GLYPH_WALLPAPER, 0xFFE8507D.toInt(), { android.os.Environment.isExternalStorageManager() || WallpaperLayer.hasOwnCopy(this) }, "Allow") {
-                open(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName")),
-                    Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-            },
             Step("Notifications and bubbles", "Open apps in floating bubbles from their touch and hold menu.",
                 GLYPH_BUBBLE, 0xFFF5923E.toInt(), { AppBubbles.ready(this) }, "Allow") {
                 prefs.appBubbles = true
@@ -113,7 +108,6 @@ class SetupActivity : OneUiPage() {
                 { checkSelfPermission(android.Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED }, "Allow") { askContacts() },
         )
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs.setupShown = true
@@ -152,11 +146,11 @@ class SetupActivity : OneUiPage() {
 
         card {
             header("Get started")
-            steps.take(2).forEach { stepRow(it) }
+            steps.take(1).forEach { stepRow(it) }
         }
         card {
             header("Permissions")
-            steps.drop(2).forEach { stepRow(it) }
+            steps.drop(1).forEach { stepRow(it) }
         }
         list.addView(TextView(this).apply {
             text = "$done of ${steps.size} done"
