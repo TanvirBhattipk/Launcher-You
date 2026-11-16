@@ -14,29 +14,16 @@ import com.oneuiclone.home.device.DeviceProfile
 internal const val SEARCH_GLASS_INK = 0xE6FFFFFF.toInt()
 private const val NIGHT_GLASS_BG = 0xFF1C1C1E.toInt()
 
-/** Search bar palette: frosted translucent glass matching the Spotlight mockup. */
-class SearchColors private constructor(
-    val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
-) {
-    companion object {
-        private val FROSTED = SearchColors(
-            pill = 0x2EFFFFFF,
-            homePill = 0x2EFFFFFF,
-            open = 0x2EFFFFFF,
-            stroke = 0x24FFFFFF,
-            hint = 0x99FFFFFF.toInt(),
-            text = 0xFFFFFFFF.toInt()
-        )
-
-        fun dark() = FROSTED
-
-        fun of(@Suppress("UNUSED_PARAMETER") context: Context) = FROSTED
-    }
+/** Tint of a glass pill (the folder-glass look of [HomeSearchButton]); [transparency] 0..1. */
+internal fun searchGlassFill(context: Context, transparency: Float): Int {
+    val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    val base = if (night) NIGHT_GLASS_BG else FolderIconView.DEFAULT_BG
+    return (base and 0x00FFFFFF) or ((android.graphics.Color.alpha(base) * (1f - transparency)).toInt() shl 24)
 }
 
 /**
- * The apps-screen search bar: full width, drawn exactly like the Home screen's Search button (the same glass,
- * tint and thin border), with the hint and magnifier inside. With [menuIcon] it is only the ⋮ glyph: the menu button
+ * The apps-screen search bar: full width, drawn like the Home screen's Search button (the same glass,
+ * tint and subtle border), with the hint and magnifier inside. With [menuIcon] it is only the ⋮ glyph: the menu button
  * that sits inside the bar's right end (no background of its own).
  */
 class SearchPill(context: Context, private val dp: DeviceProfile, private val hint: String, private val menuIcon: Boolean = false) : View(context) {
@@ -44,7 +31,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = dp.dp(1f)
+        strokeWidth = maxOf(1f, dp.dp(0.75f))
     }
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 15f * resources.displayMetrics.scaledDensity
@@ -78,7 +65,6 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     private fun scaled(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * backgroundOpacity).toInt() shl 24)
 
     private val glassPaint = GlassPaint()
-    private val rim = LiquidRim()
     private val toWindow = Matrix()
     private val drawnAt = Matrix()
     private val moved = ViewTreeObserver.OnPreDrawListener {
@@ -110,9 +96,9 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         baseStroke = c.stroke
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)
-        text.color = if (glass != null) SEARCH_GLASS_INK else c.hint
-        glyph.color = text.color
-        dots.color = text.color
+        text.color = c.hint
+        glyph.color = c.text
+        dots.color = c.text
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -127,7 +113,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         return AppsSearch.Origin(
             RectF(left + i, top + i, left + dp.searchBarWidth - i, top + dp.searchBarHeight - i), baseFill, baseStroke, 0f,
             dp.dp(16f) - i, dp.dp(24f), dp.dp(16f + 24f + 6f) - i, text.textSize,
-            glass, if (glass != null) text.color else null,
+            glass, text.color,
         )
     }
 
@@ -158,22 +144,22 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-/** Search bar palette: dark charcoal smoked glass in both light and dark modes. */
+/** Search bar palette: frosted translucent glass matching the Spotlight mockup. */
 class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
-        private val DARK_GREY = SearchColors(
-            pill = 0x8A1E1E22.toInt(),
-            homePill = 0x8A1E1E22.toInt(),
-            open = 0x8A1E1E22.toInt(),
-            stroke = 0x16FFFFFF,
+        private val FROSTED = SearchColors(
+            pill = 0x2EFFFFFF,
+            homePill = 0x2EFFFFFF,
+            open = 0x2EFFFFFF,
+            stroke = 0x24FFFFFF,
             hint = 0x99FFFFFF.toInt(),
             text = 0xFFFFFFFF.toInt()
         )
 
-        fun dark() = DARK_GREY
+        fun dark() = FROSTED
 
-        fun of(@Suppress("UNUSED_PARAMETER") context: Context) = DARK_GREY
+        fun of(@Suppress("UNUSED_PARAMETER") context: Context) = FROSTED
     }
 }
