@@ -87,10 +87,10 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-/** #BFC4C7 at 30% opacity (0x4D = 77/255 ≈ 30%) with full blur (100) for both search bar and cards. */
-    private val glassFillColor = 0x4DBFC4C7
-    private val glassBorderColor = 0x1FBFC4C7
-    private val dividerLineColor = 0x1FBFC4C7
+/** #808080 at 10% opacity (0x1A = 26/255 ≈ 10%) with blur 100 for both search bar and cards. */
+    private val glassFillColor = 0x1A808080
+    private val glassBorderColor = 0x1AFFFFFF
+    private val dividerLineColor = 0x1AFFFFFF
     
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -126,7 +126,7 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-    /** Smoked glass card container matching the search bar's exact fill, border, and blurred glass. */
+    /** Frosted glass card container with 24dp corners, blur 100 backdrop, and #808080 10% tint (no Liquid Glass). */
     private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         private val cardBg = GradientDrawable()
         private val glassPaint = GlassPaint()
@@ -143,24 +143,39 @@ class AppsSearch(
 
         fun syncWithBar() {
             cardBg.cornerRadius = dp.dp(24f)
-            cardBg.setColor(withOpacity(glassFillColor))
-            cardBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
+            cardBg.setColor(glassFillColor)
+            cardBg.setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
             invalidate()
         }
 
         override fun onDraw(canvas: Canvas) {
             val g = pillGlass ?: barGlass
-            if (g != null) {
-                toWindow.reset()
-                transformMatrixToGlobal(toWindow)
+            if (g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
                 rect.set(0f, 0f, width.toFloat(), height.toFloat())
                 val r = dp.dp(24f)
-               if (glassPaint.aimLiquid(canvas, g, toWindow, rect, r, dp.dp(1f))) {
-                    glassPaint.paint.alpha = 255
-                    canvas.drawRoundRect(rect, r, r, glassPaint.paint)
-                }
+                glassPaint.paint.alpha = 255
+                canvas.drawRoundRect(rect, r, r, glassPaint.paint)
             }
             super.onDraw(canvas)
+        }
+    }
+
+    /** Frosted glass search bar pill with blur 100 and #808080 10% tint (no Liquid Glass). */
+    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+        private val glassPaint = GlassPaint()
+        private val toWindow = android.graphics.Matrix()
+        private val rect = RectF()
+
+        override fun draw(canvas: Canvas) {
+            pillGlass?.let { g ->
+                toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
+                rect.set(bounds)
+                if (glassPaint.aim(g, toWindow)) {
+                    glassPaint.paint.alpha = 255
+                    canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
+                }
+            }
+            super.draw(canvas)
         }
     }
 
@@ -854,15 +869,15 @@ class AppsSearch(
             lp.width = dp.searchBarWidth; lp.height = h
             pill.layoutParams = lp
         }
-// Wallpaper dim overlay: color #14171A at 40% opacity (0x66 = 102/255 = 40%)
-        val dimAlpha = (0x66 * f.coerceIn(0f, 1f)).toInt()
-        setBackgroundColor((dimAlpha shl 24) or 0x0014171A)
+// Wallpaper dim overlay: color #808080 at 30% opacity (0x4D = 77/255 ≈ 30%)
+        val dimAlpha = (0x4D * f.coerceIn(0f, 1f)).toInt()
+        setBackgroundColor((dimAlpha shl 24) or 0x00808080)
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        // Search bar: #BFC4C7 at 30% opacity (0x4D) + subtle #BFC4C7 border
+        // Search bar: blur 100 + #808080 at 10% opacity (0x1A)
         pillBg.setColor(glassFillColor)
         pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
         
