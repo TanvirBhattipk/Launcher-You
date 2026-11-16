@@ -87,10 +87,10 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-   /** Always dark grey smoked-glass fill and subtle border in both light and dark modes. */
-    private val glassFillColor = 0x8A1E1E22.toInt()
-    private val glassBorderColor = 0x16FFFFFF
-    private val dividerLineColor = 0x16FFFFFF
+   /** Original frosted translucent glass fill and subtle border (as in Image 2) over the darkened backdrop. */
+    private val glassFillColor = 0x2EFFFFFF
+    private val glassBorderColor = 0x24FFFFFF
+    private val dividerLineColor = 0x1AFFFFFF
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -855,11 +855,14 @@ class AppsSearch(
             lp.width = dp.searchBarWidth; lp.height = h
             pill.layoutParams = lp
         }
+        // Darken the blurred wallpaper behind search (so light wallpapers match Image 2's dark backdrop)
+        val dimAlpha = (0x6B * f.coerceIn(0f, 1f)).toInt()
+        setBackgroundColor((dimAlpha shl 24) or 0x00121215)
+
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        // Lock both search bar and cards to the same dark grey fill & subtle border even in Light Mode
         pillBg.setColor(withOpacity(glassFillColor))
         pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
         pillGlass = barGlass ?: o.glass
