@@ -579,3 +579,4 @@ class WidgetManager(private val activity: Activity) {
             }
         }
     }
+}
