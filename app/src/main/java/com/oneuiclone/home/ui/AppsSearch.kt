@@ -87,8 +87,8 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-   /** Original frosted translucent glass fill and subtle border (as in Image 2) over the darkened backdrop. */
-    private val glassFillColor = 0x2EFFFFFF
+    /** 15% frosted translucent glass fill (0x26 = 38/255 ≈ 15%) and subtle hairline border. */
+    private val glassFillColor = 0x26FFFFFF
     private val glassBorderColor = 0x24FFFFFF
     private val dividerLineColor = 0x1AFFFFFF
 
@@ -855,9 +855,9 @@ class AppsSearch(
             lp.width = dp.searchBarWidth; lp.height = h
             pill.layoutParams = lp
         }
-        // Darken the blurred wallpaper behind search (so light wallpapers match Image 2's dark backdrop)
-        val dimAlpha = (0x6B * f.coerceIn(0f, 1f)).toInt()
-        setBackgroundColor((dimAlpha shl 24) or 0x00121215)
+        // Darken the blurred wallpaper behind search by 30% (0x4D = 77/255 ≈ 30%)
+        val dimAlpha = (0x4D * f.coerceIn(0f, 1f)).toInt()
+        setBackgroundColor((dimAlpha shl 24) or 0x00000000)
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
