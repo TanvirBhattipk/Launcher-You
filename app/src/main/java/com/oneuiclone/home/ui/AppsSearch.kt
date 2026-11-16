@@ -179,26 +179,6 @@ class AppsSearch(
         }
     }
 
-
-    /** Smoked glass search bar pill with subtle 0.75dp border (no double-stacked bright rim). */
-    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
-        private val glassPaint = GlassPaint()
-        private val toWindow = Matrix()
-        private val rect = RectF()
-
-        override fun draw(canvas: Canvas) {
-            pillGlass?.let { g ->
-                toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
-                rect.set(bounds)
-               if (glassPaint.aimLiquid(canvas, g, toWindow, rect, pillBg.cornerRadius, dp.dp(1f))) {
-                    glassPaint.paint.alpha = 255
-                    canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
-                }
-            }
-            super.draw(canvas)
-        }
-    }
-
     var isOpen = false; private set
     private var f = 0f
     private var anim: ValueAnimator? = null
