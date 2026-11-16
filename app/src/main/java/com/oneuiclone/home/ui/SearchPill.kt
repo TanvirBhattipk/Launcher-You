@@ -14,11 +14,11 @@ import com.oneuiclone.home.device.DeviceProfile
 internal const val SEARCH_GLASS_INK = 0xE6FFFFFF.toInt()
 private const val NIGHT_GLASS_BG = 0xFF1C1C1E.toInt()
 
-/** Tint of a glass pill (the folder-glass look of [HomeSearchButton]); [transparency] 0..1. */
-internal fun searchGlassFill(context: Context, transparency: Float): Int {
-    val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    val base = if (night) NIGHT_GLASS_BG else FolderIconView.DEFAULT_BG
-    return (base and 0x00FFFFFF) or ((android.graphics.Color.alpha(base) * (1f - transparency)).toInt() shl 24)
+/** Tint of a glass pill: always dark charcoal grey even in light mode; [transparency] 0..1. */
+internal fun searchGlassFill(@Suppress("UNUSED_PARAMETER") context: Context, transparency: Float): Int {
+    val base = 0xFF1E1E22.toInt()
+    val alpha = (255 * (1f - transparency * 0.45f)).toInt().coerceIn(135, 220)
+    return (base and 0x00FFFFFF) or (alpha shl 24)
 }
 
 /**
@@ -148,18 +148,22 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-/** Search bar palette: frosted dark-glass pill with subtle specular border matching the Spotlight mockup. */
+/** Search bar palette: dark charcoal smoked glass in both light and dark modes. */
 class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
-        private val DAY = SearchColors(0x522A2A2E.toInt(), 0x472A2A2E.toInt(), 0x662A2A2E.toInt(), 0x3DFFFFFF, 0xCCFAFAFA.toInt(), 0xFFFFFFFF.toInt())
-        private val NIGHT = SearchColors(0x522A2A2E.toInt(), 0x472A2A2E.toInt(), 0x662A2A2E.toInt(), 0x3DFFFFFF, 0xCCFAFAFA.toInt(), 0xFFFFFFFF.toInt())
+        private val DARK_GREY = SearchColors(
+            pill = 0x8A1E1E22.toInt(),
+            homePill = 0x8A1E1E22.toInt(),
+            open = 0x8A1E1E22.toInt(),
+            stroke = 0x16FFFFFF,
+            hint = 0x99FFFFFF.toInt(),
+            text = 0xFFFFFFFF.toInt()
+        )
 
-        /** The dark palette, whatever the theme (the search page is dark in light mode too). */
-        fun dark() = NIGHT
+        fun dark() = DARK_GREY
 
-        fun of(context: Context) = if ((context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-            Configuration.UI_MODE_NIGHT_YES) NIGHT else DAY
+        fun of(@Suppress("UNUSED_PARAMETER") context: Context) = DARK_GREY
     }
 }
