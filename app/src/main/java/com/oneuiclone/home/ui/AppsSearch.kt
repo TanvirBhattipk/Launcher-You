@@ -87,11 +87,10 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-    private val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    /** Shared fill and border colors so the Search bar, Apps card, Contacts card, and Suggestions card are identical. */
-    private val glassFillColor get() = SearchColors.of(context).homePill
-    private val glassBorderColor get() = SearchColors.of(context).stroke
-    private val dividerLineColor = if (isNight) 0x12FFFFFF else 0x18FFFFFF
+   /** Always dark grey smoked-glass fill and subtle border in both light and dark modes. */
+    private val glassFillColor = 0x8A1E1E22.toInt()
+    private val glassBorderColor = 0x16FFFFFF
+    private val dividerLineColor = 0x16FFFFFF
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -143,11 +142,9 @@ class AppsSearch(
         }
 
         fun syncWithBar() {
-            val fill = if (::origin.isInitialized) withOpacity(origin.fill) else withOpacity(glassFillColor)
-            val stroke = if (::origin.isInitialized) withOpacity(origin.stroke) else withOpacity(glassBorderColor)
             cardBg.cornerRadius = dp.dp(24f)
-            cardBg.setColor(fill)
-            cardBg.setStroke(maxOf(1, dp.dpi(0.75f)), stroke)
+            cardBg.setColor(withOpacity(glassFillColor))
+            cardBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
             invalidate()
         }
 
@@ -318,7 +315,7 @@ class AppsSearch(
         contactsCard.addView(contactsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp.dpi(6f)
         })
-        content.addView(contactsCard, cardParams(top = dp.dpi(10f)))
+        content.addView(contactsCard, cardParams(top = dp.dpi(14f)))
 
         // 3. Suggestions Card ("Suggestions" + rows with full-width dividers)
         suggestionsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
@@ -329,7 +326,7 @@ class AppsSearch(
         suggestionsCard.addView(suggestionsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp.dpi(6f)
         })
-        content.addView(suggestionsCard, cardParams(top = dp.dpi(10f)))
+        content.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
 
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply { topMargin = contentTop() })
         addView(pill, LayoutParams(dp.searchBarWidth, dp.searchBarHeight))
@@ -845,10 +842,11 @@ class AppsSearch(
     // ---------------------------------------------------------------------------------------------
 
     private fun barTop() = dp.searchBarTop.toFloat()
-    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(10f)
+    /** Slightly larger gap (18dp) between the bottom of the search bar and the top of the first card. */
+    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(18f)
     private fun withOpacity(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * barOpacity).toInt() shl 24)
 
-        private fun layoutPill() {
+    private fun layoutPill() {
         if (!::origin.isInitialized) return
         val o = origin
         val h = dp.searchBarHeight
@@ -861,14 +859,15 @@ class AppsSearch(
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        pillBg.setColor(withOpacity(o.fill))
-        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(o.stroke))
+        // Lock both search bar and cards to the same dark grey fill & subtle border even in Light Mode
+        pillBg.setColor(withOpacity(glassFillColor))
+        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), withOpacity(glassBorderColor))
         pillGlass = barGlass ?: o.glass
         appsCard.syncWithBar()
         contactsCard.syncWithBar()
         suggestionsCard.syncWithBar()
         glyph.color = 0xCCFFFFFF.toInt()
-        field.setHintTextColor(0x8CFFFFFF.toInt())
+        field.setHintTextColor(0x99FFFFFF.toInt())
         pill.elevation = 0f
     }
 
