@@ -133,7 +133,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         }
         canvas.drawRoundRect(rect, r, r, fill)
         border.strokeWidth = maxOf(1f, dp.dp(0.75f))
-        border.color = scaled(0x24FFFFFF)
+        border.color = scaled(0x1FBFC4C7)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
@@ -144,17 +144,17 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-/** Search bar palette: 15% frosted translucent glass matching the Spotlight cards. */
+/** Search bar palette: #BFC4C7 at 30% opacity with subtle border. */
 class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
         private val FROSTED = SearchColors(
-            pill = 0x26FFFFFF,
-            homePill = 0x26FFFFFF,
-            open = 0x26FFFFFF,
-            stroke = 0x24FFFFFF,
-            hint = 0x99FFFFFF.toInt(),
+            pill = 0x4DBFC4C7,
+            homePill = 0x4DBFC4C7,
+            open = 0x4DBFC4C7,
+            stroke = 0x1FBFC4C7,
+            hint = 0xCCFFFFFF.toInt(),
             text = 0xFFFFFFFF.toInt()
         )
 
