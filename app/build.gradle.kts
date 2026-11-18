@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // Play upload key (signing/, kept out of version control). Without it, release builds fall back to the debug key.
@@ -30,6 +31,10 @@ android {
         }
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -54,4 +59,13 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     // installs src/main/baseline-prof.txt for sideloaded APKs (no Play cloud profiles)
     implementation("androidx.profileinstaller:profileinstaller:1.4.0")
+
+    // Jetpack Compose (compatible with compileSdk 36)
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
+    implementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.12.4")
 }
