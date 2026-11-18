@@ -2207,7 +2207,18 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         leftHomeAt = System.currentTimeMillis()
         BadgeService.removeListener(badgeListener)
     }
-
+/** Closes and removes the search overlay immediately (used after an app launch covers or finishes). */
+    private fun dismissSearchImmediately() {
+        val s = search ?: return
+        s.animate().cancel()
+        s.scaleX = 1f; s.scaleY = 1f; centrePivot(s)
+        s.visibility = View.INVISIBLE
+        s.close()
+        searchPill.animate().cancel(); searchPill.alpha = 1f
+        homeSearch.visibility = View.VISIBLE
+        if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
+        restoreAppsChrome()
+    }
     fun onStop() {
         com.oneuiclone.home.widgets.SplitLaunch.homeStopped()   // a split's top app covers Home: the bottom one can go
         searchSources.refresh { refreshSuggested() }   // Home is off screen: suggestions can change unseen
@@ -2228,6 +2239,14 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             lastLaunchedApp = null
             lastWidgetLaunch = null
             AnimLog.log("stopped without a launch: return animation armed")
+            if (pendingReturnAnim) {
+            contentAnim?.cancel()
+            dismissSearchImmediately()
+            // A folder the app was opened from closes out of sight, so the way back lands on its icon.
+            if (folders.isOpen) folders.close(animate = false)
+            overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
+            // One UI returns to the Home screen after an app is left with the home gesture.
+            if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
         }
         if (pendingReturnAnim) {
             contentAnim?.cancel()
@@ -2294,6 +2313,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         // back before the app covered Home (a translucent app, or one that closed at once)
         dropLaunchCard(fade = true)
         endEffect(animate = true)
+        if (pendingReturnAnim && search != null) dismissSearchImmediately()
         if (prefs.zoomInOpen || prefs.wallpaperOpen) repo?.let { r -> splashLook.prefetch(r.apps.map { it.activityInfo }) }
         centerWallpaper()
         BadgeService.addListener(badgeListener)
@@ -2312,6 +2332,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         // Launchii's live wallpaper follows Home's zoom rather than a parked one.
         if (!pendingReturnAnim && com.oneuiclone.home.ui.LiveWallpaper.drives) com.oneuiclone.home.ui.LiveWallpaper.setZoom(wallpaperZoom)
         playReturnAnimation()
+        
     }
 
     /**
