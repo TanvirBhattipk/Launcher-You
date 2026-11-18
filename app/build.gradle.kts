@@ -14,7 +14,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "app.launchii"
+        applicationId = "app.launcheryou"
         minSdk = 33
         targetSdk = 36
         versionCode = 180
