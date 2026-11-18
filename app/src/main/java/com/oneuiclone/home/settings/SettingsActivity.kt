@@ -45,7 +45,7 @@ class SettingsActivity : OneUiPage() {
     private var rebuildOnResume = false
 
     /**
-     * Opened from another launcher's app list while Launchii isn't Home: setup instead, which asks for Home along with
+     * Opened from another launcher's app list while Launcher You isn't Home: setup instead, which asks for Home along with
      * everything else, every time (not just the first).
      */
     private fun toSetupIfNotHome() {
