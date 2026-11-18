@@ -134,13 +134,12 @@ class HomeSearchButton(
         glyphLeft, glyphBox, textStart, text.textSize, glass, if (glass != null) text.color else null,
     )
 
-    override fun onDraw(canvas: Canvas) {
-        val liquid = glass != null && LiquidGlass.enabled
-        val inset = dp.dp(if (liquid) 0.8f else 0.5f)
+override fun onDraw(canvas: Canvas) {
+        val inset = dp.dp(0.5f)
         rect.set(inset, inset, width - inset, height - inset)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
-        if (glassPaint.aimLiquid(canvas, glass, drawnAt, rect, r, dp.dp(1f))) canvas.drawRoundRect(rect, r, r, glassPaint.paint)
+        if (glassPaint.aim(glass, drawnAt)) canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         canvas.drawRoundRect(rect, r, r, fill)
         if (progress >= 0f) {
             canvas.save()
@@ -148,6 +147,13 @@ class HomeSearchButton(
             canvas.drawRoundRect(rect, r, r, progressFill)
             canvas.restore()
         }
+        border.strokeWidth = maxOf(1f, dp.dp(0.75f))
+        border.color = 0x1AFFFFFF
+        canvas.drawRoundRect(rect, r, r, border)
+        icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
+        val fm = text.fontMetrics
+        canvas.drawText(label, textStart, height / 2f - (fm.ascent + fm.descent) / 2f, text)
+    }
         border.strokeWidth = dp.dp(if (liquid) 1.5f else 1f)                   // a slightly thick border with liquid glass
         canvas.drawRoundRect(rect, r, r, border)
         if (liquid) rim.draw(canvas, rect, r, dp.dp(LiquidGlass.RIM_DP))
