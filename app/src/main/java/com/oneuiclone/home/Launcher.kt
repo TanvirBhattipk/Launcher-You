@@ -2207,7 +2207,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         leftHomeAt = System.currentTimeMillis()
         BadgeService.removeListener(badgeListener)
     }
-/** Closes and removes the search overlay immediately (used after an app launch covers or finishes). */
+
+    /** Closes and removes the search overlay immediately (used after an app launch covers or finishes). */
     private fun dismissSearchImmediately() {
         val s = search ?: return
         s.animate().cancel()
@@ -2219,59 +2220,155 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
         restoreAppsChrome()
     }
+
     fun onStop() {
-        com.oneuiclone.home.widgets.SplitLaunch.homeStopped()   // a split's top app covers Home: the bottom one can go
-        searchSources.refresh { refreshSuggested() }   // Home is off screen: suggestions can change unseen
+        com.oneuiclone.home.widgets.SplitLaunch.homeStopped()
+        searchSources.refresh { refreshSuggested() }
         quickOpen?.close(animate = false)
         if (pendingLaunch != null) AnimLog.log("stopped with a held launch: dropped")
         pendingLaunch = null
         root.removeCallbacks(launchFallback)
         if (launchCard != null) AnimLog.log("zoom in: Home covered, card removed")
         dropLaunchCard(fade = false)
-        // Home is out of sight: its layer is opaque again for the close (the wallpaper drops its effect once hidden)
         effectIcon?.let { it.iconVisible = true; effectIcon = null }
-        effectContent?.let { root.removeCallbacks(effectTimeout); root.removeCallbacks(effectBars); it.animate().cancel(); it.alpha = 1f; effectContent = null; applyTextMode() }
-        // Left for an app Home didn't open (Recents, a quick switch, a notification): the way back zooms in all the same.
-        // Not for the screen going off, so unlocking doesn't play a close.
+        effectContent?.let {
+            root.removeCallbacks(effectTimeout)
+            root.removeCallbacks(effectBars)
+            it.animate().cancel()
+            it.alpha = 1f
+            effectContent = null
+            applyTextMode()
+        }
         if (RECENTS_CLOSE_ZOOM && !pendingReturnAnim && !edit.isActive && search?.isOpen != true && awake() &&
-            !activity.isChangingConfigurations) {   // recreated (new wallpaper colours): Home stays on screen
+            !activity.isChangingConfigurations) {
             pendingReturnAnim = true
             lastLaunchedApp = null
             lastWidgetLaunch = null
             AnimLog.log("stopped without a launch: return animation armed")
-            if (pendingReturnAnim) {
-            contentAnim?.cancel()
-            dismissSearchImmediately()
-            // A folder the app was opened from closes out of sight, so the way back lands on its icon.
-            if (folders.isOpen) folders.close(animate = false)
-            overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
-            // One UI returns to the Home screen after an app is left with the home gesture.
-            if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
         }
         if (pendingReturnAnim) {
             contentAnim?.cancel()
-            // A folder the app was opened from closes out of sight, so the way back lands on its icon.
+            dismissSearchImmediately()
             if (folders.isOpen) folders.close(animate = false)
             overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
-            // One UI returns to the Home screen after an app is left with the home gesture.
             if (state.state == StateController.State.APPS) state.setImmediate(StateController.State.HOME)
-            homeLayer.pivotX = homeLayer.width / 2f
-            homeLayer.pivotY = homeLayer.height / 2f
             homeLayer.alpha = 1f
             homeLayer.scaleX = 1f; homeLayer.scaleY = 1f; centrePivot(homeLayer)
             appsLayer.alpha = 1f
             appsLayer.scaleX = 1f; appsLayer.scaleY = 1f; centrePivot(appsLayer)
-            // The way back is drawn by the system (recents / back) over the real wallpaper, so keep our copy at
-            // rest while away; playReturnAnimation() brings the zoom back in step with the close.
             zoomAnim?.cancel()
             wallpaperZoom = 1f
             wallpaper.setZoom(1f)
-            // Launchii's live wallpaper waits, out of sight, at the open zoom, so every close zooms it back
             if (com.oneuiclone.home.ui.LiveWallpaper.drives) com.oneuiclone.home.ui.LiveWallpaper.park(1f)
             homeCovered = true
         }
     }
 
+    private fun awake(): Boolean =
+        activity.getSystemService(android.os.PowerManager::class.java).isInteractive &&
+            !activity.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
+
+    private fun placeUpdatePill() {
+        updatePill.translationX = homeSearch.translationX - dp.dp(6f) - updatePill.layoutParams.width
+    }
+
+    /** The pill as [AppUpdate] stands: hidden with nothing newer, else Update / 42 % / Installing / Retry. */
+    private fun syncUpdatePill() {
+        if (!::updatePill.isInitialized) return
+        val p = updatePill
+        if (AppUpdate.available == null) { p.animate().cancel(); p.visibility = View.GONE; return }
+        p.label = when (AppUpdate.phase) {
+            AppUpdate.Phase.Ready -> "Update"
+            AppUpdate.Phase.Downloading -> "${(AppUpdate.progress * 100).toInt()}%"
+            AppUpdate.Phase.Installing -> "Installing"
+            AppUpdate.Phase.Failed -> "Retry"
+        }
+        p.progress = if (AppUpdate.phase == AppUpdate.Phase.Downloading) AppUpdate.progress else -1f
+        val width = if (AppUpdate.phase == AppUpdate.Phase.Downloading) maxOf(p.pillWidth, p.pillWidth("100%")) else p.pillWidth
+        if (p.layoutParams.width != width) { p.layoutParams = p.layoutParams.apply { this.width = width } }
+        placeUpdatePill()
+        if (p.visibility == View.VISIBLE) return
+        p.visibility = if (edit.isActive) View.INVISIBLE else View.VISIBLE
+        if (!updateAnnounced) {
+            updateAnnounced = true
+            p.alpha = 0f; p.scaleX = 0.6f; p.scaleY = 0.6f
+            p.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(420)
+                .setInterpolator(android.view.animation.OvershootInterpolator(1.4f)).start()
+        }
+    }
+
+    fun onResume() {
+        applyGlassPrefs()
+        searchSources.refresh { refreshSuggested() }
+        AppUpdate.onResumed(activity)
+        dropLaunchCard(fade = true)
+        endEffect(animate = true)
+        if (pendingReturnAnim && search != null) dismissSearchImmediately()
+        if (prefs.zoomInOpen || prefs.wallpaperOpen) repo?.let { r -> splashLook.prefetch(r.apps.map { it.activityInfo }) }
+        centerWallpaper()
+        BadgeService.addListener(badgeListener)
+        updateBadges()
+        Thread { quickOpenRecents.scan(usage) }.start()
+        if (::dp.isInitialized && prefsSnapshot.isNotEmpty() && snapshot() != prefsSnapshot) {
+            edit.reset()
+            setupProfile(root.width, root.height)
+        }
+        wallpaper.reloadIfChanged()
+        if (!wallpaper.available) wallpaper.reload()
+        if (state.state == StateController.State.HOME && !state.isTransitioning && search == null && !edit.isActive && !folders.isOpen && quickOpen == null) {
+            background.set(BackgroundController.Kind.NONE, 0f)
+        }
+        if (!pendingReturnAnim && com.oneuiclone.home.ui.LiveWallpaper.drives) com.oneuiclone.home.ui.LiveWallpaper.setZoom(wallpaperZoom)
+        playReturnAnimation()
+    }
+
+    private fun syncBlurredWallpaper() {
+        // Keep the user's existing device wallpaper untouched when Launcher You becomes default Home
+    }
+
+    private fun centerWallpaper() {
+        val token = root.windowToken ?: return
+        android.app.WallpaperManager.getInstance(activity).setWallpaperOffsets(token, 0.5f, 0.5f)
+    }
+
+    private fun settleWallpaper() {
+        wallpaperZoom = 1f
+        wallpaper.holdCopy = false
+        wallpaper.setZoom(1f)
+        wallpaper.copyAlpha = 1f
+    }
+
+    private fun playReturnAnimation(landing: CloseTarget? = lastLaunchedApp?.let { closeTargetFor(it.key.component, it.user) }
+        ?: lastWidgetLaunch?.let { widgetTarget(it) }, shown: Boolean = false) {
+        if (!pendingReturnAnim) return
+        if (homeCovered && !contractSeen) {
+            if (!returnWaiting) {
+                returnWaiting = true
+                root.removeCallbacks(returnWaitCap)
+                root.postDelayed(returnWaitCap, RETURN_WAIT_MS)
+                AnimLog.log("return animation waits for Home to show")
+            }
+            return
+        }
+        pendingReturnAnim = false
+        if (!shown) markClosing("return animation")
+        AnimLog.log("return animation to ${(landing?.view as? com.oneuiclone.home.ui.WidgetContainer)?.let { "widget " + it.item.provider.packageName } ?: landing?.view?.contentDescription ?: "screen centre"}")
+        contentAnim?.cancel()
+        if (folders.isOpen) {
+            overlay.scaleX = 1f; overlay.scaleY = 1f; centrePivot(overlay)
+        } else {
+            homeLayer.alpha = 1f
+            homeLayer.scaleX = 1f; homeLayer.scaleY = 1f; centrePivot(homeLayer)
+        }
+        centerWallpaper()
+        zoomAnim?.cancel()
+        settleWallpaper()
+        if (com.oneuiclone.home.ui.LiveWallpaper.drives) {
+            com.oneuiclone.home.ui.LiveWallpaper.setZoom(1f)
+        }
+        returnRipple?.let { root.removeCallbacks(it); returnRipple = null }
+        lastLaunchedApp = null
+    }
     private fun awake(): Boolean =
         activity.getSystemService(android.os.PowerManager::class.java).isInteractive &&
             !activity.getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked
