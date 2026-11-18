@@ -174,8 +174,8 @@ class SettingsActivity : OneUiPage() {
     }
 
     /**
-     * Launchii's live wallpaper: the same picture, drawn by Launchii so Home can zoom the real wallpaper on app opens
-     * and closes. Wallpapers set in Launchii go on as it until it's turned off here, which puts the picture back as a
+     * Launcher You's live wallpaper: the same picture, drawn by Launcher You so Home can zoom the real wallpaper on app opens
+     * and closes. Wallpapers set in Launcher You go on as it until it's turned off here, which puts the picture back as a
      * normal image wallpaper.
      */
     private fun liveWallpaperItem(hasCopy: Boolean) {
