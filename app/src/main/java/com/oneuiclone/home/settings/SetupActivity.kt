@@ -43,7 +43,7 @@ import com.oneuiclone.home.ui.WallpaperLayer
  * First-run setup: every permission the launcher's features need and setting the wallpaper again (blur and zoom
  * only work on a wallpaper the launcher set itself, see WallpaperLayer.hasOwnCopy), each a row with its own Allow
  * button that turns into a tick once done. Shown once on the first Home, on every open from another launcher's app
- * list while Launchii isn't the Home app, and from Settings › Set up Launchii.
+ * list while Launcher You isn't the Home app, and from Settings › Set up Launcher You.
  */
 class SetupActivity : OneUiPage() {
 
@@ -66,7 +66,7 @@ class SetupActivity : OneUiPage() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
         }
 
-        /** Launchii is the default Home app. */
+        /** Launcher You is the default Home app. */
         fun isHome(context: Context): Boolean {
             val roles = context.getSystemService(RoleManager::class.java)
             return roles.isRoleAvailable(RoleManager.ROLE_HOME) && roles.isRoleHeld(RoleManager.ROLE_HOME)
