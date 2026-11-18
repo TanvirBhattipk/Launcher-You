@@ -71,11 +71,6 @@ class SettingsActivity : OneUiPage() {
             }
         }
         card {
-            item("Liquid glass", "Blur radius of the search bars, drawer, folders and widgets") {
-                startActivity(Intent(this@SettingsActivity, LiquidGlassActivity::class.java))
-            }
-        }
-        card {
             item("Home screen grid", "${prefs.homeCols}×${prefs.homeRows}") {
                 choose("Home screen grid", listOf(4 to 5, 4 to 6, 4 to 7, 5 to 5, 5 to 6)) { (c, r) -> prefs.homeCols = c; prefs.homeRows = r }
             }
