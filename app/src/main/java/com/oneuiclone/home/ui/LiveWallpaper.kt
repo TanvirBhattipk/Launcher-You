@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
 /**
- * Launchii's live wallpaper (0.162; on by default for wallpapers set here since 0.163): the launcher's own wallpaper
+ * Launcher You's live wallpaper (0.162; on by default for wallpapers set here since 0.163): the launcher's own wallpaper
  * copy ([WallpaperLayer.OWN_FILE]), drawn by this app so Home zooms the real wallpaper itself on app opens and closes.
  * The system only zooms an image wallpaper for the Pixel Launcher, and Home's copy of it (drawn in the launcher window,
  * which the system fades during the transitions) cross-dissolved with it. Blur wallpaper bakes into the picture it
@@ -32,7 +32,7 @@ object LiveWallpaper {
     /** A zoom to take once the wallpaper is out of sight ([park]). */
     private var parked: Float? = null
 
-    /** True while Launchii's wallpaper is drawing (not a preview): Home then zooms it instead of its copy. */
+    /** True while Launcher You's wallpaper is drawing (not a preview): Home then zooms it instead of its copy. */
     val drives get() = engines.isNotEmpty()
 
     fun setZoom(z: Float) {
@@ -91,7 +91,7 @@ object LiveWallpaper {
     /** The picture changed (a new wallpaper, or Blur wallpaper): any thread. */
     fun contentChanged() = engines.forEach { it.reload() }
 
-    /** Whether wallpapers set in Launchii should go on as its live wallpaper (until the user turns it off). */
+    /** Whether wallpapers set in Launcher You should go on as its live wallpaper (until the user turns it off). */
     fun wanted(context: Context) = prefs(context).getBoolean(WallpaperLayer.KEY_LIVE_WANTED, true)
     fun setWanted(context: Context, on: Boolean) { prefs(context).edit().putBoolean(WallpaperLayer.KEY_LIVE_WANTED, on).apply() }
     private fun prefs(context: Context) = context.getSharedPreferences(WallpaperLayer.PREFS, Context.MODE_PRIVATE)
@@ -111,16 +111,16 @@ object LiveWallpaper {
         }
     }
 
-    /** True while Launchii's live wallpaper is the Home wallpaper. */
+    /** True while Launcher You's live wallpaper is the Home wallpaper. */
     fun isActive(context: Context): Boolean = drives || try {
         WallpaperManager.getInstance(context).wallpaperInfo?.packageName == context.packageName
     } catch (_: Exception) { false }
 
-    /** The system's preview of Launchii's wallpaper, with its Set wallpaper button. */
+    /** The system's preview of Launcher You's wallpaper, with its Set wallpaper button. */
     fun pickerIntent(context: Context): Intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
         .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, ComponentName(context, LiveWallpaperService::class.java))
 
-    /** Puts the launcher's copy back as an image wallpaper, on the lock screen too if it showed Launchii's. Slow. */
+    /** Puts the launcher's copy back as an image wallpaper, on the lock screen too if it showed Launcher You's. Slow. */
     fun turnOff(context: Context): Boolean {
         val wm = WallpaperManager.getInstance(context)
         val bmp = BitmapFactory.decodeFile(java.io.File(context.filesDir, WallpaperLayer.OWN_FILE).path) ?: return false
