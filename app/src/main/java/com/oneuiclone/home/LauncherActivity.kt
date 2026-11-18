@@ -1,6 +1,6 @@
 package com.oneuiclone.home
 
-import android.app.Activity
+import androidx.activity.ComponentActivity
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
@@ -8,7 +8,7 @@ import android.view.WindowManager
 import android.window.OnBackInvokedDispatcher
 import com.oneuiclone.home.debug.AnimLog
 
-class LauncherActivity : Activity() {
+class LauncherActivity : ComponentActivity() {
 
     companion object {
         const val REQUEST_CONTACTS = 4202
