@@ -23,18 +23,18 @@ import java.util.concurrent.Executors
 
 /**
  * Self-update from the GitHub releases, as Skipii does. At most every 6 hours (and on a new version's first start)
- * the newest release's Launchii.apk is looked up; when it's newer than this build, Home shows an Update pill left
+ * the newest release's Launcher You.apk is looked up; when it's newer than this build, Home shows an Update pill left
  * of the Search pill ([com.oneuiclone.home.ui.HomeSearchButton] with [Launcher.updatePill]). Tapping it downloads
  * the APK (checked against GitHub's size and sha256) and hands it to PackageInstaller. The first update asks the
- * user (Android may first ask to allow installs from Launchii); after that Launchii is its own installer and
+ * user (Android may first ask to allow installs from Launcher You); after that Launcher You is its own installer and
  * Android 12+ updates it without a prompt, then a notification says it's done. Nothing newer = no pill. On Wi-Fi
  * the APK is fetched ahead, so the tap goes straight to installing. Logs "update check: …" / "update: …".
  */
 object AppUpdate {
-    private const val TAG = "Launchii"
-    const val REPO = "deciocrytek/Launchii"
+    private const val TAG = "Launcher You"
+    const val REPO = "deciocrytek/Launcher You"
     private const val LATEST_URL = "https://api.github.com/repos/$REPO/releases/latest"
-    private const val APK_ASSET = "Launchii.apk"
+    private const val APK_ASSET = "Launcher You.apk"
     private const val CHECK_EVERY_MS = 6 * 60 * 60 * 1000L
     /** A check that failed (offline, rate limit) tries again after this, not 6 hours later. */
     private const val RETRY_AFTER_MS = 60 * 60 * 1000L
@@ -47,7 +47,7 @@ object AppUpdate {
     /** The install asked the user; Android's own dialog then offers Open, so no notification. */
     private const val KEY_PROMPTED = "prompted"
     private const val CHANNEL = "updates"
-    internal const val ACTION_RESULT = "app.launchii.UPDATE_RESULT"
+    internal const val ACTION_RESULT = "app.Launcher You.UPDATE_RESULT"
 
     data class Release(val version: String, val apkUrl: String, val size: Long, val sha256: String?)
 
@@ -169,7 +169,7 @@ object AppUpdate {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(context.packageName)
         val notification = android.app.Notification.Builder(context, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle("Launchii updated to $thisVersion")
+            .setContentTitle("Launcher You updated to $thisVersion")
             .setContentText("Tap to open")
             .setContentIntent(PendingIntent.getActivity(context, 0, home, PendingIntent.FLAG_IMMUTABLE))
             .setAutoCancel(true)
@@ -181,7 +181,7 @@ object AppUpdate {
     private fun open(url: String): HttpURLConnection = (URL(url).openConnection() as HttpURLConnection).apply {
         connectTimeout = 15_000
         readTimeout = 30_000
-        setRequestProperty("User-Agent", "Launchii/$thisVersion")
+        setRequestProperty("User-Agent", "Launcher You/$thisVersion")
     }
 
     private fun fetchLatest(): Release? {
@@ -194,7 +194,7 @@ object AppUpdate {
         }
     }
 
-    /** The latest-release JSON → its Launchii.apk, or null when it has none. */
+    /** The latest-release JSON → its Launcher You.apk, or null when it has none. */
     internal fun parseRelease(json: JSONObject): Release? {
         val version = json.optString("tag_name").removePrefix("v").ifBlank { return null }
         val assets = json.optJSONArray("assets") ?: return null
@@ -287,7 +287,7 @@ object AppUpdate {
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(app.packageName)
             setSize(apk.length())
-            // Once Launchii installed itself, Android 12+ lets it update without asking.
+            // Once Launcher You installed itself, Android 12+ lets it update without asking.
             setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         }
         val id = installer.createSession(params)
@@ -311,7 +311,7 @@ object AppUpdate {
     }
 
     private fun dir() = File(app.cacheDir, "update").apply { mkdirs() }
-    private fun apkFile(release: Release) = File(dir(), "Launchii-${release.version}.apk")
+    private fun apkFile(release: Release) = File(dir(), "Launcher You-${release.version}.apk")
 
     private fun savedRelease(): Release? = prefs.getString(KEY_RELEASE, null)?.let {
         runCatching {
