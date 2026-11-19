@@ -20,7 +20,7 @@ class Prefs(context: Context) {
     var appsCols: Int get() = sp.getInt("apps_cols", 4); set(v) = sp.edit().putInt("apps_cols", v).apply()
     var appsRows: Int get() = sp.getInt("apps_rows", 6); set(v) = sp.edit().putInt("apps_rows", v).apply()
     /** 85..115 % (Home Up range); stock small/medium/large = 90/100/110. */
-    var iconScale: Int get() = sp.getInt("icon_scale", 100); set(v) = sp.edit().putInt("icon_scale", v).apply()
+    var iconScale: Int get() = sp.getInt("icon_scale", 98); set(v) = sp.edit().putInt("icon_scale", v).apply()
     /** Favorite contacts on the search page. */
     var searchContacts: Boolean get() = sp.getBoolean("search_contacts", true); set(v) = sp.edit().putBoolean("search_contacts", v).apply()
     /** Home screen apps: no Apps screen; every app is on a Home page. */
@@ -47,11 +47,12 @@ class Prefs(context: Context) {
     /** Settings › Liquid glass: refraction, vibrancy and a lit rim on the blurred glass (pills, folders, widgets). */
     var liquidGlass: Boolean get() = sp.getBoolean("liquid_glass", true); set(v) = sp.edit().putBoolean("liquid_glass", v).apply()
     /** Settings › Liquid glass: the blur radius, in dp, of each blurred background (all set to 40dp). */
-    var blurAppSearch: Int get() = sp.getInt("blur_app_search", 40); set(v) = sp.edit().putInt("blur_app_search", v).apply()
-    var blurHomePill: Int get() = sp.getInt("blur_home_pill", 40); set(v) = sp.edit().putInt("blur_home_pill", v).apply()
-    var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 40); set(v) = sp.edit().putInt("blur_app_drawer", v).apply()
-    var blurSearchBar: Int get() = sp.getInt("blur_search_bar", 40); set(v) = sp.edit().putInt("blur_search_bar", v).apply()
-    var blurFolder: Int get() = sp.getInt("blur_folder", 40); set(v) = sp.edit().putInt("blur_folder", v).apply()
+    /** Blur radius defaults (in dp): folder/search/drawer = 50, home pill = 20. */
+    var blurAppSearch: Int get() = sp.getInt("blur_app_search", 50); set(v) = sp.edit().putInt("blur_app_search", v).apply()
+    var blurHomePill: Int get() = sp.getInt("blur_home_pill", 20); set(v) = sp.edit().putInt("blur_home_pill", v).apply()
+    var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edit().putInt("blur_app_drawer", v).apply()
+    var blurSearchBar: Int get() = sp.getInt("blur_search_bar", 50); set(v) = sp.edit().putInt("blur_search_bar", v).apply()
+    var blurFolder: Int get() = sp.getInt("blur_folder", 50); set(v) = sp.edit().putInt("blur_folder", v).apply()
     var blurWidget: Int get() = sp.getInt("blur_widget", 40); set(v) = sp.edit().putInt("blur_widget", v).apply()
     /** Settings › Liquid glass: lens height and strength, in dp. */
     var refractionHeight: Int get() = sp.getInt("refraction_height", 12); set(v) = sp.edit().putInt("refraction_height", v).apply()
