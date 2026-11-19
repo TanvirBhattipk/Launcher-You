@@ -126,8 +126,8 @@ class HomeSearchButton(
             canvas.drawRoundRect(rect, r, r, progressFill)
             canvas.restore()
         }
-        border.strokeWidth = maxOf(1f, dp.dp(0.75f))
-        border.color = 0x1AFFFFFF
+        border.strokeWidth = maxOf(1f, dp.dp(0.5f))
+        border.color = 0x26FFFFFF
         canvas.drawRoundRect(rect, r, r, border)
         icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
         val fm = text.fontMetrics
