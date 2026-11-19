@@ -201,22 +201,13 @@ class WallpaperLayer(context: Context) : android.view.ViewGroup(context) {
         else android.graphics.BitmapFactory.decodeFile(ownFile.path)
     } catch (_: Exception) { null }
 
-  /** The wallpaper as the system has it: readable when All files access is granted, and not for a live wallpaper. */
+    /** The wallpaper as the system has it: readable when All files access is granted, and not for a live wallpaper. */
     private fun systemWallpaper(): Bitmap? = try {
         if (!android.os.Environment.isExternalStorageManager() || wm.wallpaperInfo != null) null
         else (wm.getDrawable() as? android.graphics.drawable.BitmapDrawable)?.bitmap?.let {
             if (it.config == Bitmap.Config.HARDWARE) it.copy(Bitmap.Config.ARGB_8888, false) else it
         }
     } catch (_: Exception) { null }
-        } catch (_: Throwable) { null }
-        if (fromDrawable != null) return fromDrawable
-
-        return try {
-            wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)?.use { pfd ->
-                android.graphics.BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor)
-            }
-        } catch (_: Throwable) { null }
-    }
 
     @Volatile private var loaded = Triple(-2, -2, -2L)
     private fun ids() = Triple(wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM), ownPrefs.getInt(KEY_SYSTEM_ID, -1), ownPrefs.getLong(KEY_COPY_STAMP, 0L))
