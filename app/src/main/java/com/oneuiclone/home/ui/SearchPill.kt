@@ -31,7 +31,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = maxOf(1f, dp.dp(0.75f))
+        strokeWidth = maxOf(1f, dp.dp(0.5f))
     }
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 15f * resources.displayMetrics.scaledDensity
@@ -132,8 +132,8 @@ override fun onDraw(canvas: Canvas) {
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
-        border.strokeWidth = maxOf(1f, dp.dp(0.75f))
-        border.color = scaled(0x1AFFFFFF)
+        border.strokeWidth = maxOf(1f, dp.dp(0.5f))
+        border.color = scaled(0x26FFFFFF)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
@@ -149,11 +149,11 @@ class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
-        private val FROSTED = SearchColors(
-            pill = 0x1A808080,
-            homePill = 0x1A808080,
-            open = 0x1A808080,
-            stroke = 0x1AFFFFFF,
+       private val FROSTED = SearchColors(
+            pill = 0x33808080,
+            homePill = 0x33808080,
+            open = 0x33808080,
+            stroke = 0x26FFFFFF,
             hint = 0xB3FFFFFF.toInt(),
             text = 0xFFFFFFFF.toInt()
         )
