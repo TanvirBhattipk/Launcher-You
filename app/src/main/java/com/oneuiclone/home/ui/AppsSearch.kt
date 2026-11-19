@@ -87,9 +87,9 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-/** #808080 at 10% opacity (0x1A = 26/255 ≈ 10%) with blur 100 for both search bar and cards. */
-    private val glassFillColor = 0x1A808080
-    private val glassBorderColor = 0x1AFFFFFF
+/** #808080 at 20% opacity (0x33) with BitChord's subtle 0.5dp hairline border (0x26FFFFFF) for search bar & cards. */
+    private val glassFillColor = 0x33808080
+    private val glassBorderColor = 0x26FFFFFF
     private val dividerLineColor = 0x1AFFFFFF
     
     private val field = EditText(context)
@@ -144,10 +144,9 @@ class AppsSearch(
         fun syncWithBar() {
             cardBg.cornerRadius = dp.dp(24f)
             cardBg.setColor(glassFillColor)
-            cardBg.setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
+            cardBg.setStroke(maxOf(1, dp.dpi(0.5f)), glassBorderColor)
             invalidate()
         }
-
         override fun onDraw(canvas: Canvas) {
             val g = pillGlass ?: barGlass
             if (g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
@@ -276,7 +275,7 @@ class AppsSearch(
             background = GradientDrawable().apply {
                 cornerRadius = dp.dp(22f)
                 setColor(glassFillColor)
-                setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
+                setStroke(maxOf(1, dp.dpi(0.5f)), glassBorderColor)
             }
             isClickable = true
             setOnClickListener {
@@ -857,9 +856,9 @@ class AppsSearch(
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        // Search bar: blur 100 + #808080 at 10% opacity (0x1A)
+        // Search bar: #808080 at 20% opacity (0x33) + BitChord 0.5dp subtle hairline border
         pillBg.setColor(glassFillColor)
-        pillBg.setStroke(maxOf(1, dp.dpi(0.75f)), glassBorderColor)
+        pillBg.setStroke(maxOf(1, dp.dpi(0.5f)), glassBorderColor)
         
         pillGlass = barGlass ?: o.glass
         appsCard.syncWithBar()
