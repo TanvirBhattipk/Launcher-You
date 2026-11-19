@@ -201,22 +201,13 @@ class WallpaperLayer(context: Context) : android.view.ViewGroup(context) {
         else android.graphics.BitmapFactory.decodeFile(ownFile.path)
     } catch (_: Exception) { null }
 
-    /** Reads the device's current static wallpaper automatically without requiring All files access. */
-    private fun systemWallpaper(): Bitmap? {
-        if (wm.wallpaperInfo != null) return null
-        val fromDrawable = try {
-            (wm.peekDrawable() ?: wm.getDrawable())?.let { d ->
-                if (d is android.graphics.drawable.BitmapDrawable && d.bitmap != null) {
-                    val b = d.bitmap
-                    if (b.config == Bitmap.Config.HARDWARE) b.copy(Bitmap.Config.ARGB_8888, false) else b
-                } else if (d.intrinsicWidth > 0 && d.intrinsicHeight > 0) {
-                    Bitmap.createBitmap(d.intrinsicWidth, d.intrinsicHeight, Bitmap.Config.ARGB_8888).also { bmp ->
-                        val c = Canvas(bmp)
-                        d.setBounds(0, 0, c.width, c.height)
-                        d.draw(c)
-                    }
-                } else null
-            }
+  /** The wallpaper as the system has it: readable when All files access is granted, and not for a live wallpaper. */
+    private fun systemWallpaper(): Bitmap? = try {
+        if (!android.os.Environment.isExternalStorageManager() || wm.wallpaperInfo != null) null
+        else (wm.getDrawable() as? android.graphics.drawable.BitmapDrawable)?.bitmap?.let {
+            if (it.config == Bitmap.Config.HARDWARE) it.copy(Bitmap.Config.ARGB_8888, false) else it
+        }
+    } catch (_: Exception) { null }
         } catch (_: Throwable) { null }
         if (fromDrawable != null) return fromDrawable
 
