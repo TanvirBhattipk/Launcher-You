@@ -142,9 +142,26 @@ class SettingsActivity : OneUiPage() {
             item("Set up ${getString(com.oneuiclone.home.R.string.app_name)}", "Permissions and your wallpaper, all in one place") {
                 startActivity(Intent(this@SettingsActivity, SetupActivity::class.java))
             }
-            val ok = com.oneuiclone.home.ui.WallpaperLayer.hasOwnCopy(this@SettingsActivity)
-            item("Wallpaper effects", if (ok) "Blur and zoom use your wallpaper"
-                else "For blur and zoom, set your wallpaper with Set as wallpaper in your photos app, or from Home screen edit mode › Wallpaper and style › Choose a photo") {}
+val hasStorage = android.os.Environment.isExternalStorageManager()
+            val ok = hasStorage || com.oneuiclone.home.ui.WallpaperLayer.hasOwnCopy(this@SettingsActivity)
+            item(
+                "Wallpaper blur access",
+                if (ok) "Active: automatically blurring your current device wallpaper"
+                else "Tap to allow automatic blur on your existing wallpaper without re-setting it"
+            ) {
+                if (!hasStorage) {
+                    try {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                Uri.parse("package:$packageName")
+                            )
+                        )
+                    } catch (_: Exception) {
+                        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                    }
+                }
+            }
             liveWallpaperItem(ok)
             val usage = com.oneuiclone.home.model.AppUsage(this@SettingsActivity).systemAllowed
             item("Most used apps in search", if (usage) "Ranked by how often you open each app"
