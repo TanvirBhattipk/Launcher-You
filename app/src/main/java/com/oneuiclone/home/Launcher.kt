@@ -1965,8 +1965,10 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             edit.reset()
             setupProfile(root.width, root.height)
         }
-        wallpaper.reloadIfChanged()
-        if (!wallpaper.available) wallpaper.reload()
+       wallpaper.reloadIfChanged()
+        if (!wallpaper.available && (android.os.Environment.isExternalStorageManager() || com.oneuiclone.home.ui.WallpaperLayer.hasOwnCopy(activity))) {
+            wallpaper.reload()
+        }
         if (state.state == StateController.State.HOME && !state.isTransitioning && search == null && !edit.isActive && !folders.isOpen && quickOpen == null) {
             background.set(BackgroundController.Kind.NONE, 0f)
         }
