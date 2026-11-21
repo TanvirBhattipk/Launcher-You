@@ -7,10 +7,9 @@ import android.content.SharedPreferences
 class Prefs(context: Context) {
     val sp: SharedPreferences = context.getSharedPreferences("home_settings", Context.MODE_PRIVATE)
 
-    // whatever reads the settings first (Home, a widget, a settings page) sets the icon shape and glass values for this process
     init {
         com.oneuiclone.home.icons.IconShape.current = iconShape
-        com.oneuiclone.home.ui.LiquidGlass.enabled = liquidGlass
+        com.oneuiclone.home.ui.LiquidGlass.enabled = false
         com.oneuiclone.home.ui.LiquidGlass.refractionHeightDp = refractionHeight.toFloat()
         com.oneuiclone.home.ui.LiquidGlass.refractionAmountDp = refractionAmount.toFloat()
     }
@@ -19,7 +18,7 @@ class Prefs(context: Context) {
     var homeRows: Int get() = sp.getInt("home_rows", 6); set(v) = sp.edit().putInt("home_rows", v).apply()
     var appsCols: Int get() = sp.getInt("apps_cols", 4); set(v) = sp.edit().putInt("apps_cols", v).apply()
     var appsRows: Int get() = sp.getInt("apps_rows", 6); set(v) = sp.edit().putInt("apps_rows", v).apply()
-    /** 85..115 % (Home Up range); stock small/medium/large = 90/100/110. */
+    /** 85..115 % (Home Up range); reduced by 2% default = 98. */
     var iconScale: Int get() = sp.getInt("icon_scale", 98); set(v) = sp.edit().putInt("icon_scale", v).apply()
     /** Favorite contacts on the search page. */
     var searchContacts: Boolean get() = sp.getBoolean("search_contacts", true); set(v) = sp.edit().putBoolean("search_contacts", v).apply()
@@ -44,9 +43,8 @@ class Prefs(context: Context) {
     var swipeDownSearch: Boolean get() = sp.getBoolean("swipe_down_search", false); set(v) = sp.edit().putBoolean("swipe_down_search", v).apply()
     /** Home screen: an icon dropped between others slides them along, and the gap an icon leaves is closed by the next icons. */
     var fillEmptyCells: Boolean get() = sp.getBoolean("fill_empty_cells", true); set(v) = sp.edit().putBoolean("fill_empty_cells", v).apply()
-    /** Settings › Liquid glass: refraction, vibrancy and a lit rim on the blurred glass (pills, folders, widgets). */
-    var liquidGlass: Boolean get() = sp.getBoolean("liquid_glass", true); set(v) = sp.edit().putBoolean("liquid_glass", v).apply()
-    /** Settings › Liquid glass: the blur radius, in dp, of each blurred background (all set to 40dp). */
+    /** Liquid glass disabled across the launcher. */
+    var liquidGlass: Boolean get() = false; set(_) = sp.edit().putBoolean("liquid_glass", false).apply()
     /** Blur radius defaults (in dp): folder/search/drawer = 50, home pill = 20. */
     var blurAppSearch: Int get() = sp.getInt("blur_app_search", 50); set(v) = sp.edit().putInt("blur_app_search", v).apply()
     var blurHomePill: Int get() = sp.getInt("blur_home_pill", 20); set(v) = sp.edit().putInt("blur_home_pill", v).apply()
@@ -54,7 +52,7 @@ class Prefs(context: Context) {
     var blurSearchBar: Int get() = sp.getInt("blur_search_bar", 50); set(v) = sp.edit().putInt("blur_search_bar", v).apply()
     var blurFolder: Int get() = sp.getInt("blur_folder", 50); set(v) = sp.edit().putInt("blur_folder", v).apply()
     var blurWidget: Int get() = sp.getInt("blur_widget", 40); set(v) = sp.edit().putInt("blur_widget", v).apply()
-    /** Settings › Liquid glass: lens height and strength, in dp. */
+    /** Lens height and strength, in dp. */
     var refractionHeight: Int get() = sp.getInt("refraction_height", 12); set(v) = sp.edit().putInt("refraction_height", v).apply()
     var refractionAmount: Int get() = sp.getInt("refraction_amount", 24); set(v) = sp.edit().putInt("refraction_amount", v).apply()
     var lockLayout: Boolean get() = sp.getBoolean("lock_layout", false); set(v) = sp.edit().putBoolean("lock_layout", v).apply()
@@ -103,11 +101,6 @@ class Prefs(context: Context) {
     /** The baked wallpaper blur is gone (the Apps screen's own look is set by its opacity): always 0 = sharp. */
     val homeBlurLevel: Float get() = 0f
 
-    /**
-     * App opening animation: [OPEN_ZOOM_IN] (the icon grows into a card, iOS-style; the default), [OPEN_SMOOTH] (Home
-     * shrinks), or one drawn by Launchii's live wallpaper ([openEffect]: Aura, Shutter, Orbit, Anticipate, Scan, Mist;
-     * Zoom In without it).
-     */
     var openAnimation: String get() = sp.getString("open_animation", OPEN_ZOOM_IN) ?: OPEN_ZOOM_IN; set(v) = sp.edit().putString("open_animation", v).apply()
     val zoomInOpen: Boolean get() = openAnimation == OPEN_ZOOM_IN
     val openEffect: com.oneuiclone.home.ui.LiveWallpaper.Kind? get() = when (openAnimation) {
@@ -131,7 +124,7 @@ class Prefs(context: Context) {
         const val OPEN_SCAN = "scan"
         const val OPEN_MIST = "mist"
 
-       /** Keys applied live by the launcher (no view rebuild when only these change). */
+        /** Keys applied live by the launcher (no view rebuild when only these change). */
         fun isLive(key: String) = key.startsWith("home_blur") ||
             key.startsWith("blur_") ||
             key.startsWith("refraction_") ||
