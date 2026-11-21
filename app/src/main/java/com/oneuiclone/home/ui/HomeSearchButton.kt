@@ -26,7 +26,7 @@ class HomeSearchButton(
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = dp.dp(1f)
+        strokeWidth = maxOf(2f, dp.dp(1f))
     }
     private val glyph = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -43,11 +43,6 @@ class HomeSearchButton(
     var glassTransparency = 0f
         set(v) { field = v; applyColors(); invalidate() }
 
-    private fun glassFill(): Int {
-        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        val base = if (night) NIGHT_GLASS_BG else FolderIconView.DEFAULT_BG
-        return (base and 0x00FFFFFF) or ((android.graphics.Color.alpha(base) * (1f - glassTransparency)).toInt() shl 24)
-    }
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
     private val drawnAt = android.graphics.Matrix()
@@ -91,10 +86,10 @@ class HomeSearchButton(
 
     private fun applyColors() {
         val c = SearchColors.of(context)
-        fill.color = if (glass != null) glassFill() else c.homePill
+        fill.color = c.homePill
         border.color = c.stroke
-        text.color = if (glass != null) GLASS_INK else c.hint
-        glyph.color = text.color
+        text.color = c.text
+        glyph.color = c.text
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -103,14 +98,9 @@ class HomeSearchButton(
         invalidate()
     }
 
-    private companion object {
-        const val GLASS_INK = 0xE6FFFFFF.toInt()
-        const val NIGHT_GLASS_BG = 0xFF1C1C1E.toInt()
-    }
-
     fun origin(left: Float, top: Float) = AppsSearch.Origin(
         RectF(left, top, left + pillWidth, top + pillHeight), fill.color, border.color, 0f,
-        glyphLeft, glyphBox, textStart, text.textSize, glass, if (glass != null) text.color else null,
+        glyphLeft, glyphBox, textStart, text.textSize, glass, text.color,
     )
 
     override fun onDraw(canvas: Canvas) {
@@ -126,8 +116,7 @@ class HomeSearchButton(
             canvas.drawRoundRect(rect, r, r, progressFill)
             canvas.restore()
         }
-        border.strokeWidth = maxOf(1f, dp.dp(0.5f))
-        border.color = 0x26FFFFFF
+        border.strokeWidth = maxOf(2f, dp.dp(1f))
         canvas.drawRoundRect(rect, r, r, border)
         icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
         val fm = text.fontMetrics
