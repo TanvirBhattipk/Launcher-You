@@ -61,54 +61,8 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
 
     private var baseFill = 0
     private var baseStroke = 0
-    private fun scaled(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * backgroundOpacity).toInt() shl 24)
+    private fun scaled(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * backgroundOpacity).
 
-    private val glassPaint = GlassPaint()
-    private val toWindow = Matrix()
-    private val drawnAt = Matrix()
-    private val moved = ViewTreeObserver.OnPreDrawListener {
-        if (glass != null && !menuIcon) {
-            toWindow.reset(); transformMatrixToGlobal(toWindow)
-            if (toWindow != drawnAt) invalidate()
-        }
-        true
-    }
-
-    init {
-        isClickable = true
-        applyColors()
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (!menuIcon) { glass?.views?.add(this); viewTreeObserver.addOnPreDrawListener(moved) }
-    }
-
-    override fun onDetachedFromWindow() {
-        if (!menuIcon) { viewTreeObserver.removeOnPreDrawListener(moved); glass?.views?.remove(this) }
-        super.onDetachedFromWindow()
-    }
-
-    private fun applyColors() {
-        val c = SearchColors.of(context)
-        baseFill = c.pill
-        baseStroke = c.stroke
-        fill.color = scaled(baseFill)
-        border.color = scaled(baseStroke)
-        text.color = c.hint
-        glyph.color = c.text
-        dots.color = c.text
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        applyColors()
-        invalidate()
-    }
-
-    /** The drawn pill as the search bar's start / end state; [left]/[top] in root coordinates. */
-    fun origin(left: Float, top: Float): AppsSearch.Origin {
-        val i = inset
         return AppsSearch.Origin(
             RectF(left + i, top + i, left + dp.searchBarWidth - i, top + dp.searchBarHeight - i), baseFill, baseStroke, 0f,
             dp.dp(16f) - i, dp.dp(24f), dp.dp(16f + 24f + 6f) - i, text.textSize,
