@@ -101,7 +101,7 @@ class AppsSearch(
 
     // Always use dark mode settings for surface (0x00)
     private val surfaceRgb: Int
-        get() = 0x00
+        get() = 0xFF
 
     // Always use white borders (0xFF)
     private val borderRgb: Int
