@@ -38,6 +38,18 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         strokeCap = Paint.Cap.ROUND
     }
     private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val frostedNoisePaint by lazy {
+        val size = 128
+        val pixels = IntArray(size * size)
+        val rnd = kotlin.random.Random(System.currentTimeMillis())
+        for (i in pixels.indices) {
+            val gray = rnd.nextInt(256)
+            pixels[i] = android.graphics.Color.argb(12, gray, gray, gray)
+        }
+        val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+        android.graphics.Paint().apply { this.shader = shader }
+    }
     private val rect = RectF()
     private val inset = dp.dp(0.5f)
 
@@ -150,7 +162,8 @@ private fun applyColors() {
             glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
-        canvas.drawRoundRect(rect, r, r, fill)
+canvas.drawRoundRect(rect, r, r, fill)
+        canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
