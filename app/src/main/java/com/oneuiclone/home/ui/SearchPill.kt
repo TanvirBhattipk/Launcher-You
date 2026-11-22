@@ -135,7 +135,7 @@ private fun applyColors() {
 fun origin(left: Float, top: Float): AppsSearch.Origin {
         val i = inset
         return AppsSearch.Origin(
-            RectF(left + i, top + i, left + width - i, top + height - i), // uses the drawn View width/height
+            RectF(left + i, top + i, left + width - i, top + height - i),
             baseFill,
             baseStroke,
             0f,
@@ -163,7 +163,7 @@ fun origin(left: Float, top: Float): AppsSearch.Origin {
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
-        canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
+        canvas.drawRoundRect(rect, r, r, Acrylic.noise)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
@@ -172,7 +172,6 @@ fun origin(left: Float, top: Float): AppsSearch.Origin {
         val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
         canvas.drawText(hint, gx + box + dp.dp(8f), baseline, text)
     }
-}
 
 class SearchColors(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
