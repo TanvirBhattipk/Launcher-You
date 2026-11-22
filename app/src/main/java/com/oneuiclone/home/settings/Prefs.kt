@@ -45,11 +45,9 @@ class Prefs(context: Context) {
     var fillEmptyCells: Boolean get() = sp.getBoolean("fill_empty_cells", true); set(v) = sp.edit().putBoolean("fill_empty_cells", v).apply()
     /** Liquid glass disabled across the launcher. */
     var liquidGlass: Boolean get() = false; set(_) = sp.edit().putBoolean("liquid_glass", false).apply()
-    /** Blur radius defaults (in dp): folder/search/drawer = 50, home pill = 20. */
-    var blurAppSearch: Int get() = sp.getInt("blur_app_search", 50); set(v) = sp.edit().putInt("blur_app_search", v).apply()
+    /** Blur radius defaults (in dp): folder/drawer = 50, home pill = 20. */
     var blurHomePill: Int get() = sp.getInt("blur_home_pill", 20); set(v) = sp.edit().putInt("blur_home_pill", v).apply()
     var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edit().putInt("blur_app_drawer", v).apply()
-    var blurSearchBar: Int get() = sp.getInt("blur_search_bar", 50); set(v) = sp.edit().putInt("blur_search_bar", v).apply()
     var blurFolder: Int get() = sp.getInt("blur_folder", 50); set(v) = sp.edit().putInt("blur_folder", v).apply()
     var blurWidget: Int get() = sp.getInt("blur_widget", 40); set(v) = sp.edit().putInt("blur_widget", v).apply()
     // Card 1: App Drawer
