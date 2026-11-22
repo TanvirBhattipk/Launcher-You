@@ -100,15 +100,14 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
 
     val background = BackgroundController(activity, scrim, wallpaper).apply {
         val d = activity.resources.displayMetrics.density
-        appsRadiusPx = prefs.blurAppDrawer * d; searchRadiusPx = prefs.blurAppSearch * d
-    }
+        appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d    }
 
     private fun applyGlassPrefs() {
         val d = activity.resources.displayMetrics.density
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
         pillGlass.setRadius(prefs.blurHomePill * d, wallpaper); barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper)
-        background.appsRadiusPx = prefs.blurAppDrawer * d; background.searchRadiusPx = prefs.blurAppSearch * d
+        background.appsRadiusPx = prefs.drawerBgBlur * d; background.searchRadiusPx = prefs.appSearchBgBlur * d
         background.refresh()
         glasses.forEach { g -> g.views.toList().forEach { it.invalidate() } }
         root.invalidate()
