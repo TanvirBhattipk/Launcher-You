@@ -87,7 +87,7 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-private val prefs = com.oneuiclone.home.settings.Prefs(context)
+    private val prefs = com.oneuiclone.home.settings.Prefs(context)
 
     private val isNightMode: Boolean
         get() = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -99,23 +99,26 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         return ((p.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255)
     }
 
+    // Always use dark mode settings for surface (0x00)
     private val surfaceRgb: Int
-        get() = if (isNightMode) 0x00 else 0xFF
+        get() = 0x00
 
+    // Always use white borders (0xFF)
     private val borderRgb: Int
-        get() = if (isNightMode) 0xFF else 0x00
+        get() = 0xFF 
 
+    // Always use white text (0xFFFFFFFF)
     private val primaryInk: Int
-        get() = if (isNightMode) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+        get() = 0xFFFFFFFF.toInt()
 
     private val secondaryInk: Int
-        get() = if (isNightMode) 0xCCFFFFFF.toInt() else 0xCC444444.toInt()
+        get() = 0xCCFFFFFF.toInt()
 
     private val hintInk: Int
-        get() = if (isNightMode) 0x99FFFFFF.toInt() else 0x99444444.toInt()
+        get() = 0x99FFFFFF.toInt()
 
     private val dividerLineColor: Int
-        get() = if (isNightMode) 0x33FFFFFF.toInt() else 0x22444444.toInt()
+        get() = 0x33FFFFFF.toInt()
 
     private val searchBarFillColor: Int
         get() = android.graphics.Color.argb(
@@ -133,7 +136,7 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             borderRgb,
         )
 
-private val searchBarBorderWidth: Float
+    private val searchBarBorderWidth: Float
         get() = dp.dp(0.5f + (prefs.appSearchBorderSize.coerceIn(0, 50) / 50f) * 2.5f)
 
     private val cardFillColor: Int
@@ -152,7 +155,7 @@ private val searchBarBorderWidth: Float
             borderRgb,
         )
 
-        private val cardBorderWidth: Float
+    private val cardBorderWidth: Float
         get() = dp.dp(0.5f + (prefs.appSearchCardsBorderSize.coerceIn(0, 50) / 50f) * 2.5f)
 
     private val backdropDimColor: Int
@@ -167,12 +170,26 @@ private val searchBarBorderWidth: Float
     private val clearBtn = ClearButton(context)
     private val glyph = MagnifierView(context, secondaryInk)
 
+    // Acrylic frost texture (reused from Acrylic singleton if available, otherwise built here)
+    private val frostedNoisePaint by lazy {
+        val size = 256
+        val pixels = IntArray(size * size)
+        val rnd = kotlin.random.Random(12345)
+        for (i in pixels.indices) {
+            val gray = rnd.nextInt(256)
+            pixels[i] = android.graphics.Color.argb(10, gray, gray, gray)
+        }
+        val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+        android.graphics.Paint().apply { this.shader = shader }
+    }
+
     // Cards
-    private val appsCard = GlassCard(context)
+    private val appsCard = GlassCard(context, flatBottom = true)
     private val appsRow = LinearLayout(context)
-    private val contactsCard = GlassCard(context)
+    private val contactsCard = GlassCard(context, flatBottom = false)
     private val contactsListLayout = LinearLayout(context)
-    private val suggestionsCard = GlassCard(context)
+    private val suggestionsCard = GlassCard(context, flatBottom = false)
     private val suggestionsListLayout = LinearLayout(context)
     private val calcBox = TextView(context)
     private var calcResult: String? = null
@@ -190,43 +207,27 @@ private val searchBarBorderWidth: Float
     private var shownSuggestions: List<String> = emptyList()
     private var opening = false
     private var pendingSources: Runnable? = null
-    private val searchPrefs = context.getSharedPreferences("search", Context.MODE_PRIVATE)
+    private val searchPrefs = context.getSharedPreferences("search", Context.MODEPRIVATE)
     private var enterTarget: View? = null
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
-        private val cardBg = GradientDrawable()
+    private inner class GlassCard(ctx: Context, private val flatBottom: Boolean) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
-        private val frostedNoisePaint by lazy {
-            val size = 128
-            val pixels = IntArray(size * size)
-            val rnd = kotlin.random.Random(System.currentTimeMillis())
-            for (i in pixels.indices) {
-                val gray = rnd.nextInt(256)
-                pixels[i] = android.graphics.Color.argb(12, gray, gray, gray)
-            }
-            val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
-            val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
-            android.graphics.Paint().apply { this.shader = shader }
-        }
         private val toWindow = Matrix()
         private val rect = RectF()
+        private val cardPath = android.graphics.Path()
+        private val strokePath = android.graphics.Path()
 
         init {
             orientation = VERTICAL
-            background = cardBg
-            clipToOutline = true
             setWillNotDraw(false)
             syncWithBar()
         }
 
         fun syncWithBar() {
-            val radius = dp.dp(24f)
-            cardBg.cornerRadius = radius
-            cardBg.setColor(android.graphics.Color.TRANSPARENT)
             fillPaint.color = cardFillColor
             strokePaint.color = cardBorderColor
             strokePaint.strokeWidth = cardBorderWidth
@@ -237,19 +238,52 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
             val radius = dp.dp(24f)
             rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
+            val radii = if (flatBottom) {
+                floatArrayOf(
+                    radius, radius, // Top-left
+                    radius, radius, // Top-right
+                    0f, 0f,         // Bottom-right
+                    0f, 0f          // Bottom-left
+                )
+            } else {
+                floatArrayOf(
+                    radius, radius, radius, radius,
+                    radius, radius, radius, radius
+                )
+            }
+
+            cardPath.reset()
+            cardPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
+
             val g = pillGlass ?: barGlass
             val cardAlpha = android.graphics.Color.alpha(cardFillColor)
             if (cardAlpha < 255 && g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
                 glassPaint.paint.alpha = 255
-                canvas.drawRoundRect(rect, radius, radius, glassPaint.paint)
+                canvas.drawPath(cardPath, glassPaint.paint)
             }
 
-            canvas.drawRoundRect(rect, radius, radius, fillPaint)
-            canvas.drawRoundRect(rect, radius, radius, frostedNoisePaint)
+            canvas.drawPath(cardPath, fillPaint)
+            canvas.drawPath(cardPath, frostedNoisePaint)
+            
             if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
                 val inset = strokePaint.strokeWidth / 2f
                 val strokeRect = RectF(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
-                canvas.drawRoundRect(strokeRect, maxOf(0f, radius - inset), maxOf(0f, radius - inset), strokePaint)
+                
+                val strokeRadii = if (flatBottom) {
+                    floatArrayOf(
+                        maxOf(0f, radius - inset), maxOf(0f, radius - inset),
+                        maxOf(0f, radius - inset), maxOf(0f, radius - inset),
+                        0f, 0f,
+                        0f, 0f
+                    )
+                } else {
+                    val cr = maxOf(0f, radius - inset)
+                    floatArrayOf(cr, cr, cr, cr, cr, cr, cr, cr)
+                }
+
+                strokePath.reset()
+                strokePath.addRoundRect(strokeRect, strokeRadii, android.graphics.Path.Direction.CW)
+                canvas.drawPath(strokePath, strokePaint)
             }
             super.onDraw(canvas)
         }
@@ -846,7 +880,7 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
     private fun avatarColor(name: String) = AVATAR_COLORS[(name.hashCode() and 0x7FFFFFFF) % AVATAR_COLORS.size]
 
     private fun rowRipple() = android.graphics.drawable.RippleDrawable(
-        android.content.res.ColorStateList.valueOf(if (isNight()) 0x22FFFFFF else 0x1A000000), null, null
+        android.content.res.ColorStateList.valueOf(0x22FFFFFF), null, null // Forced light ripple
     )
 
     private fun firstEnterable(box: ViewGroup): View? {
@@ -913,7 +947,6 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
 
     private fun layoutPill() {
         if (!::origin.isInitialized) return
-        val o = origin
         val h = dp.searchBarHeight
         val lp = pill.layoutParams
         if (lp.width != dp.searchBarWidth || lp.height != h) {
@@ -932,14 +965,14 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         pillBg.setColor(searchBarFillColor)
         pillBg.setStroke(searchBarBorderWidth.toInt(), searchBarBorderColor)
 
-        pillGlass = barGlass ?: o.glass
+        pillGlass = barGlass ?: origin.glass
         appsCard.syncWithBar()
         contactsCard.syncWithBar()
         suggestionsCard.syncWithBar()
         glyph.color = secondaryInk
         field.setTextColor(primaryInk)
         field.setHintTextColor(hintInk)
-        clearBtn.setNight(isNight())
+        clearBtn.setNight(true) // Force night mode style for clear button
         pill.elevation = 0f
     }
 
@@ -1097,7 +1130,7 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         }
         fun setNight(night: Boolean) {
             bgPaint.color = if (night) 0x52FFFFFF else 0x26000000
-            xPaint.color = if (night) 0xFF2C2C2E.toInt() else 0xFFFFFFFF.toInt()
+            xPaint.color = 0xFFFFFFFF.toInt() // Forced white x button
             invalidate()
         }
         override fun onDraw(canvas: Canvas) {
@@ -1112,7 +1145,7 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
 
     private class ChevronGlyph(context: Context, ink: Int) : View(context) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = ink
+            color = 0xFFFFFFFF.toInt() // Forced white chevron
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
@@ -1140,8 +1173,8 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
 
     private class ActionCircleButton(context: Context, private val kind: Int, night: Boolean) : View(context) {
         companion object { const val PHONE = 0; const val VIDEO = 1 }
-        private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (night) 0x22FFFFFF else 0x1A000000 }
-        private val fgColor = if (night) 0xFFFFFFFF.toInt() else 0xFF1C1C1E.toInt()
+        private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x22FFFFFF } // Forced dark mode background
+        private val fgColor = 0xFFFFFFFF.toInt() // Forced white action buttons
         private val fg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = fgColor
             style = Paint.Style.FILL
