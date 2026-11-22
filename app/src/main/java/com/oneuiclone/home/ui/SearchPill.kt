@@ -38,18 +38,21 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         strokeCap = Paint.Cap.ROUND
     }
     private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    
+    // Acrylic frost texture 
     private val frostedNoisePaint by lazy {
-        val size = 128
+        val size = 256
         val pixels = IntArray(size * size)
-        val rnd = kotlin.random.Random(System.currentTimeMillis())
+        val rnd = kotlin.random.Random(12345)
         for (i in pixels.indices) {
             val gray = rnd.nextInt(256)
-            pixels[i] = android.graphics.Color.argb(12, gray, gray, gray)
+            pixels[i] = android.graphics.Color.argb(10, gray, gray, gray)
         }
         val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
         val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
-        android.graphics.Paint().apply { this.shader = shader }
+        android.graphics.Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
     }
+
     private val rect = RectF()
     private val inset = dp.dp(0.5f)
 
@@ -97,10 +100,10 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         super.onDetachedFromWindow()
     }
 
-private fun applyColors() {
+    private fun applyColors() {
         val night = isNight()
         val baseRgb = if (night) 0x00 else 0xFF
-        val borderRgb = 0xFF
+        val borderRgb = 0xFF 
         val fillPercent = if (prefs.drawerSearchBarOpacity in 1..100) prefs.drawerSearchBarOpacity else 75
         val strokePercent = if (prefs.drawerSearchBorderOpacity in 1..100) prefs.drawerSearchBorderOpacity else 35
         val strokeSizeDp = prefs.drawerSearchBorderSize.coerceAtLeast(10) / 10f
@@ -122,17 +125,18 @@ private fun applyColors() {
         border.color = scaled(baseStroke)
         border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
 
-        text.color = text.color = 0xFFFFFFFF.toInt()
+        text.color = 0xFFFFFFFF.toInt() 
         glyph.color = text.color
         dots.color = text.color
     }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         applyColors()
         invalidate()
     }
 
-fun origin(left: Float, top: Float): AppsSearch.Origin {
+    fun origin(left: Float, top: Float): AppsSearch.Origin {
         val i = inset
         return AppsSearch.Origin(
             RectF(left + i, top + i, left + width - i, top + height - i),
@@ -163,7 +167,7 @@ fun origin(left: Float, top: Float): AppsSearch.Origin {
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
-        canvas.drawRoundRect(rect, r, r, Acrylic.noise)
+        canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
@@ -172,7 +176,7 @@ fun origin(left: Float, top: Float): AppsSearch.Origin {
         val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
         canvas.drawText(hint, gx + box + dp.dp(8f), baseline, text)
     }
-} // <-- This is the missing bracket that broke the build!
+}
 
 class SearchColors(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
