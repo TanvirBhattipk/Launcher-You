@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.view.View
 import android.view.ViewTreeObserver
 import com.oneuiclone.home.device.DeviceProfile
+import kotlin.math.roundToInt
 
 internal const val SEARCH_GLASS_INK = 0xE6FFFFFF.toInt()
 private const val NIGHT_GLASS_BG = 0xFF1C1C1E.toInt()
@@ -84,22 +85,35 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         super.onDetachedFromWindow()
     }
 
-    private fun applyColors() {
-        val baseRgb = if (isNight()) 0 else 255
-        val borderRgb = if (isNight()) 255 else 0
-        
-        baseFill = android.graphics.Color.argb(prefs.drawerSearchBarOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
-        baseStroke = android.graphics.Color.argb(prefs.drawerSearchBorderOpacity * 255 / 100, borderRgb, borderRgb, borderRgb)
-        
+private fun applyColors() {
+        val night = isNight()
+        val baseRgb = if (night) 0x00 else 0xFF
+        val borderRgb = if (night) 0xFF else 0x00
+        val fillPercent = if (prefs.drawerSearchBarOpacity in 1..100) prefs.drawerSearchBarOpacity else 75
+        val strokePercent = if (prefs.drawerSearchBorderOpacity in 1..100) prefs.drawerSearchBorderOpacity else 35
+        val strokeSizeDp = prefs.drawerSearchBorderSize.coerceAtLeast(10) / 10f
+
+        baseFill = android.graphics.Color.argb(
+            ((fillPercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
+            baseRgb,
+            baseRgb,
+            baseRgb,
+        )
+        baseStroke = android.graphics.Color.argb(
+            ((strokePercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
+            borderRgb,
+            borderRgb,
+            borderRgb,
+        )
+
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)
-        border.strokeWidth = maxOf(2f, dp.dp(prefs.drawerSearchBorderSize / 10f))
-        
-        text.color = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+        border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
+
+        text.color = if (night) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
         glyph.color = text.color
         dots.color = text.color
     }
-
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         applyColors()
