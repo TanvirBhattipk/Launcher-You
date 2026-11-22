@@ -101,7 +101,7 @@ class AppsSearch(
 
     // Always use dark mode settings for surface (0x00)
     private val surfaceRgb: Int
-        get() = 0xFF
+        get() = 0x00
 
     // Always use white borders (0xFF)
     private val borderRgb: Int
@@ -207,7 +207,7 @@ class AppsSearch(
     private var shownSuggestions: List<String> = emptyList()
     private var opening = false
     private var pendingSources: Runnable? = null
-    private val searchPrefs = context.getSharedPreferences("search", Context.MODEPRIVATE)
+    private val searchPrefs = context.getSharedPreferences("search", Context.MODE_PRIVATE)
     private var enterTarget: View? = null
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
@@ -1104,7 +1104,7 @@ class AppsSearch(
 
     companion object {
         const val MORPH_MS = 300L
-        private val MARKS = Regex("\\p{Mn}+")
+        private val MARKS = Regex("\p{Mn}+")
         private const val KEY_CONTACTS_DECLINED = "contacts_declined"
         private const val INVITE_ID = -1L
         private const val MAX_APPS = 5
