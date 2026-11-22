@@ -19,6 +19,9 @@ class HomeSearchButton(
     private val icon: ((Canvas, Float, Float, Float, Paint) -> Unit)? = MagnifierView::draw,
 ) : View(context) {
 
+    private val prefs = com.oneuiclone.home.settings.Prefs(context)
+    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 13f * resources.displayMetrics.scaledDensity
         typeface = Fonts.ui(context, 400)
@@ -26,7 +29,6 @@ class HomeSearchButton(
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = maxOf(2f, dp.dp(1f))
     }
     private val glyph = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -84,16 +86,12 @@ class HomeSearchButton(
         applyColors()
     }
 
-private val prefs = com.oneuiclone.home.settings.Prefs(context)
-
-    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
     private fun applyColors() {
-        val baseGlass = if (isNight()) 0x000000 else 0xFFFFFF
-        val baseBorder = if (isNight()) 0xFFFFFF else 0x000000
+        val baseRgb = if (isNight()) 0 else 255
+        val borderRgb = if (isNight()) 255 else 0
         
-        fill.color = (prefs.homePillBgOpacity * 255 / 100) shl 24 or baseGlass
-        border.color = (prefs.homePillBorderOpacity * 255 / 100) shl 24 or baseBorder
+        fill.color = android.graphics.Color.argb(prefs.homePillBgOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
+        border.color = android.graphics.Color.argb(prefs.homePillBorderOpacity * 255 / 100, borderRgb, borderRgb, borderRgb)
         border.strokeWidth = maxOf(2f, dp.dp(prefs.homePillBorderSize / 10f))
         
         text.color = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
@@ -124,7 +122,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             canvas.drawRoundRect(rect, r, r, progressFill)
             canvas.restore()
         }
-        border.strokeWidth = maxOf(2f, dp.dp(1f))
         canvas.drawRoundRect(rect, r, r, border)
         icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
         val fm = text.fontMetrics
@@ -138,25 +135,5 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> animate().scaleX(1f).scaleY(1f).setDuration(200).setInterpolator(Easing.BASIC).start()
         }
         return super.onTouchEvent(event)
-    }
-}
-
-class MagnifierView(context: Context, color: Int) : View(context) {
-    private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; this.color = color
-    }
-    var color: Int
-        get() = p.color
-        set(v) { if (p.color != v) { p.color = v; invalidate() } }
-
-    override fun onDraw(canvas: Canvas) = draw(canvas, 0f, 0f, width.toFloat(), p)
-
-    companion object {
-        fun draw(canvas: Canvas, left: Float, top: Float, s: Float, p: Paint) {
-            p.strokeWidth = s * 0.085f
-            val cr = s * 0.30f; val cx = left + s * 0.42f; val cy = top + s * 0.42f
-            canvas.drawCircle(cx, cy, cr, p)
-            canvas.drawLine(cx + cr * 0.72f, cy + cr * 0.72f, left + s * 0.86f, top + s * 0.86f, p)
-        }
     }
 }
