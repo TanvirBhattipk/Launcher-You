@@ -122,7 +122,7 @@ private fun applyColors() {
         border.color = scaled(baseStroke)
         border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
 
-        text.color = 0xFFFFFFFF.toInt().toInt() else 0xFF444444.toInt()
+        text.color = text.color = 0xFFFFFFFF.toInt()
         glyph.color = text.color
         dots.color = text.color
     }
@@ -162,7 +162,7 @@ fun origin(left: Float, top: Float): AppsSearch.Origin {
             glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
-canvas.drawRoundRect(rect, r, r, fill)
+        canvas.drawRoundRect(rect, r, r, fill)
         canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
