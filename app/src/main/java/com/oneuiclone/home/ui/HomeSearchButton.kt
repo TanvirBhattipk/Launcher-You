@@ -10,6 +10,7 @@ import android.view.MotionEvent
 import android.view.View
 import com.oneuiclone.home.device.DeviceProfile
 import com.oneuiclone.home.motion.Easing
+import kotlin.math.roundToInt
 
 @SuppressLint("ViewConstructor")
 class HomeSearchButton(
