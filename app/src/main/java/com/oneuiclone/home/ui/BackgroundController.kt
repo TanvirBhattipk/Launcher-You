@@ -126,8 +126,28 @@ class ScrimView(context: Context) : View(context) {
     var curveAlpha = 0f
     var dimAlpha = 0f
 
+    private val frostedNoisePaint by lazy {
+        val size = 128
+        val pixels = IntArray(size * size)
+        val rnd = kotlin.random.Random(System.currentTimeMillis())
+        for (i in pixels.indices) {
+            val gray = rnd.nextInt(256)
+            pixels[i] = android.graphics.Color.argb(12, gray, gray, gray)
+        }
+        val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+        android.graphics.Paint().apply { this.shader = shader }
+    }
+
     override fun onDraw(canvas: Canvas) {
         if (curveAlpha > 0f) canvas.drawColor(((curveAlpha * 255).roundToInt() shl 24) or 0xA5A5A5)
         if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24))
+        
+        // Draw full-screen frosted grain when the background is active
+        val progress = maxOf(curveAlpha.coerceAtMost(1f), dimAlpha.coerceAtMost(1f))
+        if (progress > 0.01f) {
+            frostedNoisePaint.alpha = (255 * progress).toInt()
+            canvas.drawPaint(frostedNoisePaint)
+        }
     }
 }
