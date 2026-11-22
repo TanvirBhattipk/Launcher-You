@@ -121,7 +121,7 @@ private fun applyColors() {
         )
         border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
 
-        text.color = if (night) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+       text.color = 0xFFFFFFFF.toInt()
         glyph.color = text.color
     }
 
