@@ -81,3 +81,19 @@ class GlassView(
         canvas.drawPaint(fillPaint)
     }
 }
+// Generates the frosted acrylic noise texture
+object Acrylic {
+    val noise by lazy {
+        val size = 256
+        val pixels = IntArray(size * size)
+        val rnd = kotlin.random.Random(12345) // Fixed seed for consistent grain
+        for (i in pixels.indices) {
+            val gray = rnd.nextInt(256)
+            // 10 alpha out of 255 creates a subtle, premium frost
+            pixels[i] = android.graphics.Color.argb(10, gray, gray, gray) 
+        }
+        val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+    }
+}
