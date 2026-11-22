@@ -139,15 +139,15 @@ class ScrimView(context: Context) : View(context) {
         android.graphics.Paint().apply { this.shader = shader }
     }
 
-    override fun onDraw(canvas: Canvas) {
+        override fun onDraw(canvas: Canvas) {
         if (curveAlpha > 0f) canvas.drawColor(((curveAlpha * 255).roundToInt() shl 24) or 0xA5A5A5)
         if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24))
         
-        // Draw full-screen frosted grain when the background is active
+        // Add Acrylic Frost Texture
         val progress = maxOf(curveAlpha.coerceAtMost(1f), dimAlpha.coerceAtMost(1f))
         if (progress > 0.01f) {
-            frostedNoisePaint.alpha = (255 * progress).toInt()
-            canvas.drawPaint(frostedNoisePaint)
+            Acrylic.noise.alpha = (255 * progress).toInt()
+            canvas.drawPaint(Acrylic.noise)
         }
     }
 }
