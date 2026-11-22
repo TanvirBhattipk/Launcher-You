@@ -87,17 +87,26 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-    private fun isNight(): Boolean =
+private fun isNight(): Boolean =
         (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-    private val glassFillColor get() = if (isNight()) 0x521C1C1E else 0x66FFFFFF
-    private val glassBorderColor get() = if (isNight()) 0x3DFFFFFF else 0x33000000
-    private val dividerLineColor get() = if (isNight()) 0x24FFFFFF else 0x1F000000
-    private val primaryInk get() = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF1C1C1E.toInt()
-    private val secondaryInk get() = if (isNight()) 0xCCFFFFFF.toInt() else 0xB31C1C1E.toInt()
-    private val hintInk get() = if (isNight()) 0x99FFFFFF.toInt() else 0x801C1C1E.toInt()
-    private val backdropDimColor get() = if (isNight()) 0x000E0E10 else 0x00F2F2F7
-    private val backdropDimMaxAlpha get() = if (isNight()) 0x66 else 0x40
+    // iOS Liquid Glass: 15% White (Dark) / 40% White (Light)
+    private val glassFillColor get() = if (isNight()) 0x26FFFFFF.toInt() else 0x66FFFFFF.toInt()
+    
+    // iOS Specular Edge: 30% White (Dark) / 60% White (Light) acting as a light-catching rim
+    private val glassBorderColor get() = if (isNight()) 0x4DFFFFFF.toInt() else 0x99FFFFFF.toInt()
+    
+    // Dividers: 20% white (Dark) / 10% black (Light)
+    private val dividerLineColor get() = if (isNight()) 0x33FFFFFF.toInt() else 0x1A000000.toInt()
+    
+    // Text inks
+    private val primaryInk get() = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt()
+    private val secondaryInk get() = if (isNight()) 0xB3FFFFFF.toInt() else 0x99000000.toInt()
+    private val hintInk get() = if (isNight()) 0x80FFFFFF.toInt() else 0x80000000.toInt()
+    
+    // Backdrop Dim: Faint dark wash so the glass shines through
+    private val backdropDimColor = 0x00000000
+    private val backdropDimMaxAlpha get() = if (isNight()) 0x40 else 0x1A // 25% dark, 10% light
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
