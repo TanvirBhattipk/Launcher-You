@@ -86,15 +86,29 @@ class HomeSearchButton(
         applyColors()
     }
 
-    private fun applyColors() {
-        val baseRgb = if (isNight()) 0 else 255
-        val borderRgb = if (isNight()) 255 else 0
-        
-        fill.color = android.graphics.Color.argb(prefs.homePillBgOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
-        border.color = android.graphics.Color.argb(prefs.homePillBorderOpacity * 255 / 100, borderRgb, borderRgb, borderRgb)
-        border.strokeWidth = maxOf(2f, dp.dp(prefs.homePillBorderSize / 10f))
-        
-        text.color = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+private fun applyColors() {
+        val night = isNight()
+        val baseRgb = if (night) 0x00 else 0xFF
+        val borderRgb = if (night) 0xFF else 0x00
+        val fillPercent = if (prefs.homePillBgOpacity in 1..100) prefs.homePillBgOpacity else 65
+        val strokePercent = if (prefs.homePillBorderOpacity in 1..100) prefs.homePillBorderOpacity else 35
+        val strokeSizeDp = prefs.homePillBorderSize.coerceAtLeast(10) / 10f
+
+        fill.color = android.graphics.Color.argb(
+            ((fillPercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
+            baseRgb,
+            baseRgb,
+            baseRgb,
+        )
+        border.color = android.graphics.Color.argb(
+            ((strokePercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
+            borderRgb,
+            borderRgb,
+            borderRgb,
+        )
+        border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
+
+        text.color = if (night) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
         glyph.color = text.color
     }
 
