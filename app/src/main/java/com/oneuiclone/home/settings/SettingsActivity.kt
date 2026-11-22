@@ -70,6 +70,12 @@ class SettingsActivity : OneUiPage() {
                 startActivity(Intent(this@SettingsActivity, HomeStyleActivity::class.java))
             }
         }
+        item(
+                "Search & Blur Customization",
+                "Adjust opacity, blur, and borders for all search bars and cards"
+            ) {
+                startActivity(Intent(this@SettingsActivity, SearchBlurSettingsActivity::class.java))
+            }
         card {
             item("Home screen grid", "${prefs.homeCols}×${prefs.homeRows}") {
                 choose("Home screen grid", listOf(4 to 5, 4 to 6, 4 to 7, 5 to 5, 5 to 6)) { (c, r) -> prefs.homeCols = c; prefs.homeRows = r }
