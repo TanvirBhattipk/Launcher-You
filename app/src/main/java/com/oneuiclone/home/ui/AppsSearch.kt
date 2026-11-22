@@ -133,8 +133,8 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             borderRgb,
         )
 
-    private val searchBarBorderWidth: Float
-        get() = maxOf(2f, dp.dp(prefs.appSearchBorderSize.coerceAtLeast(10) / 10f))
+private val searchBarBorderWidth: Float
+        get() = dp.dp(0.5f + (prefs.appSearchBorderSize.coerceIn(0, 50) / 50f) * 2.5f)
 
     private val cardFillColor: Int
         get() = android.graphics.Color.argb(
@@ -152,8 +152,8 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             borderRgb,
         )
 
-    private val cardBorderWidth: Float
-        get() = maxOf(2f, dp.dp(prefs.appSearchCardsBorderSize.coerceAtLeast(10) / 10f))
+        private val cardBorderWidth: Float
+        get() = dp.dp(0.5f + (prefs.appSearchCardsBorderSize.coerceIn(0, 50) / 50f) * 2.5f)
 
     private val backdropDimColor: Int
         get() = surfaceRgb
@@ -195,8 +195,10 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-    private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
+private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         private val cardBg = GradientDrawable()
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
         private val toWindow = Matrix()
         private val rect = RectF()
@@ -210,19 +212,31 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         }
 
         fun syncWithBar() {
-            cardBg.cornerRadius = dp.dp(24f)
-            cardBg.setColor(cardFillColor)
-            cardBg.setStroke(cardBorderWidth.toInt(), cardBorderColor)
+            val radius = dp.dp(24f)
+            cardBg.cornerRadius = radius
+            cardBg.setColor(android.graphics.Color.TRANSPARENT)
+            fillPaint.color = cardFillColor
+            strokePaint.color = cardBorderColor
+            strokePaint.strokeWidth = cardBorderWidth
             invalidate()
         }
 
         override fun onDraw(canvas: Canvas) {
+            val radius = dp.dp(24f)
+            rect.set(0f, 0f, width.toFloat(), height.toFloat())
+
             val g = pillGlass ?: barGlass
-            if (g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
-                rect.set(0f, 0f, width.toFloat(), height.toFloat())
-                val r = dp.dp(24f)
+            val cardAlpha = android.graphics.Color.alpha(cardFillColor)
+            if (cardAlpha < 255 && g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
                 glassPaint.paint.alpha = 255
-                canvas.drawRoundRect(rect, r, r, glassPaint.paint)
+                canvas.drawRoundRect(rect, radius, radius, glassPaint.paint)
+            }
+
+            canvas.drawRoundRect(rect, radius, radius, fillPaint)
+            if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
+                val inset = strokePaint.strokeWidth / 2f
+                val strokeRect = RectF(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
+                canvas.drawRoundRect(strokeRect, maxOf(0f, radius - inset), maxOf(0f, radius - inset), strokePaint)
             }
             super.onDraw(canvas)
         }
