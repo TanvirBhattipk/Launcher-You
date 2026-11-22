@@ -87,29 +87,79 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-    private val prefs = com.oneuiclone.home.settings.Prefs(context)
+private val prefs = com.oneuiclone.home.settings.Prefs(context)
 
-    private fun isNight(): Boolean =
-        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    private val isNightMode: Boolean
+        get() = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-    private val baseRgb get() = if (isNight()) 0 else 255
-    private val baseBorder get() = if (isNight()) 255 else 0
+    private fun isNight(): Boolean = isNightMode
 
-    private val primaryInk get() = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
-    private val secondaryInk get() = if (isNight()) 0xB3FFFFFF.toInt() else 0xB3444444.toInt()
-    private val hintInk get() = if (isNight()) 0x80FFFFFF.toInt() else 0x80444444.toInt()
-    private val dividerLineColor get() = if (isNight()) 0x33FFFFFF.toInt() else 0x1A000000.toInt()
+    private fun alphaFromPercent(percent: Int, fallbackPercent: Int): Int {
+        val p = if (percent in 1..100) percent else fallbackPercent
+        return ((p.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255)
+    }
 
-    private val searchBarFillColor get() = android.graphics.Color.argb(prefs.appSearchBarOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
-    private val searchBarBorderColor get() = android.graphics.Color.argb(prefs.appSearchBorderOpacity * 255 / 100, baseBorder, baseBorder, baseBorder)
-    private val searchBarBorderWidth get() = maxOf(2f, dp.dp(prefs.appSearchBorderSize / 10f))
+    private val surfaceRgb: Int
+        get() = if (isNightMode) 0x00 else 0xFF
 
-    private val cardFillColor get() = android.graphics.Color.argb(prefs.appSearchCardsBgOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
-    private val cardBorderColor get() = android.graphics.Color.argb(prefs.appSearchCardsBorderOpacity * 255 / 100, baseBorder, baseBorder, baseBorder)
-    private val cardBorderWidth get() = maxOf(2f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
+    private val borderRgb: Int
+        get() = if (isNightMode) 0xFF else 0x00
 
-    private val backdropDimColor get() = android.graphics.Color.rgb(baseRgb, baseRgb, baseRgb)
-    private val backdropDimMaxAlpha get() = (prefs.appSearchBgOpacity * 255 / 100)
+    private val primaryInk: Int
+        get() = if (isNightMode) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+
+    private val secondaryInk: Int
+        get() = if (isNightMode) 0xCCFFFFFF.toInt() else 0xCC444444.toInt()
+
+    private val hintInk: Int
+        get() = if (isNightMode) 0x99FFFFFF.toInt() else 0x99444444.toInt()
+
+    private val dividerLineColor: Int
+        get() = if (isNightMode) 0x33FFFFFF.toInt() else 0x22444444.toInt()
+
+    private val searchBarFillColor: Int
+        get() = android.graphics.Color.argb(
+            alphaFromPercent(prefs.appSearchBarOpacity, 75),
+            surfaceRgb,
+            surfaceRgb,
+            surfaceRgb,
+        )
+
+    private val searchBarBorderColor: Int
+        get() = android.graphics.Color.argb(
+            alphaFromPercent(prefs.appSearchBorderOpacity, 35),
+            borderRgb,
+            borderRgb,
+            borderRgb,
+        )
+
+    private val searchBarBorderWidth: Float
+        get() = maxOf(2f, dp.dp(prefs.appSearchBorderSize.coerceAtLeast(10) / 10f))
+
+    private val cardFillColor: Int
+        get() = android.graphics.Color.argb(
+            alphaFromPercent(prefs.appSearchCardsBgOpacity, 70),
+            surfaceRgb,
+            surfaceRgb,
+            surfaceRgb,
+        )
+
+    private val cardBorderColor: Int
+        get() = android.graphics.Color.argb(
+            alphaFromPercent(prefs.appSearchCardsBorderOpacity, 35),
+            borderRgb,
+            borderRgb,
+            borderRgb,
+        )
+
+    private val cardBorderWidth: Float
+        get() = maxOf(2f, dp.dp(prefs.appSearchCardsBorderSize.coerceAtLeast(10) / 10f))
+
+    private val backdropDimColor: Int
+        get() = surfaceRgb
+
+    private val backdropDimMaxAlpha: Int
+        get() = alphaFromPercent(prefs.appSearchBgOpacity, 55)
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -844,7 +894,8 @@ class AppsSearch(
             pill.layoutParams = lp
         }
 
-        val dimAlpha = (backdropDimMaxAlpha * f.coerceIn(0f, 1f)).toInt()
+        val progress = f.coerceIn(0f, 1f)
+        val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
         setBackgroundColor(android.graphics.Color.argb(dimAlpha, backdropDimColor, backdropDimColor, backdropDimColor))
 
         pill.x = dp.searchBarSide.toFloat()
