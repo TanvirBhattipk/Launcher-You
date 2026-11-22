@@ -87,26 +87,31 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-private fun isNight(): Boolean =
+private val prefs = com.oneuiclone.home.settings.Prefs(context)
+
+    private fun isNight(): Boolean =
         (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-    // iOS Liquid Glass: 15% White (Dark) / 40% White (Light)
-    private val glassFillColor get() = if (isNight()) 0x26FFFFFF.toInt() else 0x66FFFFFF.toInt()
-    
-    // iOS Specular Edge: 30% White (Dark) / 60% White (Light) acting as a light-catching rim
-    private val glassBorderColor get() = if (isNight()) 0x4DFFFFFF.toInt() else 0x99FFFFFF.toInt()
-    
-    // Dividers: 20% white (Dark) / 10% black (Light)
+    private val baseGlass get() = if (isNight()) 0x000000 else 0xFFFFFF
+    private val baseBorder get() = if (isNight()) 0xFFFFFF else 0x000000
+
+    // Text & Divider Inks: White in Dark Mode, slightly light grey/black (#444444) in Light Mode
+    private val primaryInk get() = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+    private val secondaryInk get() = if (isNight()) 0xB3FFFFFF.toInt() else 0xB3444444.toInt()
+    private val hintInk get() = if (isNight()) 0x80FFFFFF.toInt() else 0x80444444.toInt()
     private val dividerLineColor get() = if (isNight()) 0x33FFFFFF.toInt() else 0x1A000000.toInt()
-    
-    // Text inks
-    private val primaryInk get() = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt()
-    private val secondaryInk get() = if (isNight()) 0xB3FFFFFF.toInt() else 0x99000000.toInt()
-    private val hintInk get() = if (isNight()) 0x80FFFFFF.toInt() else 0x80000000.toInt()
-    
-    // Backdrop Dim: Faint dark wash so the glass shines through
-    private val backdropDimColor = 0x00000000
-    private val backdropDimMaxAlpha get() = if (isNight()) 0x40 else 0x1A // 25% dark, 10% light
+
+    // Card 3: App Search Overlay
+    private val backdropDimColor get() = if (isNight()) 0x000000 else 0xFFFFFF
+    private val backdropDimMaxAlpha get() = (prefs.appSearchBgOpacity * 255 / 100)
+    private val searchBarFillColor get() = (prefs.appSearchBarOpacity * 255 / 100) shl 24 or baseGlass
+    private val searchBarBorderColor get() = (prefs.appSearchBorderOpacity * 255 / 100) shl 24 or baseBorder
+    private val searchBarBorderWidth get() = maxOf(2f, dp.dp(prefs.appSearchBorderSize / 10f))
+
+    // Card 4: App Search Cards
+    private val cardFillColor get() = (prefs.appSearchCardsBgOpacity * 255 / 100) shl 24 or baseGlass
+    private val cardBorderColor get() = (prefs.appSearchCardsBorderOpacity * 255 / 100) shl 24 or baseBorder
+    private val cardBorderWidth get() = maxOf(2f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
