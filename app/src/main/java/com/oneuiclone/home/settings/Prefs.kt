@@ -48,8 +48,6 @@ class Prefs(context: Context) {
 /** Blur radius defaults (in dp): folder/drawer = 50, home pill = 20. */
 var blurHomePill: Int get() = sp.getInt("blur_home_pill", 20); set(v) = sp.edit().putInt("blur_home_pill", v).apply()
 var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edit().putInt("blur_app_drawer", v).apply()
-var blurAppSearch: Int get() = appSearchBgBlur; set(v) { appSearchBgBlur = v }
-var blurSearchBar: Int get() = appSearchBarBlur; set(v) { appSearchBarBlur = v }
     var blurFolder: Int get() = sp.getInt("blur_folder", 50); set(v) = sp.edit().putInt("blur_folder", v).apply()
     var blurWidget: Int get() = sp.getInt("blur_widget", 40); set(v) = sp.edit().putInt("blur_widget", v).apply()
     // Card 1: App Drawer
