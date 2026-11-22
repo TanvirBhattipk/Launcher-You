@@ -200,6 +200,18 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
+        private val frostedNoisePaint by lazy {
+            val size = 128
+            val pixels = IntArray(size * size)
+            val rnd = kotlin.random.Random(System.currentTimeMillis())
+            for (i in pixels.indices) {
+                val gray = rnd.nextInt(256)
+                pixels[i] = android.graphics.Color.argb(12, gray, gray, gray)
+            }
+            val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
+            val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+            android.graphics.Paint().apply { this.shader = shader }
+        }
         private val toWindow = Matrix()
         private val rect = RectF()
 
@@ -233,6 +245,7 @@ private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
             }
 
             canvas.drawRoundRect(rect, radius, radius, fillPaint)
+            canvas.drawRoundRect(rect, radius, radius, frostedNoisePaint)
             if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
                 val inset = strokePaint.strokeWidth / 2f
                 val strokeRect = RectF(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
