@@ -101,8 +101,8 @@ class HomeSearchButton(
 
 private fun applyColors() {
         val night = isNight()
-        val baseRgb = if (night) 0x00 else 0xFF
-        val borderRgb = if (night) 0xFF else 0x00
+        val baseRgb = 0x00
+        val borderRgb = 0xFF
         val fillPercent = if (prefs.homePillBgOpacity in 1..100) prefs.homePillBgOpacity else 65
         val strokePercent = if (prefs.homePillBorderOpacity in 1..100) prefs.homePillBorderOpacity else 35
         val strokeSizeDp = prefs.homePillBorderSize.coerceAtLeast(10) / 10f
