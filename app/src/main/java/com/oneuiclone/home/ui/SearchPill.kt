@@ -90,15 +90,28 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         super.onDetachedFromWindow()
     }
 
+private val prefs = com.oneuiclone.home.settings.Prefs(context)
+
+    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+private val prefs = com.oneuiclone.home.settings.Prefs(context)
+
+    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
     private fun applyColors() {
-        val c = SearchColors.of(context)
-        baseFill = c.pill
-        baseStroke = c.stroke
+        val baseGlass = if (isNight()) 0x000000 else 0xFFFFFF
+        val baseBorder = if (isNight()) 0xFFFFFF else 0x000000
+        
+        baseFill = (prefs.drawerSearchBarOpacity * 255 / 100) shl 24 or baseGlass
+        baseStroke = (prefs.drawerSearchBorderOpacity * 255 / 100) shl 24 or baseBorder
+        
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)
-        text.color = c.hint
-        glyph.color = c.text
-        dots.color = c.text
+        border.strokeWidth = maxOf(2f, dp.dp(prefs.drawerSearchBorderSize / 10f))
+        
+        text.color = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+        glyph.color = text.color
+        dots.color = text.color
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -148,39 +161,5 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         val fm = text.fontMetrics
         val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
         canvas.drawText(hint, gx + box + dp.dp(8f), baseline, text)
-    }
-}
-
-/** Adaptive Light & Dark mode frosted palette for search bars and pills. */
-class SearchColors private constructor(
-    val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
-) {
-    companion object {
-        // iOS Liquid Glass (Dark Mode)
-        private val DARK = SearchColors(
-            pill = 0x26FFFFFF.toInt(),   // 15% White fill
-            homePill = 0x26FFFFFF.toInt(),
-            open = 0x26FFFFFF.toInt(),
-            stroke = 0x4DFFFFFF.toInt(), // 30% White specular highlight
-            hint = 0x80FFFFFF.toInt(),
-            text = 0xFFFFFFFF.toInt()
-        )
-
-        // iOS Liquid Glass (Light Mode)
-        private val LIGHT = SearchColors(
-            pill = 0x66FFFFFF.toInt(),   // 40% White fill
-            homePill = 0x66FFFFFF.toInt(),
-            open = 0x66FFFFFF.toInt(),
-            stroke = 0x99FFFFFF.toInt(), // 60% White specular highlight
-            hint = 0x80000000.toInt(),
-            text = 0xFF000000.toInt()
-        )
-
-        fun dark() = DARK
-
-        fun of(context: Context): SearchColors {
-            val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            return if (night) DARK else LIGHT
-        }
     }
 }
