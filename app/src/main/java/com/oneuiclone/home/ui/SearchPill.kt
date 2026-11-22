@@ -122,7 +122,7 @@ private fun applyColors() {
         border.color = scaled(baseStroke)
         border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
 
-        text.color = if (night) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+        text.color = 0xFFFFFFFF.toInt().toInt() else 0xFF444444.toInt()
         glyph.color = text.color
         dots.color = text.color
     }
@@ -179,7 +179,7 @@ class SearchColors(
 ) {
     companion object {
         private val DARK = SearchColors(0x26FFFFFF, 0x26FFFFFF, 0x26FFFFFF, 0x4DFFFFFF, 0x80FFFFFF.toInt(), 0xFFFFFFFF.toInt())
-        private val LIGHT = SearchColors(0x66FFFFFF, 0x66FFFFFF, 0x66FFFFFF, 0xFFFFFFFF.toInt(), 0x80000000.toInt(), 0xFF000000.toInt())
+        private val LIGHT = SearchColors(0x66FFFFFF, 0x66FFFFFF, 0x66FFFFFF, 0xFFFFFFFF.toInt(), 0x80FFFFFF.toInt(), 0xFFFFFFFF.toInt())
         fun dark() = DARK
         fun of(context: Context): SearchColors {
             val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
