@@ -35,6 +35,18 @@ class HomeSearchButton(
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
+    private val frostedNoisePaint by lazy {
+        val size = 128
+        val pixels = IntArray(size * size)
+        val rnd = kotlin.random.Random(System.currentTimeMillis())
+        for (i in pixels.indices) {
+            val gray = rnd.nextInt(256)
+            pixels[i] = android.graphics.Color.argb(12, gray, gray, gray)
+        }
+        val bmp = android.graphics.Bitmap.createBitmap(pixels, size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val shader = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.REPEAT, android.graphics.Shader.TileMode.REPEAT)
+        android.graphics.Paint().apply { this.shader = shader }
+    }
     private val rect = RectF()
 
     var glass: WidgetGlass? = null
@@ -131,6 +143,7 @@ private fun applyColors() {
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
         if (glassPaint.aim(glass, drawnAt)) canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         canvas.drawRoundRect(rect, r, r, fill)
+        canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
         if (progress >= 0f) {
             canvas.save()
             canvas.clipRect(rect.left, rect.top, rect.left + rect.width() * progress, rect.bottom)
