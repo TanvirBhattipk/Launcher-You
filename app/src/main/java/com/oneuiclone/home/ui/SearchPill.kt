@@ -10,27 +10,23 @@ import android.view.View
 import android.view.ViewTreeObserver
 import com.oneuiclone.home.device.DeviceProfile
 
-/** Ink of a pill drawn on the blurred-wallpaper glass: white, as on the Home screen's Search button. */
 internal const val SEARCH_GLASS_INK = 0xE6FFFFFF.toInt()
 private const val NIGHT_GLASS_BG = 0xFF1C1C1E.toInt()
 
-/** Tint of a glass pill (the folder-glass look of [HomeSearchButton]); [transparency] 0..1. */
 internal fun searchGlassFill(context: Context, transparency: Float): Int {
     val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val base = if (night) NIGHT_GLASS_BG else FolderIconView.DEFAULT_BG
     return (base and 0x00FFFFFF) or ((android.graphics.Color.alpha(base) * (1f - transparency)).toInt() shl 24)
 }
 
-/**
- * The apps-screen search bar: full width, drawn with frosted blur, adaptive light/dark tint,
- * and a subtle hairline border, with the hint and magnifier inside.
- */
 class SearchPill(context: Context, private val dp: DeviceProfile, private val hint: String, private val menuIcon: Boolean = false) : View(context) {
+
+    private val prefs = com.oneuiclone.home.settings.Prefs(context)
+    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = maxOf(2f, dp.dp(1f))
     }
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 15f * resources.displayMetrics.scaledDensity
@@ -44,7 +40,6 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     private val rect = RectF()
     private val inset = dp.dp(0.5f)
 
-    /** The blurred wallpaper behind the pill; null for none. */
     var glass: WidgetGlass? = null
         set(v) {
             if (field === v) return
@@ -52,16 +47,15 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
             field = v; applyColors(); invalidate()
         }
 
-    /** How see-through the glass tint is (0..1). */
     var glassTransparency = 0f
         set(v) { field = v; applyColors(); invalidate() }
 
-    /** 0..1: how much of the pill's background (glass, tint and border) shows. */
     var backgroundOpacity = 1f
         set(v) { field = v.coerceIn(0f, 1f); applyColors(); invalidate() }
 
     private var baseFill = 0
     private var baseStroke = 0
+    
     private fun scaled(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * backgroundOpacity).toInt() shl 24)
 
     private val glassPaint = GlassPaint()
@@ -90,20 +84,12 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         super.onDetachedFromWindow()
     }
 
-private val prefs = com.oneuiclone.home.settings.Prefs(context)
-
-    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
-private val prefs = com.oneuiclone.home.settings.Prefs(context)
-
-    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
     private fun applyColors() {
-        val baseGlass = if (isNight()) 0x000000 else 0xFFFFFF
-        val baseBorder = if (isNight()) 0xFFFFFF else 0x000000
+        val baseRgb = if (isNight()) 0 else 255
+        val borderRgb = if (isNight()) 255 else 0
         
-        baseFill = (prefs.drawerSearchBarOpacity * 255 / 100) shl 24 or baseGlass
-        baseStroke = (prefs.drawerSearchBorderOpacity * 255 / 100) shl 24 or baseBorder
+        baseFill = android.graphics.Color.argb(prefs.drawerSearchBarOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
+        baseStroke = android.graphics.Color.argb(prefs.drawerSearchBorderOpacity * 255 / 100, borderRgb, borderRgb, borderRgb)
         
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)
@@ -120,7 +106,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         invalidate()
     }
 
-    /** The drawn pill as the search bar's start / end state; [left]/[top] in root coordinates. */
     fun origin(left: Float, top: Float): AppsSearch.Origin {
         val i = inset
         return AppsSearch.Origin(
@@ -152,8 +137,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
-        border.strokeWidth = maxOf(2f, dp.dp(1f))
-        border.color = scaled(baseStroke)
         canvas.drawRoundRect(rect, r, r, border)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
@@ -161,5 +144,19 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         val fm = text.fontMetrics
         val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
         canvas.drawText(hint, gx + box + dp.dp(8f), baseline, text)
+    }
+}
+
+class SearchColors private constructor(
+    val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
+) {
+    companion object {
+        private val DARK = SearchColors(0x26FFFFFF, 0x26FFFFFF, 0x26FFFFFF, 0x4DFFFFFF, 0x80FFFFFF.toInt(), 0xFFFFFFFF.toInt())
+        private val LIGHT = SearchColors(0x66FFFFFF, 0x66FFFFFF, 0x66FFFFFF, 0x99FFFFFF.toInt(), 0x80000000.toInt(), 0xFF000000.toInt())
+        fun dark() = DARK
+        fun of(context: Context): SearchColors {
+            val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            return if (night) DARK else LIGHT
+        }
     }
 }
