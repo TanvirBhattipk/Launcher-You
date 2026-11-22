@@ -147,7 +147,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 }
 
-class SearchColors private constructor(
+class SearchColors(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
