@@ -156,22 +156,24 @@ class SearchColors private constructor(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
 ) {
     companion object {
+        // iOS Liquid Glass (Dark Mode)
         private val DARK = SearchColors(
-            pill = 0x521C1C1E,
-            homePill = 0x521C1C1E,
-            open = 0x521C1C1E,
-            stroke = 0x3DFFFFFF,
-            hint = 0xB3FFFFFF.toInt(),
+            pill = 0x26FFFFFF.toInt(),   // 15% White fill
+            homePill = 0x26FFFFFF.toInt(),
+            open = 0x26FFFFFF.toInt(),
+            stroke = 0x4DFFFFFF.toInt(), // 30% White specular highlight
+            hint = 0x80FFFFFF.toInt(),
             text = 0xFFFFFFFF.toInt()
         )
 
+        // iOS Liquid Glass (Light Mode)
         private val LIGHT = SearchColors(
-            pill = 0x66FFFFFF,
-            homePill = 0x66FFFFFF,
-            open = 0x66FFFFFF,
-            stroke = 0x33000000,
-            hint = 0x8C1C1C1E.toInt(),
-            text = 0xFF1C1C1E.toInt()
+            pill = 0x66FFFFFF.toInt(),   // 40% White fill
+            homePill = 0x66FFFFFF.toInt(),
+            open = 0x66FFFFFF.toInt(),
+            stroke = 0x99FFFFFF.toInt(), // 60% White specular highlight
+            hint = 0x80000000.toInt(),
+            text = 0xFF000000.toInt()
         )
 
         fun dark() = DARK
