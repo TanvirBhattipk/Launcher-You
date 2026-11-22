@@ -84,12 +84,20 @@ class HomeSearchButton(
         applyColors()
     }
 
+private val prefs = com.oneuiclone.home.settings.Prefs(context)
+
+    private fun isNight() = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
     private fun applyColors() {
-        val c = SearchColors.of(context)
-        fill.color = c.homePill
-        border.color = c.stroke
-        text.color = c.text
-        glyph.color = c.text
+        val baseGlass = if (isNight()) 0x000000 else 0xFFFFFF
+        val baseBorder = if (isNight()) 0xFFFFFF else 0x000000
+        
+        fill.color = (prefs.homePillBgOpacity * 255 / 100) shl 24 or baseGlass
+        border.color = (prefs.homePillBorderOpacity * 255 / 100) shl 24 or baseBorder
+        border.strokeWidth = maxOf(2f, dp.dp(prefs.homePillBorderSize / 10f))
+        
+        text.color = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
+        glyph.color = text.color
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
