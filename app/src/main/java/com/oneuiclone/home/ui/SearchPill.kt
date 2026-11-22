@@ -172,6 +172,7 @@ fun origin(left: Float, top: Float): AppsSearch.Origin {
         val baseline = height / 2f - (fm.ascent + fm.descent) / 2f
         canvas.drawText(hint, gx + box + dp.dp(8f), baseline, text)
     }
+} // <-- This is the missing bracket that broke the build!
 
 class SearchColors(
     val pill: Int, val homePill: Int, val open: Int, val stroke: Int, val hint: Int, val text: Int,
