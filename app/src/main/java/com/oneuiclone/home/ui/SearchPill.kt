@@ -132,10 +132,10 @@ private fun applyColors() {
         invalidate()
     }
 
-    fun origin(left: Float, top: Float): AppsSearch.Origin {
+fun origin(left: Float, top: Float): AppsSearch.Origin {
         val i = inset
         return AppsSearch.Origin(
-            RectF(left + i, top + i, left + dp.searchBarWidth - i, top + dp.searchBarHeight - i),
+            RectF(left + i, top + i, left + width - i, top + height - i), // uses the drawn View width/height
             baseFill,
             baseStroke,
             0f,
