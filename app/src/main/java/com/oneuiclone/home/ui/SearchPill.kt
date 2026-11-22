@@ -100,7 +100,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
 private fun applyColors() {
         val night = isNight()
         val baseRgb = if (night) 0x00 else 0xFF
-        val borderRgb = if (night) 0xFF else 0x00
+        val borderRgb = 0xFF
         val fillPercent = if (prefs.drawerSearchBarOpacity in 1..100) prefs.drawerSearchBarOpacity else 75
         val strokePercent = if (prefs.drawerSearchBorderOpacity in 1..100) prefs.drawerSearchBorderOpacity else 35
         val strokeSizeDp = prefs.drawerSearchBorderSize.coerceAtLeast(10) / 10f
@@ -179,7 +179,7 @@ class SearchColors(
 ) {
     companion object {
         private val DARK = SearchColors(0x26FFFFFF, 0x26FFFFFF, 0x26FFFFFF, 0x4DFFFFFF, 0x80FFFFFF.toInt(), 0xFFFFFFFF.toInt())
-        private val LIGHT = SearchColors(0x66FFFFFF, 0x66FFFFFF, 0x66FFFFFF, 0x99FFFFFF.toInt(), 0x80000000.toInt(), 0xFF000000.toInt())
+        private val LIGHT = SearchColors(0x66FFFFFF, 0x66FFFFFF, 0x66FFFFFF, 0xFFFFFFFF.toInt(), 0x80000000.toInt(), 0xFF000000.toInt())
         fun dark() = DARK
         fun of(context: Context): SearchColors {
             val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
