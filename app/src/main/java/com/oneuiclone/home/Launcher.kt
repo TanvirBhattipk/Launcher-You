@@ -430,9 +430,22 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         searchPill.glassTransparency = homeSearch.glassTransparency
         searchPill.glass = barGlass
         searchPill.setOnClickListener { openSearch() }
-        val barLeft = (dp.widthPx - dp.searchBarWidth) / 2
-        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.searchBarWidth, dp.searchBarHeight).apply {
+        val columnWidth = dp.appsGrid.width() / dp.appsCols
+        val iconPad = (columnWidth - dp.iconSizePx) / 2
+        val barLeft = dp.appsGrid.left + iconPad
+        val barWidth = dp.appsGrid.width() - (iconPad * 2)
+
+        appsLayer.addView(searchPill, FrameLayout.LayoutParams(barWidth, dp.searchBarHeight).apply {
             leftMargin = barLeft
+            topMargin = dp.searchBarTop
+        })
+        moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
+            glassTransparency = homeSearch.glassTransparency
+            glass = barGlass
+            setOnClickListener { showAppsMenu(this) }
+        }
+        appsLayer.addView(moreButton, FrameLayout.LayoutParams(dp.searchBarHeight, dp.searchBarHeight).apply {
+            leftMargin = barLeft + barWidth - dp.searchBarHeight
             topMargin = dp.searchBarTop
         })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
