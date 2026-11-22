@@ -87,37 +87,35 @@ class AppsSearch(
         val ink: Int? = null,
     )
 
-private val prefs = com.oneuiclone.home.settings.Prefs(context)
+    private val prefs = com.oneuiclone.home.settings.Prefs(context)
 
     private fun isNight(): Boolean =
         (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
-    private val baseGlass get() = if (isNight()) 0x000000 else 0xFFFFFF
-    private val baseBorder get() = if (isNight()) 0xFFFFFF else 0x000000
+    private val baseRgb get() = if (isNight()) 0 else 255
+    private val baseBorder get() = if (isNight()) 255 else 0
 
-    // Text & Divider Inks: White in Dark Mode, slightly light grey/black (#444444) in Light Mode
     private val primaryInk get() = if (isNight()) 0xFFFFFFFF.toInt() else 0xFF444444.toInt()
     private val secondaryInk get() = if (isNight()) 0xB3FFFFFF.toInt() else 0xB3444444.toInt()
     private val hintInk get() = if (isNight()) 0x80FFFFFF.toInt() else 0x80444444.toInt()
     private val dividerLineColor get() = if (isNight()) 0x33FFFFFF.toInt() else 0x1A000000.toInt()
 
-    // Card 3: App Search Overlay
-    private val backdropDimColor get() = if (isNight()) 0x000000 else 0xFFFFFF
-    private val backdropDimMaxAlpha get() = (prefs.appSearchBgOpacity * 255 / 100)
-    private val searchBarFillColor get() = (prefs.appSearchBarOpacity * 255 / 100) shl 24 or baseGlass
-    private val searchBarBorderColor get() = (prefs.appSearchBorderOpacity * 255 / 100) shl 24 or baseBorder
+    private val searchBarFillColor get() = android.graphics.Color.argb(prefs.appSearchBarOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
+    private val searchBarBorderColor get() = android.graphics.Color.argb(prefs.appSearchBorderOpacity * 255 / 100, baseBorder, baseBorder, baseBorder)
     private val searchBarBorderWidth get() = maxOf(2f, dp.dp(prefs.appSearchBorderSize / 10f))
 
-    // Card 4: App Search Cards
-    private val cardFillColor get() = (prefs.appSearchCardsBgOpacity * 255 / 100) shl 24 or baseGlass
-    private val cardBorderColor get() = (prefs.appSearchCardsBorderOpacity * 255 / 100) shl 24 or baseBorder
+    private val cardFillColor get() = android.graphics.Color.argb(prefs.appSearchCardsBgOpacity * 255 / 100, baseRgb, baseRgb, baseRgb)
+    private val cardBorderColor get() = android.graphics.Color.argb(prefs.appSearchCardsBorderOpacity * 255 / 100, baseBorder, baseBorder, baseBorder)
     private val cardBorderWidth get() = maxOf(2f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
+
+    private val backdropDimColor get() = android.graphics.Color.rgb(baseRgb, baseRgb, baseRgb)
+    private val backdropDimMaxAlpha get() = (prefs.appSearchBgOpacity * 255 / 100)
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
     private val pillBg = GradientDrawable()
     private val clearBtn = ClearButton(context)
-    private val glyph = MagnifierView(context, 0xCCFFFFFF.toInt())
+    private val glyph = MagnifierView(context, secondaryInk)
 
     // Cards
     private val appsCard = GlassCard(context)
@@ -147,7 +145,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-    /** Frosted glass card container with 24dp corners, adaptive light/dark tint, and crisp hairline border. */
     private inner class GlassCard(ctx: Context) : LinearLayout(ctx) {
         private val cardBg = GradientDrawable()
         private val glassPaint = GlassPaint()
@@ -164,8 +161,8 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
 
         fun syncWithBar() {
             cardBg.cornerRadius = dp.dp(24f)
-            cardBg.setColor(glassFillColor)
-            cardBg.setStroke(maxOf(2, dp.dpi(1f)), glassBorderColor)
+            cardBg.setColor(cardFillColor)
+            cardBg.setStroke(cardBorderWidth.toInt(), cardBorderColor)
             invalidate()
         }
 
@@ -181,7 +178,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         }
     }
 
-    /** Frosted glass search bar pill with blurred wallpaper backdrop and adaptive hairline border. */
     private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val glassPaint = GlassPaint()
         private val toWindow = android.graphics.Matrix()
@@ -289,15 +285,14 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         content.gravity = Gravity.TOP
         content.clipChildren = false
 
-        // Calculator answer banner
         calcBox.apply {
             visibility = GONE
             setPadding(dp.dpi(18f), dp.dpi(14f), dp.dpi(18f), dp.dpi(14f))
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
                 cornerRadius = dp.dp(22f)
-                setColor(glassFillColor)
-                setStroke(maxOf(2, dp.dpi(1f)), glassBorderColor)
+                setColor(cardFillColor)
+                setStroke(cardBorderWidth.toInt(), cardBorderColor)
             }
             isClickable = true
             setOnClickListener {
@@ -309,7 +304,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         }
         content.addView(calcBox, cardParams(top = 0))
 
-        // 1. Apps Card
         appsCard.setPadding(dp.dpi(12f), dp.dpi(14f), dp.dpi(12f), dp.dpi(14f))
         appsCard.addView(sectionHeader("Apps", showAll = true, horizontalPadDp = 4f) { onSwipeUp() })
         appsRow.orientation = LinearLayout.HORIZONTAL
@@ -319,7 +313,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         })
         content.addView(appsCard, cardParams(top = 0))
 
-        // 2. Contacts Card
         contactsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
         contactsCard.addView(sectionHeader("Contacts", showAll = true, horizontalPadDp = 16f) {
             onOpenIntent(it, Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -332,7 +325,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         })
         content.addView(contactsCard, cardParams(top = dp.dpi(14f)))
 
-        // 3. Suggestions Card
         suggestionsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
         suggestionsCard.addView(sectionHeader("Suggestions", showAll = false, horizontalPadDp = 16f, onShowAll = null))
         suggestionsListLayout.orientation = LinearLayout.VERTICAL
@@ -477,8 +469,8 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         }
         (appsCard.layoutParams as LinearLayout.LayoutParams).topMargin = dp.dpi(10f)
         (calcBox.background as? GradientDrawable)?.apply {
-            setColor(glassFillColor)
-            setStroke(maxOf(2, dp.dpi(1f)), glassBorderColor)
+            setColor(cardFillColor)
+            setStroke(cardBorderWidth.toInt(), cardBorderColor)
         }
         val typed = field.text.toString().trim()
         val b = android.text.SpannableStringBuilder()
@@ -551,10 +543,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
     }
 
     private fun initials(s: String) = s.split(' ', '-', '.').filter { it.isNotEmpty() }.joinToString("") { it.take(1) }
-
-    // ---------------------------------------------------------------------------------------------
-    // Suggestions
-    // ---------------------------------------------------------------------------------------------
 
     private fun fetchSuggestions(q: String) {
         pendingFetch?.let { main.removeCallbacks(it) }
@@ -677,10 +665,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         }
     }
 
-    // ---------------------------------------------------------------------------------------------
-    // Contacts
-    // ---------------------------------------------------------------------------------------------
-
     private fun querySources(raw: String) {
         pendingSources?.let { main.removeCallbacks(it) }
         val r = Runnable {
@@ -788,10 +772,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         android.content.res.ColorStateList.valueOf(if (isNight()) 0x22FFFFFF else 0x1A000000), null, null
     )
 
-    // ---------------------------------------------------------------------------------------------
-    // Enter target
-    // ---------------------------------------------------------------------------------------------
-
     private fun firstEnterable(box: ViewGroup): View? {
         if (box.visibility != VISIBLE) return null
         for (i in 0 until box.childCount) {
@@ -806,10 +786,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         enterTarget = if (field.text.isNullOrBlank()) null
         else firstEnterable(appsRow) ?: firstEnterable(contactsListLayout) ?: firstEnterable(suggestionsListLayout)
     }
-
-    // ---------------------------------------------------------------------------------------------
-    // Swipe gestures
-    // ---------------------------------------------------------------------------------------------
 
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
     private var downX = 0f
@@ -855,13 +831,8 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         onDismiss()
     }
 
-    // ---------------------------------------------------------------------------------------------
-    // Morph + keyboard
-    // ---------------------------------------------------------------------------------------------
-
     private fun barTop() = dp.searchBarTop.toFloat()
     private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(18f)
-    private fun withOpacity(c: Int) = (c and 0x00FFFFFF) or ((android.graphics.Color.alpha(c) * barOpacity).toInt() shl 24)
 
     private fun layoutPill() {
         if (!::origin.isInitialized) return
@@ -872,16 +843,16 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
             lp.width = dp.searchBarWidth; lp.height = h
             pill.layoutParams = lp
         }
-        // Adaptive Light/Dark mode wallpaper dim overlay
+
         val dimAlpha = (backdropDimMaxAlpha * f.coerceIn(0f, 1f)).toInt()
-        setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
+        setBackgroundColor(android.graphics.Color.argb(dimAlpha, backdropDimColor, backdropDimColor, backdropDimColor))
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
         pill.alpha = f.coerceIn(0f, 1f)
         pillBg.cornerRadius = h / 2f
-        pillBg.setColor(glassFillColor)
-        pillBg.setStroke(maxOf(2, dp.dpi(1f)), glassBorderColor)
+        pillBg.setColor(searchBarFillColor)
+        pillBg.setStroke(searchBarBorderWidth.toInt(), searchBarBorderColor)
 
         pillGlass = barGlass ?: o.glass
         appsCard.syncWithBar()
@@ -1028,9 +999,9 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         private const val MAX_APPS = 5
         private const val MAX_WEB = 4
         const val OPEN_MS = 425L
-        const val OPEN_BAR_MS = 360L
-        const val CLOSE_MS = 240L
-        const val BAR_SLIDE_DP = 36f
+        private const val OPEN_BAR_MS = 360L
+        private const val CLOSE_MS = 240L
+        private const val BAR_SLIDE_DP = 36f
         const val OPEN_RISE_DP = 48f
         private const val FADE_MS = 150L
         private const val KEYBOARD_RETRY_MS = 1500L
@@ -1038,7 +1009,6 @@ private val prefs = com.oneuiclone.home.settings.Prefs(context)
         private val AVATAR_COLORS = intArrayOf(0xFF7B8591.toInt(), 0xFF6E7885.toInt(), 0xFF64707D.toInt(), 0xFF737D8A.toInt())
     }
 
-    /** Soft translucent circular × clear button on the right of the search bar. */
     private class ClearButton(context: Context) : View(context) {
         private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x52FFFFFF }
         private val xPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
