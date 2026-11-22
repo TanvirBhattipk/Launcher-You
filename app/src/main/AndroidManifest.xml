@@ -91,7 +91,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-
+<activity
+            android:name=".settings.SearchBlurSettingsActivity"
+            android:exported="false" />
         <!-- Home screen edit mode › Wallpaper and style (and Icons, below); in Settings' task, closed by the home gesture like it -->
         <activity
             android:name=".settings.WallpaperStyleActivity"
