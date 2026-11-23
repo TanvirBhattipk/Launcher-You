@@ -448,22 +448,14 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
             glassTransparency = homeSearch.glassTransparency
-            glass = drawerBarGlass
+            glass = barGlass
             setOnClickListener { showAppsMenu(this) }
         }
         appsLayer.addView(moreButton, FrameLayout.LayoutParams(dp.searchBarHeight, dp.searchBarHeight).apply {
             leftMargin = barLeft + barWidth - dp.searchBarHeight
             topMargin = dp.searchBarTop
         })
-        moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
-            glassTransparency = homeSearch.glassTransparency
-            glass = drawerBarGlass
-            setOnClickListener { showAppsMenu(this) }
-        }
-        appsLayer.addView(moreButton, FrameLayout.LayoutParams(dp.searchBarHeight, dp.searchBarHeight).apply {
-            leftMargin = barLeft + dp.searchBarWidth - dp.searchBarHeight
-            topMargin = dp.searchBarTop
-        })
+        
         bound = false
         if (repo?.apps?.isNotEmpty() == true) bindAll()
     }
