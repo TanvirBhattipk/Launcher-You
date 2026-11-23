@@ -9,6 +9,8 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import kotlin.math.roundToInt
+import android.graphics.Matrix
+import android.graphics.RuntimeShader
 
 /** Yuno's navbar glass, driven by the Search & Blur sliders. */
 object YunoGlass {
@@ -31,36 +33,55 @@ object YunoGlass {
     fun rimPeak(borderOpacityPercent: Int): Float = (borderOpacityPercent / 100f * 5f).coerceIn(0f, 1f)
 }
 
-/** Yuno's 45° edge highlight: bright at top-left and bottom-right, fading across the middle. */
+/** Yuno's directional edge highlight: every edge lit by its angle to a 45° light, brightest at top-left and bottom-right. */
 class YunoRim {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private var l = Float.NaN
-    private var t = Float.NaN
-    private var r = Float.NaN
-    private var b = Float.NaN
-    private var lastPeak = -1f
+    private val shader = RuntimeShader(AGSL)
+    private val matrix = Matrix()
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        this.shader = this@YunoRim.shader
+    }
 
-    private fun aim(rect: RectF, strokePx: Float, peak: Float): Boolean {
-        if (peak <= 0f) return false
-        if (rect.left != l || rect.top != t || rect.right != r || rect.bottom != b || peak != lastPeak) {
-            l = rect.left; t = rect.top; r = rect.right; b = rect.bottom; lastPeak = peak
-            val hi = ((peak * 255f).roundToInt() shl 24) or 0xFFFFFF
-            paint.shader = LinearGradient(
-                l, t, r, b,
-                intArrayOf(hi, 0x00FFFFFF, 0x00FFFFFF, hi),
-                floatArrayOf(0f, 0.3f, 0.7f, 1f),
-                Shader.TileMode.CLAMP,
-            )
-        }
+    private fun aim(rect: RectF, radius: Float, strokePx: Float, peak: Float): Boolean {
+        if (peak <= 0f || rect.width() <= 0f || rect.height() <= 0f) return false
+        shader.setFloatUniform("size", rect.width(), rect.height())
+        shader.setFloatUniform("radius", minOf(radius, rect.width() / 2f, rect.height() / 2f))
+        shader.setFloatUniform("peak", peak)
+        matrix.setTranslate(rect.left, rect.top)
+        shader.setLocalMatrix(matrix)
         paint.strokeWidth = strokePx
         return true
     }
 
     fun draw(canvas: Canvas, rect: RectF, radius: Float, strokePx: Float, peak: Float) {
-        if (aim(rect, strokePx, peak)) canvas.drawRoundRect(rect, radius, radius, paint)
+        if (aim(rect, radius, strokePx, peak)) canvas.drawRoundRect(rect, radius, radius, paint)
     }
 
-    fun drawPath(canvas: Canvas, path: Path, rect: RectF, strokePx: Float, peak: Float) {
-        if (aim(rect, strokePx, peak)) canvas.drawPath(path, paint)
+    fun drawPath(canvas: Canvas, path: Path, rect: RectF, radius: Float, strokePx: Float, peak: Float) {
+        if (aim(rect, radius, strokePx, peak)) canvas.drawPath(path, paint)
+    }
+
+    private companion object {
+        const val AGSL = """
+            uniform float2 size;
+            uniform float radius;
+            uniform float peak;
+            float2 gradSdRoundedRect(float2 coord, float2 halfSize, float r) {
+                float2 cornerCoord = abs(coord) - (halfSize - float2(r));
+                if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
+                    return sign(coord) * normalize(max(cornerCoord, 0.0) + 0.00001);
+                } else {
+                    float gradX = step(cornerCoord.y, cornerCoord.x);
+                    return sign(coord) * float2(gradX, 1.0 - gradX);
+                }
+            }
+            half4 main(float2 coord) {
+                float2 halfSize = size * 0.5;
+                float2 grad = gradSdRoundedRect(coord - halfSize, halfSize, radius);
+                float2 normal = float2(cos(0.7853982), sin(0.7853982));
+                float a = abs(dot(grad, normal)) * peak;
+                return half4(a);
+            }
+        """
     }
 }
