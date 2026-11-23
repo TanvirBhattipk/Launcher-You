@@ -103,8 +103,9 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
 
     val background = BackgroundController(activity, scrim, wallpaper).apply {
         val d = activity.resources.displayMetrics.density
-        appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d    }
+        appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d
         appsDim = prefs.drawerBgOpacity / 100f
+    }
 
     private fun applyGlassPrefs() {
         val d = activity.resources.displayMetrics.density
