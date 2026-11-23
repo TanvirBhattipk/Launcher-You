@@ -166,7 +166,7 @@ class AppsSearch(
     }
 
     // Cards
-    private val appsCard = GlassCard(context, flatBottom = true)
+    private val appsCard = GlassCard(context, flatBottom = false)
     private val appsRow = LinearLayout(context)
     private val contactsCard = GlassCard(context, flatBottom = false)
     private val contactsListLayout = LinearLayout(context)
