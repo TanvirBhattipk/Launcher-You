@@ -261,7 +261,8 @@ class WallpaperLayer(context: Context) : android.view.ViewGroup(context) {
     }
 
     private var lastRadius = -1f
-
+    var extraSaturation = 1f
+        set(v) { if (field != v) { field = v; lastRadius = -1f; updateViews() } }
     private fun updateViews() {
         if (!available) {
             blurView.visibility = INVISIBLE; sharpView.visibility = INVISIBLE
@@ -295,11 +296,13 @@ class WallpaperLayer(context: Context) : android.view.ViewGroup(context) {
         }
     }
 
-    private fun interpolatedCurve(p: Float): ColorMatrix {
+     private fun interpolatedCurve(p: Float): ColorMatrix {
         val target = curveMatrix().array
         val id = ColorMatrix().array
         val t = p.coerceIn(0f, 1f)
-        return ColorMatrix(FloatArray(20) { id[it] + (target[it] - id[it]) * t })
+        val m = ColorMatrix(FloatArray(20) { id[it] + (target[it] - id[it]) * t })
+        if (extraSaturation != 1f) m.postConcat(ColorMatrix().apply { setSaturation(1f + (extraSaturation - 1f) * t) })
+        return m
     }
 
     fun drawSnapshot(c: Canvas): Boolean {
