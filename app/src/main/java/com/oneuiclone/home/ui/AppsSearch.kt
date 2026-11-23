@@ -1243,4 +1243,3 @@ class AppsSearch(
         }
     }
 }
-""")
