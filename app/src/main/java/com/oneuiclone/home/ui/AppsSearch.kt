@@ -237,13 +237,7 @@ class AppsSearch(
             cardPath.reset()
             cardPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
 
-            val g = cardGlass ?: pillGlass ?: barGlass
-            val cardAlpha = android.graphics.Color.alpha(cardFillColor)
-            if (cardAlpha < 255 && g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
-                glassPaint.paint.colorFilter = YunoGlass.saturation
-                glassPaint.paint.alpha = 255
-                canvas.drawPath(cardPath, glassPaint.paint)
-            }
+
 
             canvas.drawPath(cardPath, fillPaint)
             
@@ -272,22 +266,17 @@ class AppsSearch(
         }
     }
 
-   private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
-        private val glassPaint = GlassPaint()
-        private val toWindow = android.graphics.Matrix()
+    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val rect = RectF()
         private val rim = YunoRim()
 
         override fun draw(canvas: Canvas) {
-            pillGlass?.let { g ->
-                toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
-                rect.set(bounds)
-                if (glassPaint.aim(g, toWindow)) {
-                    glassPaint.paint.colorFilter = YunoGlass.saturation
-                    glassPaint.paint.alpha = 255
-                    canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
-                }
-            }
+            super.draw(canvas)
+            val w = searchBarBorderWidth
+            rect.set(bounds); rect.inset(w / 2f, w / 2f)
+            rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
+        }
+    }
             super.draw(canvas)
             val w = searchBarBorderWidth
             rect.set(bounds); rect.inset(w / 2f, w / 2f)
