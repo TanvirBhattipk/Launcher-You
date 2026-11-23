@@ -924,7 +924,9 @@ class AppsSearch(
         field.setTextColor(primaryInk)
         field.setHintTextColor(hintInk)
         clearBtn.setNight(true) // Force night mode style for clear button
-        pill.elevation = 0f
+                pill.elevation = dp.dp(6f)
+        pill.outlineAmbientShadowColor = 0x1A000000
+        pill.outlineSpotShadowColor = 0x33000000
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
