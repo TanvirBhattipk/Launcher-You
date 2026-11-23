@@ -101,28 +101,11 @@ class HomeSearchButton(
     }
 
 private fun applyColors() {
-        val night = isNight()
-        val baseRgb = 0x00
-        val borderRgb = 0xFF
-        val fillPercent = if (prefs.homePillBgOpacity in 1..100) prefs.homePillBgOpacity else 65
-        val strokePercent = if (prefs.homePillBorderOpacity in 1..100) prefs.homePillBorderOpacity else 35
-        val strokeSizeDp = prefs.homePillBorderSize.coerceAtLeast(10) / 10f
+        fill.color = YunoGlass.fill(isNight())
+        border.color = YunoGlass.BORDER_COLOR
+        border.strokeWidth = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
 
-        fill.color = android.graphics.Color.argb(
-            ((fillPercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
-            baseRgb,
-            baseRgb,
-            baseRgb,
-        )
-        border.color = android.graphics.Color.argb(
-            ((strokePercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
-            borderRgb,
-            borderRgb,
-            borderRgb,
-        )
-        border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
-
-       text.color = 0xFFFFFFFF.toInt()
+        text.color = 0xFFFFFFFF.toInt()
         glyph.color = text.color
     }
 
@@ -142,9 +125,11 @@ private fun applyColors() {
         rect.set(inset, inset, width - inset, height - inset)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
-        if (glassPaint.aim(glass, drawnAt)) canvas.drawRoundRect(rect, r, r, glassPaint.paint)
+        if (glassPaint.aim(glass, drawnAt)) {
+            glassPaint.paint.colorFilter = YunoGlass.saturation
+            canvas.drawRoundRect(rect, r, r, glassPaint.paint)
+        }
         canvas.drawRoundRect(rect, r, r, fill)
-        canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
         if (progress >= 0f) {
             canvas.save()
             canvas.clipRect(rect.left, rect.top, rect.left + rect.width() * progress, rect.bottom)
@@ -152,6 +137,7 @@ private fun applyColors() {
             canvas.restore()
         }
         canvas.drawRoundRect(rect, r, r, border)
+        rim.draw(canvas, rect, r, border.strokeWidth)
         icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
         val fm = text.fontMetrics
         canvas.drawText(label, textStart, height / 2f - (fm.ascent + fm.descent) / 2f, text)
