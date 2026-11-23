@@ -896,7 +896,7 @@ class AppsSearch(
     private fun barTop() = dp.searchBarTop.toFloat()
     private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(18f)
 
-        private fun layoutPill() {
+    private fun layoutPill() {
         if (!::origin.isInitialized) return
         val h = dp.searchBarHeight
         val lp = pill.layoutParams
@@ -924,7 +924,7 @@ class AppsSearch(
         field.setTextColor(primaryInk)
         field.setHintTextColor(hintInk)
         clearBtn.setNight(true) // Force night mode style for clear button
-                pill.elevation = dp.dp(10f)
+        pill.elevation = dp.dp(10f)
         pill.outlineAmbientShadowColor = 0x33000000
         pill.outlineSpotShadowColor = 0x59000000
         pill.outlineProvider = object : android.view.ViewOutlineProvider() {
@@ -934,12 +934,6 @@ class AppsSearch(
             }
         }
     }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-                outline.setRoundRect(0, 0, view.width, view.height, pillBg.cornerRadius)
-                outline.alpha = 1f
-            }
-        }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
