@@ -2404,6 +2404,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             onSwipeUp = { closeSearch(lift = true) },
             onDismiss = { closeSearch() },
             barGlass = barGlass,
+            cardGlass = cardGlass,
         ) {
             searchPill.animate().cancel(); searchPill.alpha = 1f
             homeSearch.visibility = View.VISIBLE
