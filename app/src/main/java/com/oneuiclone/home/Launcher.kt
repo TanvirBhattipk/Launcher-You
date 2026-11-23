@@ -412,17 +412,17 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         }
 
         val listTop = dp.appsListTop
-        appsScroll = com.oneuiclone.home.ui.DrawerScrollView(activity, dp).apply {
+                appsScroll = com.oneuiclone.home.ui.DrawerScrollView(activity, dp).apply {
             isVerticalScrollBarEnabled = false
-            isVerticalFadingEdgeEnabled = true
-            setFadingEdgeLength(dp.dpi(24f))
+            isVerticalFadingEdgeEnabled = false   // the progressive blur replaces the old fade
             clipToPadding = false
+            setPadding(0, listTop, 0, 0)          // first row still starts at listTop; apps now scroll under the bar
             overScrollMode = View.OVER_SCROLL_NEVER
             addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> v.clipBounds = Rect(0, 0, v.width, v.height) }
         }
         appsGrid = CellLayout(activity, dp.appsCols, 1)
         appsScroll.addView(appsGrid, FrameLayout.LayoutParams(MATCH_PARENT, dp.appsGrid.height() / dp.appsRows))
-        appsLayer.addView(appsScroll, FrameLayout.LayoutParams(MATCH_PARENT, dp.heightPx - listTop).apply {
+                appsLayer.addView(appsScroll, FrameLayout.LayoutParams(MATCH_PARENT, dp.heightPx))
             topMargin = listTop
         })
         val scrollbar = com.oneuiclone.home.ui.DrawerScrollbar(activity, dp, appsScroll).apply {
