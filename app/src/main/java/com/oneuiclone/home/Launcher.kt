@@ -90,7 +90,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         val d = activity.resources.displayMetrics.density
         widgetGlass.radiusPx = prefs.blurWidget * d; folderGlass.radiusPx = prefs.blurFolder * d
-        pillGlass.radiusPx = prefs.blurHomePill * d; barGlass.radiusPx = prefs.appSearchBarBlur * d
+        pillGlass.radiusPx = com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d; barGlass.radiusPx = com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d
         wallpaper.onLoaded = {
             glasses.forEach { it.rebuild(wallpaper) }
             syncBlurredWallpaper()
@@ -106,7 +106,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         val d = activity.resources.displayMetrics.density
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
-        pillGlass.setRadius(prefs.blurHomePill * d, wallpaper); barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper)
+        pillGlass.setRadius(com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d, wallpaper); barGlass.setRadius(com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d, wallpaper)
         background.appsRadiusPx = prefs.drawerBgBlur * d; background.searchRadiusPx = prefs.appSearchBgBlur * d
         background.refresh()
         glasses.forEach { g -> g.views.toList().forEach { it.invalidate() } }
