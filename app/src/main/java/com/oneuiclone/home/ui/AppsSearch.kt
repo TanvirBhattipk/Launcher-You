@@ -196,9 +196,7 @@ class AppsSearch(
     private inner class GlassCard(ctx: Context, private val flatBottom: Boolean) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-        private val glassPaint = GlassPaint()
         private val rim = YunoRim()
-        private val toWindow = Matrix()
         private val rect = RectF()
         private val cardPath = android.graphics.Path()
         private val strokePath = android.graphics.Path()
@@ -221,45 +219,27 @@ class AppsSearch(
             rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
             val radii = if (flatBottom) {
-                floatArrayOf(
-                    radius, radius, // Top-left
-                    radius, radius, // Top-right
-                    0f, 0f,         // Bottom-right
-                    0f, 0f          // Bottom-left
-                )
+                floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
             } else {
-                floatArrayOf(
-                    radius, radius, radius, radius,
-                    radius, radius, radius, radius
-                )
+                floatArrayOf(radius, radius, radius, radius, radius, radius, radius, radius)
             }
 
             cardPath.reset()
             cardPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
-
-
-
             canvas.drawPath(cardPath, fillPaint)
-            
+
             if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
                 val inset = strokePaint.strokeWidth / 2f
                 val strokeRect = RectF(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
-                
+                val cr = maxOf(0f, radius - inset)
                 val strokeRadii = if (flatBottom) {
-                    floatArrayOf(
-                        maxOf(0f, radius - inset), maxOf(0f, radius - inset),
-                        maxOf(0f, radius - inset), maxOf(0f, radius - inset),
-                        0f, 0f,
-                        0f, 0f
-                    )
+                    floatArrayOf(cr, cr, cr, cr, 0f, 0f, 0f, 0f)
                 } else {
-                    val cr = maxOf(0f, radius - inset)
                     floatArrayOf(cr, cr, cr, cr, cr, cr, cr, cr)
                 }
-
                 strokePath.reset()
                 strokePath.addRoundRect(strokeRect, strokeRadii, android.graphics.Path.Direction.CW)
-                                canvas.drawPath(strokePath, strokePaint)
+                canvas.drawPath(strokePath, strokePaint)
                 rim.drawPath(canvas, strokePath, strokeRect, strokePaint.strokeWidth, YunoGlass.rimPeak(prefs.appSearchCardsBorderOpacity))
             }
             super.onDraw(canvas)
@@ -277,13 +257,7 @@ class AppsSearch(
             rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
         }
     }
-            super.draw(canvas)
-            val w = searchBarBorderWidth
-            rect.set(bounds); rect.inset(w / 2f, w / 2f)
-            rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
-        }
-    }
-   
+    
     var isOpen = false; private set
     private var f = 0f
     private var anim: ValueAnimator? = null
