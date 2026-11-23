@@ -42,6 +42,7 @@ class BackgroundController(
 
     /** 1 = the Apps screen's full blur and dimming. */
     var appsBlurScale = 1f
+    var appsDim = 0.4f
 
     /** Settings › Liquid glass: the blur radius (px) of the Apps screen's background, and of the search page's. */
     var appsRadiusPx = maxRadiusPx
@@ -55,7 +56,8 @@ class BackgroundController(
     private fun radiusOf(k: Kind): Float =
         if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * (if (searchOpen) searchRadiusPx else appsRadiusPx) else k.blurFactor * maxRadiusPx
 
-    private fun dimOf(k: Kind) = if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.dim * appsBlurScale else k.dim
+        private fun dimOf(k: Kind) =
+        if (k == Kind.APPS || k == Kind.APPS_FOLDER) appsDim * 255f / 0xA6 * appsBlurScale else k.dim
 
     private fun factor(k: Kind) = if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * appsBlurScale else k.blurFactor
 
@@ -101,6 +103,7 @@ class BackgroundController(
             val radiusPx = p * radiusOf(kind) + q * radiusOf(from)
             val reach = maxOf(maxRadiusPx, appsRadiusPx, searchRadiusPx)
             wallpaper.maxBlurRadiusPx = reach
+            wallpaper.extraSaturation = if (kind == Kind.APPS || kind == Kind.APPS_FOLDER) YunoGlass.SATURATION else 1f
             wallpaper.setBlur(if (reach > 0f) radiusPx / reach else 0f)
             scrim.curveAlpha = 0f
             scrim.dimAlpha = dim * 0xA6 / 255f
@@ -141,7 +144,7 @@ class ScrimView(context: Context) : View(context) {
 
         override fun onDraw(canvas: Canvas) {
         if (curveAlpha > 0f) canvas.drawColor(((curveAlpha * 255).roundToInt() shl 24) or 0xA5A5A5)
-        if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24))
+        if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24) or 0x121212)
         
         // Add Acrylic Frost Texture
         val progress = maxOf(curveAlpha.coerceAtMost(1f), dimAlpha.coerceAtMost(1f))
