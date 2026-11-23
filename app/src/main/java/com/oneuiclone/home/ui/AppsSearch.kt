@@ -67,6 +67,7 @@ class AppsSearch(
     private val onSwipeUp: () -> Unit,
     private val onDismiss: () -> Unit,
     private val barGlass: WidgetGlass? = null,
+    private val cardGlass: WidgetGlass? = null,
     private val barOpacity: Float = 1f,
     private val recents: () -> List<AppInfo> = { emptyList() },
     private val contactsEnabled: Boolean = true,
@@ -120,23 +121,23 @@ class AppsSearch(
         get() = 0x33FFFFFF.toInt()
 
     private val searchBarFillColor: Int
-        get() = YunoGlass.fill(true)
-
+        get() = YunoGlass.fill(false, prefs.appSearchBarOpacity)
+        
     private val searchBarBorderColor: Int
-        get() = YunoGlass.BORDER_COLOR
+        get() = YunoGlass.border(prefs.appSearchBorderOpacity)
     
 
     private val searchBarBorderWidth: Float
-        get() = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
+        get() = maxOf(1f, dp.dp(prefs.appSearchBorderSize / 10f))
         
     private val cardFillColor: Int
-        get() = YunoGlass.fill(true)
+        get() = YunoGlass.fill(false, prefs.appSearchCardsBgOpacity)
 
     private val cardBorderColor: Int
-    get() = YunoGlass.BORDER_COLOR
+     get() = YunoGlass.border(prefs.appSearchCardsBorderOpacity)
     
     private val cardBorderWidth: Float
-        get() = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
+        get() = maxOf(1f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
         
     private val backdropDimColor: Int
         get() = surfaceRgb
@@ -196,6 +197,7 @@ class AppsSearch(
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
+        private val rim = YunoRim()
         private val toWindow = Matrix()
         private val rect = RectF()
         private val cardPath = android.graphics.Path()
@@ -235,15 +237,15 @@ class AppsSearch(
             cardPath.reset()
             cardPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
 
-            val g = pillGlass ?: barGlass
+            val g = cardGlass ?: pillGlass ?: barGlass
             val cardAlpha = android.graphics.Color.alpha(cardFillColor)
             if (cardAlpha < 255 && g != null && glassPaint.aim(g, toWindow.apply { reset(); transformMatrixToGlobal(this) })) {
+                glassPaint.paint.colorFilter = YunoGlass.saturation
                 glassPaint.paint.alpha = 255
                 canvas.drawPath(cardPath, glassPaint.paint)
             }
 
             canvas.drawPath(cardPath, fillPaint)
-            canvas.drawPath(cardPath, frostedNoisePaint)
             
             if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
                 val inset = strokePaint.strokeWidth / 2f
@@ -263,7 +265,8 @@ class AppsSearch(
 
                 strokePath.reset()
                 strokePath.addRoundRect(strokeRect, strokeRadii, android.graphics.Path.Direction.CW)
-                canvas.drawPath(strokePath, strokePaint)
+                                canvas.drawPath(strokePath, strokePaint)
+                rim.drawPath(canvas, strokePath, strokeRect, strokePaint.strokeWidth, YunoGlass.rimPeak(prefs.appSearchCardsBorderOpacity))
             }
             super.onDraw(canvas)
         }
@@ -288,7 +291,7 @@ class AppsSearch(
             super.draw(canvas)
             val w = searchBarBorderWidth
             rect.set(bounds); rect.inset(w / 2f, w / 2f)
-            rim.draw(canvas, rect, pillBg.cornerRadius, w)
+            rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
         }
     }
    
