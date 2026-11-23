@@ -101,9 +101,9 @@ class HomeSearchButton(
     }
 
 private fun applyColors() {
-        fill.color = YunoGlass.fill(isNight())
-        border.color = YunoGlass.BORDER_COLOR
-        border.strokeWidth = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
+        fill.color = YunoGlass.fill(true, prefs.homePillBgOpacity)
+        border.color = YunoGlass.border(prefs.homePillBorderOpacity)
+        border.strokeWidth = maxOf(1f, dp.dp(prefs.homePillBorderSize / 10f))
 
         text.color = 0xFFFFFFFF.toInt()
         glyph.color = text.color
@@ -137,7 +137,7 @@ private fun applyColors() {
             canvas.restore()
         }
         canvas.drawRoundRect(rect, r, r, border)
-        rim.draw(canvas, rect, r, border.strokeWidth)
+                rim.draw(canvas, rect, r, border.strokeWidth, YunoGlass.rimPeak(prefs.homePillBorderOpacity))
         icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
         val fm = text.fontMetrics
         canvas.drawText(label, textStart, height / 2f - (fm.ascent + fm.descent) / 2f, text)
