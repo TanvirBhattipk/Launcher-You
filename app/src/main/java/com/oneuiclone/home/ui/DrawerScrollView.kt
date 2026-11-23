@@ -9,6 +9,14 @@ import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.min
 import kotlin.math.sqrt
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RenderEffect
+import android.graphics.RenderNode
+import android.graphics.RuntimeShader
+import android.graphics.Shader
 
 /**
  * The Apps screen's list, with its own stretch overscroll at the bottom (drawn here, not by the system's EdgeEffect,
@@ -38,7 +46,24 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     var onPullToClose: (() -> Unit)? = null
     private var topPull = 0f
     private var closed = false
-
+   // Progressive alpha-masked blur under the search bar (from the Glass app's shader).
+    // Fully blurred above blurFullY, fading back to sharp by blurEndY (the top of the first row).
+    private val blurFullY = dp.searchBarTop + dp.searchBarHeight * 0.5f
+    private val blurEndY = maxOf(dp.appsGrid.top.toFloat(), blurFullY + dp.dp(24f))
+    private val blurNode = RenderNode("drawerProgressiveBlur")
+    private val maskShader = RuntimeShader(MASK_AGSL).apply { setFloatUniform("range", blurFullY, blurEndY) }
+    private val maskPaint = Paint().apply {
+        shader = maskShader
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
+    }
+    private val blurEffect: RenderEffect by lazy {
+        val shader = RuntimeShader(BLUR_AGSL).apply { setFloatUniform("range", blurFullY, blurEndY) }
+        val r = dp.dp(12f)                       // blur radius
+        RenderEffect.createChainEffect(
+            RenderEffect.createRuntimeShaderEffect(shader, "content"),   // alpha mask, applied after the blur
+            RenderEffect.createBlurEffect(r, r, Shader.TileMode.MIRROR),
+        )
+    } 
     init {
         overScrollMode = OVER_SCROLL_NEVER                      // the stretch is drawn below
     }
@@ -110,9 +135,57 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         c.pivotY = if (pull > 0f) scrollY.toFloat() else (scrollY + height).toFloat()
         c.scaleY = 1f + s
     }
+    override fun dispatchDraw(canvas: Canvas) {
+        // At rest nothing is under the bar, so skip the effect.
+        if (scrollY <= 0 || width == 0 || !canvas.isHardwareAccelerated) { super.dispatchDraw(canvas); return }
+        val w = width.toFloat()
+        val band = minOf(blurEndY, height.toFloat())
 
+        // 1) everything below the band, untouched
+        canvas.save()
+        canvas.clipRect(0f, band, w, height.toFloat())
+        super.dispatchDraw(canvas)
+        canvas.restore()
+
+        // 2) inside the band, the sharp apps fade out toward the top
+        val layer = canvas.saveLayer(0f, 0f, w, band, null)
+        super.dispatchDraw(canvas)
+        canvas.drawRect(0f, 0f, w, band, maskPaint)
+        canvas.restoreToCount(layer)
+
+        // 3) the blurred copy fades in toward the top
+        blurNode.setPosition(0, 0, width, band.toInt())
+        blurNode.setRenderEffect(blurEffect)
+        val rc = blurNode.beginRecording()
+        try {
+            rc.clipRect(0f, 0f, w, band)
+            super.dispatchDraw(rc)
+        } finally {
+            blurNode.endRecording()
+        }
+        canvas.drawRenderNode(blurNode)
+    }
     override fun onDetachedFromWindow() {
         removeCallbacks(tick); running = false
         super.onDetachedFromWindow()
+    }
+        private companion object {
+        // Same alpha mask as the Glass app: 1 at the top, smoothly 0 lower down.
+        const val BLUR_AGSL = """
+            uniform shader content;
+            uniform float2 range;
+            half4 main(float2 coord) {
+                float blurAlpha = 1.0 - smoothstep(range.x, range.y, coord.y);
+                return content.eval(coord) * blurAlpha;
+            }
+        """
+        // The same mask, used to fade the sharp copy out so the two cross-fade.
+        const val MASK_AGSL = """
+            uniform float2 range;
+            half4 main(float2 coord) {
+                float a = 1.0 - smoothstep(range.x, range.y, coord.y);
+                return half4(0.0, 0.0, 0.0, a);
+            }
+        """
     }
 }
