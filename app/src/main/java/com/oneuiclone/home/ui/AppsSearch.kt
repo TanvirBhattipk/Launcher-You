@@ -924,10 +924,15 @@ class AppsSearch(
         field.setTextColor(primaryInk)
         field.setHintTextColor(hintInk)
         clearBtn.setNight(true) // Force night mode style for clear button
-                pill.elevation = dp.dp(6f)
-        pill.outlineAmbientShadowColor = 0x1A000000
-        pill.outlineSpotShadowColor = 0x33000000
-    }
+                        pill.elevation = dp.dp(10f)
+        pill.outlineAmbientShadowColor = 0x33000000
+        pill.outlineSpotShadowColor = 0x59000000
+        pill.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: android.view.View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, pillBg.cornerRadius)
+                outline.alpha = 1f
+            }
+        }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
