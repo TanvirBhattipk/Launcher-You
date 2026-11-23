@@ -35,6 +35,7 @@ class HomeSearchButton(
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
+    private val rim = YunoRim()
     private val frostedNoisePaint by lazy {
         val size = 128
         val pixels = IntArray(size * size)
