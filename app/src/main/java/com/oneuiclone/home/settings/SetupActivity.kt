@@ -104,6 +104,14 @@ class SetupActivity : OneUiPage() {
                 0xFF34B36B.toInt(), { AppUsage(this).systemAllowed }, "Allow") {
                 open(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName")), Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             },
+            Step("Wallpaper blur", "Lets $appName read your current wallpaper and blur it automatically.", GLYPH_WALLPAPER,
+                0xFF26A69A.toInt(),
+                { android.os.Environment.isExternalStorageManager() || WallpaperLayer.hasOwnCopy(this) }, "Allow") {
+                open(
+                    Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName")),
+                    Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+                )
+            },
             Step("Contacts", "Find people from search.", GLYPH_CONTACTS, 0xFF3E91FF.toInt(),
                 { checkSelfPermission(android.Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED }, "Allow") { askContacts() },
         )
