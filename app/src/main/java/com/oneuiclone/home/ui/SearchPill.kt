@@ -38,6 +38,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         strokeCap = Paint.Cap.ROUND
     }
     private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+
     
     // Acrylic frost texture 
     private val frostedNoisePaint by lazy {
@@ -100,36 +101,17 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         super.onDetachedFromWindow()
     }
 
-    private fun applyColors() {
-        val night = isNight()
-        val baseRgb = if (night) 0x00 else 0xFF
-        val borderRgb = 0xFF 
-        val fillPercent = if (prefs.drawerSearchBarOpacity in 1..100) prefs.drawerSearchBarOpacity else 75
-        val strokePercent = if (prefs.drawerSearchBorderOpacity in 1..100) prefs.drawerSearchBorderOpacity else 35
-        val strokeSizeDp = prefs.drawerSearchBorderSize.coerceAtLeast(10) / 10f
-
-        baseFill = android.graphics.Color.argb(
-            ((fillPercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
-            baseRgb,
-            baseRgb,
-            baseRgb,
-        )
-        baseStroke = android.graphics.Color.argb(
-            ((strokePercent.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255),
-            borderRgb,
-            borderRgb,
-            borderRgb,
-        )
-
+private fun applyColors() {
+        baseFill = YunoGlass.fill(isNight())
+        baseStroke = YunoGlass.BORDER_COLOR
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)
-        border.strokeWidth = maxOf(2f, dp.dp(strokeSizeDp))
+        border.strokeWidth = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
 
-        text.color = 0xFFFFFFFF.toInt() 
+        text.color = 0xFFFFFFFF.toInt()
         glyph.color = text.color
         dots.color = text.color
     }
-
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         applyColors()
@@ -163,12 +145,13 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
         if (glassPaint.aim(glass, drawnAt)) {
+            glassPaint.paint.colorFilter = YunoGlass.saturation
             glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
         canvas.drawRoundRect(rect, r, r, fill)
-        canvas.drawRoundRect(rect, r, r, frostedNoisePaint)
         canvas.drawRoundRect(rect, r, r, border)
+        rim.draw(canvas, rect, r, border.strokeWidth)
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
         MagnifierView.draw(canvas, gx, (height - box) / 2f, box, glyph)
