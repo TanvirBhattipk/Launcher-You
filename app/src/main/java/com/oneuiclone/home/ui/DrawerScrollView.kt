@@ -135,22 +135,24 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         c.pivotY = if (pull > 0f) scrollY.toFloat() else (scrollY + height).toFloat()
         c.scaleY = 1f + s
     }
-    override fun dispatchDraw(canvas: Canvas) {
+        override fun dispatchDraw(canvas: Canvas) {
         // At rest nothing is under the bar, so skip the effect.
         if (scrollY <= 0 || width == 0 || !canvas.isHardwareAccelerated) { super.dispatchDraw(canvas); return }
         val w = width.toFloat()
+        val top = scrollY.toFloat()                 // inside dispatchDraw the canvas is in content coordinates
         val band = minOf(blurEndY, height.toFloat())
 
         // 1) everything below the band, untouched
         canvas.save()
-        canvas.clipRect(0f, band, w, height.toFloat())
+        canvas.clipRect(0f, top + band, w, top + height)
         super.dispatchDraw(canvas)
         canvas.restore()
 
         // 2) inside the band, the sharp apps fade out toward the top
-        val layer = canvas.saveLayer(0f, 0f, w, band, null)
+        maskShader.setFloatUniform("range", top + blurFullY, top + blurEndY)
+        val layer = canvas.saveLayer(0f, top, w, top + band, null)
         super.dispatchDraw(canvas)
-        canvas.drawRect(0f, 0f, w, band, maskPaint)
+        canvas.drawRect(0f, top, w, top + band, maskPaint)
         canvas.restoreToCount(layer)
 
         // 3) the blurred copy fades in toward the top
@@ -158,12 +160,16 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         blurNode.setRenderEffect(blurEffect)
         val rc = blurNode.beginRecording()
         try {
-            rc.clipRect(0f, 0f, w, band)
+            rc.translate(0f, -top)                  // record in view coordinates so the shader's y matches the screen
+            rc.clipRect(0f, top, w, top + band)
             super.dispatchDraw(rc)
         } finally {
             blurNode.endRecording()
         }
+        canvas.save()
+        canvas.translate(0f, top)
         canvas.drawRenderNode(blurNode)
+        canvas.restore()
     }
     override fun onDetachedFromWindow() {
         removeCallbacks(tick); running = false
