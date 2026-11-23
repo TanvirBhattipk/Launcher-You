@@ -240,7 +240,7 @@ class AppsSearch(
                 strokePath.reset()
                 strokePath.addRoundRect(strokeRect, strokeRadii, android.graphics.Path.Direction.CW)
                 canvas.drawPath(strokePath, strokePaint)
-                rim.drawPath(canvas, strokePath, strokeRect, strokePaint.strokeWidth, YunoGlass.rimPeak(prefs.appSearchCardsBorderOpacity))
+                rim.drawPath(canvas, strokePath, strokeRect, cr, strokePaint.strokeWidth, YunoGlass.rimPeak(prefs.appSearchCardsBorderOpacity))
             }
             super.onDraw(canvas)
         }
