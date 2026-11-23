@@ -120,43 +120,24 @@ class AppsSearch(
         get() = 0x33FFFFFF.toInt()
 
     private val searchBarFillColor: Int
-        get() = android.graphics.Color.argb(
-            alphaFromPercent(prefs.appSearchBarOpacity, 75),
-            surfaceRgb,
-            surfaceRgb,
-            surfaceRgb,
-        )
+        get() = YunoGlass.fill(true)
 
     private val searchBarBorderColor: Int
-        get() = android.graphics.Color.argb(
-            alphaFromPercent(prefs.appSearchBorderOpacity, 35),
-            borderRgb,
-            borderRgb,
-            borderRgb,
-        )
+        get() = YunoGlass.BORDER_COLOR
+    
 
     private val searchBarBorderWidth: Float
-        get() = dp.dp(0.5f + (prefs.appSearchBorderSize.coerceIn(0, 50) / 50f) * 2.5f)
-
+        get() = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
+        
     private val cardFillColor: Int
-        get() = android.graphics.Color.argb(
-            alphaFromPercent(prefs.appSearchCardsBgOpacity, 70),
-            surfaceRgb,
-            surfaceRgb,
-            surfaceRgb,
-        )
+        get() = YunoGlass.fill(true)
 
     private val cardBorderColor: Int
-        get() = android.graphics.Color.argb(
-            alphaFromPercent(prefs.appSearchCardsBorderOpacity, 35),
-            borderRgb,
-            borderRgb,
-            borderRgb,
-        )
-
+    get() = YunoGlass.BORDER_COLOR
+    
     private val cardBorderWidth: Float
-        get() = dp.dp(0.5f + (prefs.appSearchCardsBorderSize.coerceIn(0, 50) / 50f) * 2.5f)
-
+        get() = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
+        
     private val backdropDimColor: Int
         get() = surfaceRgb
 
@@ -288,24 +269,29 @@ class AppsSearch(
         }
     }
 
-    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+   private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val glassPaint = GlassPaint()
         private val toWindow = android.graphics.Matrix()
         private val rect = RectF()
+        private val rim = YunoRim()
 
         override fun draw(canvas: Canvas) {
             pillGlass?.let { g ->
                 toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
                 rect.set(bounds)
                 if (glassPaint.aim(g, toWindow)) {
+                    glassPaint.paint.colorFilter = YunoGlass.saturation
                     glassPaint.paint.alpha = 255
                     canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
                 }
             }
             super.draw(canvas)
+            val w = searchBarBorderWidth
+            rect.set(bounds); rect.inset(w / 2f, w / 2f)
+            rim.draw(canvas, rect, pillBg.cornerRadius, w)
         }
     }
-
+   
     var isOpen = false; private set
     private var f = 0f
     private var anim: ValueAnimator? = null
