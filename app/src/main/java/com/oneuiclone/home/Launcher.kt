@@ -82,15 +82,18 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     val wallpaper = com.oneuiclone.home.ui.WallpaperLayer(activity).apply { drivesLive = true }
     private val widgetGlass = com.oneuiclone.home.ui.WidgetGlass()
     private val folderGlass = com.oneuiclone.home.ui.WidgetGlass()
-    private val pillGlass = com.oneuiclone.home.ui.WidgetGlass()
-    private val barGlass = com.oneuiclone.home.ui.WidgetGlass()
-    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, barGlass)
+    private val pillGlass = com.oneuiclone.home.ui.WidgetGlass()       // Home pill
+    private val drawerBarGlass = com.oneuiclone.home.ui.WidgetGlass()  // drawer search bar
+    private val barGlass = com.oneuiclone.home.ui.WidgetGlass()        // App Search bar
+    private val cardGlass = com.oneuiclone.home.ui.WidgetGlass()       // App Search cards
+    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass)
 
     init {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         val d = activity.resources.displayMetrics.density
         widgetGlass.radiusPx = prefs.blurWidget * d; folderGlass.radiusPx = prefs.blurFolder * d
-        pillGlass.radiusPx = com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d; barGlass.radiusPx = com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d
+        pillGlass.radiusPx = prefs.homePillBgBlur * d; drawerBarGlass.radiusPx = prefs.drawerSearchBarBlur * d
+        barGlass.radiusPx = prefs.appSearchBarBlur * d; cardGlass.radiusPx = prefs.appSearchCardsBgBlur * d
         wallpaper.onLoaded = {
             glasses.forEach { it.rebuild(wallpaper) }
             syncBlurredWallpaper()
@@ -101,12 +104,15 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     val background = BackgroundController(activity, scrim, wallpaper).apply {
         val d = activity.resources.displayMetrics.density
         appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d    }
+        appsDim = prefs.drawerBgOpacity / 100f
 
     private fun applyGlassPrefs() {
         val d = activity.resources.displayMetrics.density
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
-        pillGlass.setRadius(com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d, wallpaper); barGlass.setRadius(com.oneuiclone.home.ui.YunoGlass.BLUR_DP * d, wallpaper)
+        pillGlass.setRadius(prefs.homePillBgBlur * d, wallpaper); drawerBarGlass.setRadius(prefs.drawerSearchBarBlur * d, wallpaper)
+        barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper); cardGlass.setRadius(prefs.appSearchCardsBgBlur * d, wallpaper)
+        background.appsDim = prefs.drawerBgOpacity / 100f
         background.appsRadiusPx = prefs.drawerBgBlur * d; background.searchRadiusPx = prefs.appSearchBgBlur * d
         background.refresh()
         glasses.forEach { g -> g.views.toList().forEach { it.invalidate() } }
@@ -441,7 +447,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
             glassTransparency = homeSearch.glassTransparency
-            glass = barGlass
+            glass = drawerBarGlass
             setOnClickListener { showAppsMenu(this) }
         }
         appsLayer.addView(moreButton, FrameLayout.LayoutParams(dp.searchBarHeight, dp.searchBarHeight).apply {
@@ -450,7 +456,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
             glassTransparency = homeSearch.glassTransparency
-            glass = barGlass
+            glass = drawerBarGlass
             setOnClickListener { showAppsMenu(this) }
         }
         appsLayer.addView(moreButton, FrameLayout.LayoutParams(dp.searchBarHeight, dp.searchBarHeight).apply {
