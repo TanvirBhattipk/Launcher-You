@@ -1,3 +1,4 @@
+package com.oneuiclone.home.ui
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
