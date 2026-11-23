@@ -102,11 +102,11 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 
 private fun applyColors() {
-        baseFill = YunoGlass.fill(isNight())
-        baseStroke = YunoGlass.BORDER_COLOR
+        baseFill = YunoGlass.fill(true, prefs.drawerSearchBarOpacity)
+        baseStroke = YunoGlass.border(prefs.drawerSearchBorderOpacity)
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)
-        border.strokeWidth = maxOf(1f, dp.dp(YunoGlass.BORDER_DP))
+        border.strokeWidth = maxOf(1f, dp.dp(prefs.drawerSearchBorderSize / 10f))
 
         text.color = 0xFFFFFFFF.toInt()
         glyph.color = text.color
@@ -151,7 +151,7 @@ private fun applyColors() {
         }
         canvas.drawRoundRect(rect, r, r, fill)
         canvas.drawRoundRect(rect, r, r, border)
-        rim.draw(canvas, rect, r, border.strokeWidth)
+        rim.draw(canvas, rect, r, border.strokeWidth, YunoGlass.rimPeak(prefs.drawerSearchBorderOpacity))
         val box = dp.dp(22f)
         val gx = dp.dp(16f)
         MagnifierView.draw(canvas, gx, (height - box) / 2f, box, glyph)
