@@ -194,9 +194,11 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-    private inner class GlassCard(ctx: Context, private val flatBottom: Boolean) : LinearLayout(ctx) {
+       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+        private val glassPaint = GlassPaint()
+        private val toWindow = android.graphics.Matrix()
         private val rim = YunoRim()
         private val rect = RectF()
         private val cardPath = android.graphics.Path()
@@ -227,6 +229,20 @@ class AppsSearch(
 
             cardPath.reset()
             cardPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
+
+            // Cards' own blur: live App Search background, blurred and bent at the edges. 0 = no extra layer.
+            if (prefs.appSearchCardsBgBlur > 0) {
+                val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+                val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+                val live = backdrop?.draw(canvas, this, rect, radius, dp.dp(prefs.appSearchCardsBgBlur.toFloat()), amount, depth, cardPath) == true
+                val g = cardGlass
+                if (!live && g != null &&
+                    glassPaint.aimLens(g, toWindow.apply { reset(); transformMatrixToGlobal(this) }, rect, radius, amount, depth)) {
+                    glassPaint.paint.colorFilter = YunoGlass.saturation
+                    glassPaint.paint.alpha = 255
+                    canvas.drawPath(cardPath, glassPaint.paint)
+                }
+            }
             canvas.drawPath(cardPath, fillPaint)
 
             if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
@@ -246,7 +262,6 @@ class AppsSearch(
             super.onDraw(canvas)
         }
     }
-
     private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val glassPaint = GlassPaint()
         private val toWindow = android.graphics.Matrix()
