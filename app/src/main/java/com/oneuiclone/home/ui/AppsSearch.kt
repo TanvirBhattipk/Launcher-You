@@ -442,9 +442,9 @@ class AppsSearch(
         // Apps stays fixed at the top. Contacts + Suggestions stack up from the bar; if they're taller than the room
         // between, it is their top that gets cut (the part next to the bar stays).
         bottomCards.orientation = LinearLayout.VERTICAL
-        bottomCards.gravity = Gravity.BOTTOM
+        bottomCards.gravity = Gravity.Top
         bottomCards.clipChildren = false
-        bottomRegion.addView(bottomCards, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        bottomRegion.addView(bottomCards, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.Top))
         bottomRegion.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> v.clipBounds = android.graphics.Rect(0, 0, v.width, v.height) }
         content.addView(bottomRegion, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addView(pill, LayoutParams(dp.searchBarWidth, dp.searchBarHeight))
