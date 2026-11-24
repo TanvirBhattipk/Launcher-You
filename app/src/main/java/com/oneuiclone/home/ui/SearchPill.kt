@@ -39,6 +39,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
     private val dots = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val rim = YunoRim()
+    var backdrop: LiveBackdrop? = null
     
     // Acrylic frost texture 
     private val frostedNoisePaint by lazy {
