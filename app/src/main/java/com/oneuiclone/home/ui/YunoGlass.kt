@@ -17,6 +17,8 @@ object YunoGlass {
     const val SATURATION = 1.5f
     private const val TINT_DARK = 0x121212
     private const val TINT_LIGHT = 0xFAFAFA
+    const val LENS_DEPTH_DP = 14f    // how wide the refracting rim is
+    const val LENS_AMOUNT_DP = 16f   // how far the edge pulls the background in from outside
 
     val saturation = ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(SATURATION) })
 
