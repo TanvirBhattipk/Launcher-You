@@ -60,14 +60,6 @@ class SearchBlurSettingsActivity : ComponentActivity() {
                             SliderRow("Border Size", prefs.appSearchBorderSize, max = 50) { prefs.appSearchBorderSize = it }
                             SliderRow("Border Opacity", prefs.appSearchBorderOpacity) { prefs.appSearchBorderOpacity = it }
                         }
-
-                        // Card 4: App Search Cards
-                        SettingsCard(title = "App Search Cards") {
-                            SliderRow("Background Opacity", prefs.appSearchCardsBgOpacity) { prefs.appSearchCardsBgOpacity = it }
-                            SliderRow("Background Blur", prefs.appSearchCardsBgBlur) { prefs.appSearchCardsBgBlur = it }
-                            SliderRow("Border Size", prefs.appSearchCardsBorderSize, max = 50) { prefs.appSearchCardsBorderSize = it }
-                            SliderRow("Border Opacity", prefs.appSearchCardsBorderOpacity) { prefs.appSearchCardsBorderOpacity = it }
-                        }
                         
                         Spacer(modifier = Modifier.height(24.dp))
                     }
