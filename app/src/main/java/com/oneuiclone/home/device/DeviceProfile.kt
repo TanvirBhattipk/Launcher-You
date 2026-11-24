@@ -53,6 +53,11 @@ class DeviceProfile(
      * changing Home's icon size (or its icon scale) never changes it.
      */
     val recentsIconSizePx = (cellWidth * 0.627f * 0.95f).roundToInt().let { if (it % 2 == 1) it + 1 else it }
+    /**
+     * Home's icon size at the default settings (4 columns, 98 % icon scale), fixed: the Apps row of the search page
+     * uses it, so it matches the Home screen's icons but never changes with Home's icon size or grid settings.
+     */
+    val searchIconSizePx = ((widthPx - 2 * pageSidePadding) / 4f * 0.67f * 0.98f).roundToInt().let { if (it % 2 == 1) it + 1 else it }
     val labelTextSizePx = dp(13f) * 0.855f * labelScale
     val iconLabelGapPx = dp(5.5f)
 
