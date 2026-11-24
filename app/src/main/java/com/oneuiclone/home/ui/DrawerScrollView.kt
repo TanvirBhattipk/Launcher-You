@@ -51,6 +51,10 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private val blurFullY = (dp.searchBarTop + dp.searchBarHeight).toFloat()   // fully blurred down to the bar's bottom
     private val blurEndY = blurFullY + dp.dp(96f)                              // then fades back to sharp over 96dp
     private val tintAmount = 0.5f                                              // dark tint strength, 0..1
+    // Black top tint: solid black from the top of the screen down to the middle of the search bar, then an eased
+    // fade to transparent a little below the bar.
+    private val blackFullY = dp.searchBarTop + dp.searchBarHeight / 2f
+    private val blackEndY = blurFullY + dp.dp(24f)
     private val blurNode = RenderNode("drawerProgressiveBlur")
     private val maskShader = RuntimeShader(MASK_AGSL).apply { setFloatUniform("range", blurFullY, blurEndY) }
     private val maskPaint = Paint().apply {
@@ -61,6 +65,7 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
                 val shader = RuntimeShader(BLUR_AGSL).apply {
             setFloatUniform("range", blurFullY, blurEndY)
             setFloatUniform("tintAmount", tintAmount)
+            setFloatUniform("blackRange", blackFullY, blackEndY)
         }
         val r = dp.dp(12f)                       // blur radius
         RenderEffect.createChainEffect(
@@ -187,11 +192,15 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
             uniform shader content;
             uniform float2 range;
             uniform float tintAmount;
+            uniform float2 blackRange;
             half4 main(float2 coord) {
                 float blurAlpha = 1.0 - smoothstep(range.x, range.y, coord.y);
                 half4 c = content.eval(coord) * blurAlpha;
                 half4 tint = half4(0.07, 0.07, 0.07, 1.0) * half(blurAlpha * tintAmount);
-                return c + tint * (1.0 - c.a);
+                half4 o = c + tint * (1.0 - c.a);
+                // solid black up to blackRange.x, easing to transparent by blackRange.y (covers the blurred icons too)
+                float k = 1.0 - smoothstep(blackRange.x, blackRange.y, coord.y);
+                return o * half(1.0 - k) + half4(0.0, 0.0, 0.0, 1.0) * half(k);
             }
         """
         const val MASK_AGSL = """

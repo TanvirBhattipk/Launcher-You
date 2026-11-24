@@ -14,13 +14,21 @@ import android.view.View
  * bends them at the edges and boosts saturation. [layers] are the views to capture, bottom to top.
  */
 class LiveBackdrop(private val layers: () -> List<View>) {
-    private val node = RenderNode("liveBackdrop")
-    private val lens = RuntimeShader(LENS_AGSL)
-    private val shape = Path()
+    /**
+     * One RenderNode + shader per view that draws glass. A RenderNode is drawn by reference and only its LAST
+     * recording survives a frame, so sharing one node between the pill and the cards made every one of them show
+     * the last card's picture (hence the hard seam inside the cards).
+     */
+    private class Slot {
+        val node = RenderNode("liveBackdrop")
+        val lens = RuntimeShader(LENS_AGSL)
+        val shape = Path()
+        var effect: RenderEffect? = null
+        var key = ""
+    }
+    private val slots = java.util.WeakHashMap<View, Slot>()
     private val at = IntArray(2)
     private val layerAt = IntArray(2)
-    private var effect: RenderEffect? = null
-    private var key = ""
 
     /** Returns false when it can't draw (software canvas, no size), so the caller can fall back. */
     fun draw(
@@ -32,10 +40,13 @@ class LiveBackdrop(private val layers: () -> List<View>) {
         val h = view.height
         val pad = Math.ceil((amountPx + blurPx * 2f + 2f).toDouble()).toInt()
         view.getLocationInWindow(at)
+        val slot = slots.getOrPut(view) { Slot() }
+        val node = slot.node
+        val lens = slot.lens
 
         val k = "${rect.left},${rect.top},${rect.width()},${rect.height()},$radius,$blurPx,$amountPx,$depthPx,$pad"
-        if (k != key) {
-            key = k
+        if (k != slot.key) {
+            slot.key = k
             lens.setFloatUniform("origin", pad + rect.left, pad + rect.top)
             lens.setFloatUniform("size", rect.width(), rect.height())
             lens.setFloatUniform("radius", minOf(radius, rect.width() / 2f, rect.height() / 2f))
@@ -45,11 +56,11 @@ class LiveBackdrop(private val layers: () -> List<View>) {
             if (blurPx >= 1f) {
                 e = RenderEffect.createChainEffect(e, RenderEffect.createBlurEffect(blurPx, blurPx, Shader.TileMode.CLAMP))
             }
-            effect = RenderEffect.createColorFilterEffect(YunoGlass.saturation, e)
+            slot.effect = RenderEffect.createColorFilterEffect(YunoGlass.saturation, e)
         }
 
         node.setPosition(-pad, -pad, w + pad, h + pad)
-        node.setRenderEffect(effect)
+        node.setRenderEffect(slot.effect)
         val rc = node.beginRecording()
         try {
             rc.translate((pad - at[0]).toFloat(), (pad - at[1]).toFloat())   // record in window coordinates
@@ -67,7 +78,7 @@ class LiveBackdrop(private val layers: () -> List<View>) {
             node.endRecording()
         }
 
-        val path = clip ?: shape.also { it.reset(); it.addRoundRect(rect, radius, radius, Path.Direction.CW) }
+        val path = clip ?: slot.shape.also { it.reset(); it.addRoundRect(rect, radius, radius, Path.Direction.CW) }
         canvas.save()
         canvas.clipPath(path)
         canvas.drawRenderNode(node)
