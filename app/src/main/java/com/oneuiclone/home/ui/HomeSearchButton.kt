@@ -125,7 +125,9 @@ private fun applyColors() {
         rect.set(inset, inset, width - inset, height - inset)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
-        if (prefs.homePillBgBlur > 0 && glassPaint.aimLens(glass, drawnAt, rect, r, dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP))) {
+        // the Wallpaper and style previews draw this onto a software bitmap, where AGSL RuntimeShaders can't run: plain glass there
+        val hw = canvas.isHardwareAccelerated
+        if (prefs.homePillBgBlur > 0 && (if (hw) glassPaint.aimLens(glass, drawnAt, rect, r, dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP)) else glassPaint.aim(glass, drawnAt))) {
             glassPaint.paint.colorFilter = YunoGlass.saturation
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
         }
@@ -137,7 +139,7 @@ private fun applyColors() {
             canvas.restore()
         }
         canvas.drawRoundRect(rect, r, r, border)
-                rim.draw(canvas, rect, r, border.strokeWidth, YunoGlass.rimPeak(prefs.homePillBorderOpacity))
+        if (hw) rim.draw(canvas, rect, r, border.strokeWidth, YunoGlass.rimPeak(prefs.homePillBorderOpacity))
         icon?.invoke(canvas, glyphLeft, (height - glyphBox) / 2f, glyphBox, glyph)
         val fm = text.fontMetrics
         canvas.drawText(label, textStart, height / 2f - (fm.ascent + fm.descent) / 2f, text)
