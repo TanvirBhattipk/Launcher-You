@@ -28,6 +28,13 @@ object YunoGlass {
     fun fill(night: Boolean, opacityPercent: Int): Int =
         (a(opacityPercent) shl 24) or (if (night) TINT_DARK else TINT_LIGHT)
 
+    /**
+     * The search bars' tint, taken from the reference nav bar (warm charcoal, about #2A2927 at ~75 %), at the
+     * slider's opacity. Both the Apps screen's and the search page's bars use it.
+     */
+    const val BAR_TINT = 0x2A2927
+    fun barFill(opacityPercent: Int): Int = (a(opacityPercent) shl 24) or BAR_TINT
+
     /** White border at the slider's opacity. */
     fun border(opacityPercent: Int): Int = (a(opacityPercent) shl 24) or 0xFFFFFF
 

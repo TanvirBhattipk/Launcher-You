@@ -114,7 +114,7 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
     }
 
 private fun applyColors() {
-        baseFill = YunoGlass.fill(true, prefs.drawerSearchBarOpacity)
+        baseFill = YunoGlass.barFill(prefs.drawerSearchBarOpacity)
         baseStroke = YunoGlass.border(prefs.drawerSearchBorderOpacity)
         fill.color = scaled(baseFill)
         border.color = scaled(baseStroke)

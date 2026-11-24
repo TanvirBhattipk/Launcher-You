@@ -122,7 +122,7 @@ class AppsSearch(
         get() = 0x33FFFFFF.toInt()
 
     private val searchBarFillColor: Int
-        get() = YunoGlass.fill(false, prefs.appSearchBarOpacity)
+        get() = YunoGlass.barFill(prefs.appSearchBarOpacity)
         
     private val searchBarBorderColor: Int
         get() = YunoGlass.border(prefs.appSearchBorderOpacity)
@@ -167,19 +167,17 @@ class AppsSearch(
     }
 
     // Cards
-    private val appsCard = GlassCard(context, flatBottom = false)
+    private val appsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val appsRow = LinearLayout(context)
     private val contactsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val contactsListLayout = LinearLayout(context)
     private val suggestionsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val suggestionsListLayout = LinearLayout(context)
-    private val bottomCards = LinearLayout(context)        // Contacts + Suggestions, stacked up from the bar
-    private val bottomRegion = FrameLayout(context)        // the room between the Apps card and the bar
     private val calcBox = TextView(context)
     private var calcResult: String? = null
 
     private var favorites: List<SearchSources.Contact> = emptyList()
-    private val content = LinearLayout(context)
+    private val content = BottomBlurLayout(context, dp, dp.searchBarHeight / 2f + dp.dp(10f))   // blur ramp: bar mid -> keyboard
     private var scores: Map<AppKey, Double> = emptyMap()
     private var suggested: List<SearchSources.Contact> = emptyList()
     private var appsList: List<AppInfo> = emptyList()
@@ -405,8 +403,8 @@ class AppsSearch(
         }
         content.addView(calcBox, cardParams(top = 0))
 
-        appsCard.setPadding(dp.dpi(12f), dp.dpi(14f), dp.dpi(12f), dp.dpi(14f))
-        appsCard.addView(sectionHeader("Apps", showAll = true, horizontalPadDp = 4f) { onSwipeUp() })
+        appsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(14f))
+        appsCard.addView(sectionHeader("Apps", showAll = true, horizontalPadDp = 0f) { onSwipeUp() })
         appsRow.orientation = LinearLayout.HORIZONTAL
         appsRow.gravity = Gravity.TOP
         appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -424,7 +422,7 @@ class AppsSearch(
         contactsCard.addView(contactsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp.dpi(6f)
         })
-        bottomCards.addView(contactsCard, cardParams(top = dp.dpi(14f)))
+        content.addView(contactsCard, cardParams(top = dp.dpi(14f)))
 
         suggestionsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
         suggestionsCard.addView(sectionHeader("Suggestions", showAll = false, horizontalPadDp = 0f, onShowAll = null))
@@ -434,19 +432,11 @@ class AppsSearch(
         suggestionsCard.addView(suggestionsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp.dpi(6f)
         })
-        bottomCards.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
+        content.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
 
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply {
             topMargin = contentTop(); bottomMargin = contentBottom()
         })
-        // Apps stays fixed at the top. Contacts + Suggestions stack up from the bar; if they're taller than the room
-        // between, it is their top that gets cut (the part next to the bar stays).
-        bottomCards.orientation = LinearLayout.VERTICAL
-        bottomCards.gravity = Gravity.BOTTOM
-        bottomCards.clipChildren = false
-        bottomRegion.addView(bottomCards, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
-        bottomRegion.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> v.clipBounds = android.graphics.Rect(0, 0, v.width, v.height) }
-        content.addView(bottomRegion, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addView(pill, LayoutParams(dp.searchBarWidth, dp.searchBarHeight))
 
         field.addTextChangedListener(object : TextWatcher {
@@ -950,7 +940,13 @@ class AppsSearch(
     private fun barGap(): Float = maxOf(dp.searchBarBottomMargin.toFloat(), ime + dp.dp(10f))
     private fun barY(): Float = dp.heightPx - barGap() - dp.searchBarHeight
     private fun contentTop() = dp.insets.top + dp.dpi(12f)
-    private fun contentBottom() = (barGap() + dp.searchBarHeight + dp.dp(14f)).roundToInt()
+    /** 0 = no keyboard, 1 = keyboard up (eases with the keyboard's live inset). */
+    private fun kbFrac() = ((ime - dp.insets.bottom) / dp.dp(80f)).coerceIn(0f, 1f)
+    private fun contentBottom(): Int {
+        val rest = barGap() + dp.searchBarHeight + dp.dp(14f)     // cards end above the bar
+        val t = kbFrac()
+        return (rest * (1f - t) + ime * t).roundToInt()           // keyboard up: cards run down to the keyboard
+    }
 
     private fun layoutPill() {
         if (!::origin.isInitialized) return
@@ -1013,6 +1009,8 @@ class AppsSearch(
             lp.topMargin = top; lp.bottomMargin = bottom
             content.layoutParams = lp
         }
+        // While the keyboard is up, the cards behind the bar's lower half blur progressively (0 at the bar's middle)
+        content.setBlur(barY() + dp.searchBarHeight / 2f - top, (kbFrac() * BottomBlurLayout.STEPS).roundToInt())
     }
 
     private fun rememberedKeyboard(): Float =
