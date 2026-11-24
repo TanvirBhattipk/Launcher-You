@@ -51,7 +51,7 @@ fun LauncherTopFadeBlur(
     topChromeHeight: Dp,
     modifier: Modifier = Modifier,
     fadeRun: Dp = 8.dp,
-    maxBlur: Dp = 30.dp,
+    maxBlur: Dp = 60.dp,
     tintColor: Color = Color(0x4D808080), // #808080 at 30% opacity
 ) {
     Box(
