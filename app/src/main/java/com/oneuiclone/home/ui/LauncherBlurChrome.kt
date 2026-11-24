@@ -57,7 +57,7 @@ fun LauncherTopFadeBlur(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height((topChromeHeight - 20.dp).coerceAtLeast(0.dp))
+            .height((topChromeHeight - 16.dp).coerceAtLeast(0.dp))
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
