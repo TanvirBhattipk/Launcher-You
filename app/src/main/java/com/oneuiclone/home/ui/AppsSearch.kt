@@ -169,10 +169,12 @@ class AppsSearch(
     // Cards
     private val appsCard = GlassCard(context, flatBottom = false)
     private val appsRow = LinearLayout(context)
-    private val contactsCard = GlassCard(context, flatBottom = false)
+    private val contactsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val contactsListLayout = LinearLayout(context)
-    private val suggestionsCard = GlassCard(context, flatBottom = false)
+    private val suggestionsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val suggestionsListLayout = LinearLayout(context)
+    private val bottomCards = LinearLayout(context)        // Contacts + Suggestions, stacked up from the bar
+    private val bottomRegion = FrameLayout(context)        // the room between the Apps card and the bar
     private val calcBox = TextView(context)
     private var calcResult: String? = null
 
@@ -194,7 +196,7 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean) : LinearLayout(ctx) {
+       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean, private val chrome: Boolean = true) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
@@ -218,6 +220,7 @@ class AppsSearch(
         }
 
         override fun onDraw(canvas: Canvas) {
+            if (!chrome) { super.onDraw(canvas); return }          // no glass, fill or border
             val radius = dp.dp(24f)
             rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
@@ -380,7 +383,7 @@ class AppsSearch(
         })
 
         content.orientation = LinearLayout.VERTICAL
-        content.gravity = Gravity.BOTTOM
+        content.gravity = Gravity.TOP
         content.clipChildren = false
 
         calcBox.apply {
@@ -412,43 +415,38 @@ class AppsSearch(
         content.addView(appsCard, cardParams(top = 0))
 
         contactsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
-        contactsCard.addView(sectionHeader("Contacts", showAll = true, horizontalPadDp = 16f) {
+        contactsCard.addView(sectionHeader("Contacts", showAll = true, horizontalPadDp = 0f) {
             onOpenIntent(it, Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         })
         contactsListLayout.orientation = LinearLayout.VERTICAL
         contactsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
-        contactsListLayout.dividerDrawable = insetDivider(dp.dpi(16f), dp.dpi(16f))
+        contactsListLayout.dividerDrawable = insetDivider(0, 0)
         contactsCard.addView(contactsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp.dpi(6f)
         })
-        content.addView(contactsCard, cardParams(top = dp.dpi(14f)))
+        bottomCards.addView(contactsCard, cardParams(top = dp.dpi(14f)))
 
         suggestionsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
-        suggestionsCard.addView(sectionHeader("Suggestions", showAll = false, horizontalPadDp = 16f, onShowAll = null))
+        suggestionsCard.addView(sectionHeader("Suggestions", showAll = false, horizontalPadDp = 0f, onShowAll = null))
         suggestionsListLayout.orientation = LinearLayout.VERTICAL
         suggestionsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
-        suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(16f), dp.dpi(16f))
+        suggestionsListLayout.dividerDrawable = insetDivider(0, 0)
         suggestionsCard.addView(suggestionsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp.dpi(6f)
         })
-        content.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
+        bottomCards.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
 
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply {
             topMargin = contentTop(); bottomMargin = contentBottom()
         })
-        // Cards sit right above the bar; when they're too tall for the room above it (keyboard up), start from the
-        // top instead so it is the last card that gets cut, not the first.
-        content.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            var total = 0
-            for (i in 0 until content.childCount) {
-                val c = content.getChildAt(i)
-                if (c.visibility == GONE) continue
-                val m = c.layoutParams as ViewGroup.MarginLayoutParams
-                total += c.measuredHeight + m.topMargin + m.bottomMargin
-            }
-            val g = if (total > content.height - content.paddingTop - content.paddingBottom) Gravity.TOP else Gravity.BOTTOM
-            if (content.gravity != g) content.gravity = g
-        }
+        // Apps stays fixed at the top. Contacts + Suggestions stack up from the bar; if they're taller than the room
+        // between, it is their top that gets cut (the part next to the bar stays).
+        bottomCards.orientation = LinearLayout.VERTICAL
+        bottomCards.gravity = Gravity.BOTTOM
+        bottomCards.clipChildren = false
+        bottomRegion.addView(bottomCards, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        bottomRegion.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> v.clipBounds = android.graphics.Rect(0, 0, v.width, v.height) }
+        content.addView(bottomRegion, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         addView(pill, LayoutParams(dp.searchBarWidth, dp.searchBarHeight))
 
         field.addTextChangedListener(object : TextWatcher {
@@ -627,7 +625,7 @@ class AppsSearch(
         shownApps = keys
         appsRow.removeAllViews()
         enterTarget = null
-        val iconPx = dp.dpi(54f)
+        val iconPx = dp.searchIconSizePx                       // Home's icon size, fixed
         list.take(MAX_APPS).forEachIndexed { i, a ->
             val holder = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
@@ -636,7 +634,7 @@ class AppsSearch(
                 setTag(R_ENTERABLE, true)
                 val hiddenIcon = IconView(context, dp).apply { configureIcon(this, a) }
                 setOnClickListener { onLaunch(hiddenIcon, a) }
-                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, dp.dp(13f)), LinearLayout.LayoutParams(iconPx, iconPx))
+                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f), LinearLayout.LayoutParams(iconPx, iconPx))
                 addView(TextView(context).apply {
                     text = a.label
                     setTextColor(primaryInk)
@@ -743,7 +741,7 @@ class AppsSearch(
             val r = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp.dpi(16f), 0, dp.dpi(16f), 0)
+                setPadding(0, 0, 0, 0)
                 isClickable = true
                 setTag(R_ENTERABLE, true)
                 background = rowRipple()
@@ -804,7 +802,7 @@ class AppsSearch(
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp.dpi(16f), 0, dp.dpi(16f), 0)
+                setPadding(0, 0, 0, 0)
                 isClickable = true
                 background = rowRipple()
                 setOnClickListener { onRequestContacts() }
@@ -825,7 +823,7 @@ class AppsSearch(
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp.dpi(16f), 0, dp.dpi(16f), 0)
+                setPadding(0, 0, 0, 0)
                 isClickable = true
                 setTag(R_ENTERABLE, true)
                 background = rowRipple()
@@ -996,8 +994,8 @@ class AppsSearch(
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        contactsListLayout.dividerDrawable = insetDivider(dp.dpi(16f), dp.dpi(16f))
-        suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(16f), dp.dpi(16f))
+        contactsListLayout.dividerDrawable = insetDivider(0, 0)
+        suggestionsListLayout.dividerDrawable = insetDivider(0, 0)
         layoutPill()
         if (isOpen) {
             shownApps = emptyList()
@@ -1125,7 +1123,7 @@ class AppsSearch(
         private val MARKS = Regex("\\p{Mn}+")
         private const val KEY_CONTACTS_DECLINED = "contacts_declined"
         private const val INVITE_ID = -1L
-        private const val MAX_APPS = 5
+        private const val MAX_APPS = 4
         private const val MAX_WEB = 4
         const val OPEN_MS = 425L
         private const val OPEN_BAR_MS = 360L
