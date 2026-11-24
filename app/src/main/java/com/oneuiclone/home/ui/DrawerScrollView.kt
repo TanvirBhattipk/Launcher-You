@@ -48,8 +48,9 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private var closed = false
    // Progressive alpha-masked blur under the search bar (from the Glass app's shader).
     // Fully blurred above blurFullY, fading back to sharp by blurEndY (the top of the first row).
-    private val blurFullY = dp.searchBarTop + dp.searchBarHeight * 0.5f
-    private val blurEndY = maxOf(dp.appsGrid.top.toFloat(), blurFullY + dp.dp(24f))
+    private val blurFullY = (dp.searchBarTop + dp.searchBarHeight).toFloat()   // fully blurred down to the bar's bottom
+    private val blurEndY = blurFullY + dp.dp(96f)                              // then fades back to sharp over 96dp
+    private val tintAmount = 0.5f                                              // dark tint strength, 0..1
     private val blurNode = RenderNode("drawerProgressiveBlur")
     private val maskShader = RuntimeShader(MASK_AGSL).apply { setFloatUniform("range", blurFullY, blurEndY) }
     private val maskPaint = Paint().apply {
@@ -57,7 +58,10 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
     }
     private val blurEffect: RenderEffect by lazy {
-        val shader = RuntimeShader(BLUR_AGSL).apply { setFloatUniform("range", blurFullY, blurEndY) }
+                val shader = RuntimeShader(BLUR_AGSL).apply {
+            setFloatUniform("range", blurFullY, blurEndY)
+            setFloatUniform("tintAmount", tintAmount)
+        }
         val r = dp.dp(12f)                       // blur radius
         RenderEffect.createChainEffect(
             RenderEffect.createRuntimeShaderEffect(shader, "content"),   // alpha mask, applied after the blur
@@ -135,12 +139,12 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         c.pivotY = if (pull > 0f) scrollY.toFloat() else (scrollY + height).toFloat()
         c.scaleY = 1f + s
     }
-        override fun dispatchDraw(canvas: Canvas) {
-        // At rest nothing is under the bar, so skip the effect.
+            override fun dispatchDraw(canvas: Canvas) {
         if (scrollY <= 0 || width == 0 || !canvas.isHardwareAccelerated) { super.dispatchDraw(canvas); return }
         val w = width.toFloat()
-        val top = scrollY.toFloat()                 // inside dispatchDraw the canvas is in content coordinates
+        val top = scrollY.toFloat()
         val band = minOf(blurEndY, height.toFloat())
+        val strength = (top / dp.dp(48f)).coerceIn(0f, 1f)     // eases the effect in as you start to scroll
 
         // 1) everything below the band, untouched
         canvas.save()
@@ -150,17 +154,19 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
 
         // 2) inside the band, the sharp apps fade out toward the top
         maskShader.setFloatUniform("range", top + blurFullY, top + blurEndY)
+        maskShader.setFloatUniform("strength", strength)
         val layer = canvas.saveLayer(0f, top, w, top + band, null)
         super.dispatchDraw(canvas)
         canvas.drawRect(0f, top, w, top + band, maskPaint)
         canvas.restoreToCount(layer)
 
-        // 3) the blurred copy fades in toward the top
+        // 3) the blurred, dark-tinted copy fades in toward the top
         blurNode.setPosition(0, 0, width, band.toInt())
         blurNode.setRenderEffect(blurEffect)
+        blurNode.alpha = strength
         val rc = blurNode.beginRecording()
         try {
-            rc.translate(0f, -top)                  // record in view coordinates so the shader's y matches the screen
+            rc.translate(0f, -top)
             rc.clipRect(0f, top, w, top + band)
             super.dispatchDraw(rc)
         } finally {
@@ -180,16 +186,19 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         const val BLUR_AGSL = """
             uniform shader content;
             uniform float2 range;
+            uniform float tintAmount;
             half4 main(float2 coord) {
                 float blurAlpha = 1.0 - smoothstep(range.x, range.y, coord.y);
-                return content.eval(coord) * blurAlpha;
+                half4 c = content.eval(coord) * blurAlpha;
+                half4 tint = half4(0.07, 0.07, 0.07, 1.0) * half(blurAlpha * tintAmount);
+                return c + tint * (1.0 - c.a);
             }
         """
-        // The same mask, used to fade the sharp copy out so the two cross-fade.
         const val MASK_AGSL = """
             uniform float2 range;
+            uniform float strength;
             half4 main(float2 coord) {
-                float a = 1.0 - smoothstep(range.x, range.y, coord.y);
+                float a = (1.0 - smoothstep(range.x, range.y, coord.y)) * strength;
                 return half4(0.0, 0.0, 0.0, a);
             }
         """
