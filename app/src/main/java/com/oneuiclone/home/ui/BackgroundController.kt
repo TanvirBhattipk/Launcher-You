@@ -46,7 +46,7 @@ class BackgroundController(
     /** Settings › Liquid glass: the blur radius (px) of the Apps screen's background, and of the search page's. */
     var appsRadiusPx = maxRadiusPx
     var searchRadiusPx = maxRadiusPx
-
+    var onChange: (() -> Unit)? = null
 
     /** Applies the background again (after a radius or [searchOpen] changed). */
     fun refresh() = apply()
@@ -127,6 +127,7 @@ class BackgroundController(
             scrim.curveAlpha = 0f
             scrim.dimAlpha = dim * 0xA6 / 255f
             scrim.invalidate()
+            onChange?.invoke()
             return
         }
         val radius = if (blurEnabled) (p * radiusOf(kind) + q * radiusOf(from)).roundToInt() else 0
@@ -140,6 +141,7 @@ class BackgroundController(
         val shown = p + (if (from != Kind.NONE) q else 0f)
         scrim.dimAlpha = dim * 0xA6 / 255f + shown * fallbackExtra
         scrim.invalidate()
+        onChange?.invoke()
     }
 }
 
