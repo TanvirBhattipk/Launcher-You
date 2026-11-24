@@ -27,7 +27,7 @@ import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 
-private const val FOOT_FADE_START = 0.6f
+private const val FOOT_FADE_START = 0.75f
 private const val FOOT_FADE_STOPS = 8
 
 /** BitChord's 9-stop EaseInOut foot fade so progressive blur dissolves with zero hard edge. */
@@ -57,7 +57,7 @@ fun LauncherTopFadeBlur(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(topChromeHeight + fadeRun)
+            .height((topChromeHeight - 20.dp).coerceAtLeast(0.dp))
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
