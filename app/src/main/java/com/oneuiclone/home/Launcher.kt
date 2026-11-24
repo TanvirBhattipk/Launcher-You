@@ -438,7 +438,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         searchPill = SearchPill(activity, dp, activity.getString(R.string.search_hint))
         searchPill.glassTransparency = homeSearch.glassTransparency
         searchPill.glass = barGlass
-        backdrop = drawerBackdrop
+        searchPill.backdrop = drawerBackdrop
         searchPill.setOnClickListener { openSearch() }
         val columnWidth = dp.appsGrid.width() / dp.appsCols
         val iconPad = (columnWidth - dp.iconSizePx) / 2
