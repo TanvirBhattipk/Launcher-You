@@ -107,6 +107,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d
         appsDim = prefs.drawerBgOpacity / 100f
         searchDim = prefs.appSearchBgOpacity / 100f
+        onChange = { if (::searchPill.isInitialized) searchPill.invalidate(); search?.refreshBackdrop() }
     }
 
     private fun applyGlassPrefs() {
@@ -433,10 +434,11 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         appsLayer.addView(scrollbar, FrameLayout.LayoutParams(dp.dpi(28f), dp.heightPx - listTop, android.view.Gravity.END).apply {
             topMargin = listTop
         })
-        appsScroll.setOnScrollChangeListener { _, _, _, _, _ -> scrollbar.onScrolled() }
+        appsScroll.setOnScrollChangeListener { _, _, _, _, _ -> scrollbar.onScrolled(); searchPill.invalidate() }
         searchPill = SearchPill(activity, dp, activity.getString(R.string.search_hint))
         searchPill.glassTransparency = homeSearch.glassTransparency
         searchPill.glass = barGlass
+        backdrop = drawerBackdrop
         searchPill.setOnClickListener { openSearch() }
         val columnWidth = dp.appsGrid.width() / dp.appsCols
         val iconPad = (columnWidth - dp.iconSizePx) / 2
@@ -2399,6 +2401,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             onDismiss = { closeSearch() },
             barGlass = barGlass,
             cardGlass = cardGlass,
+            backdrop = searchBackdrop,
         ) {
             searchPill.animate().cancel(); searchPill.alpha = 1f
             homeSearch.visibility = View.VISIBLE
