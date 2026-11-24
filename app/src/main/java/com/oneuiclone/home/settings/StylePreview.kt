@@ -116,7 +116,7 @@ class StylePreview(private val activity: Activity) {
     fun load(done: () -> Unit) {
         if (io.isShutdown) return
         io.execute {
-            val l = try { read() } catch (e: Exception) {
+            val l = try { read() } catch (e: Throwable) {
                 android.util.Log.w("OneUiHome", "style preview: load failed", e); null
             }
             main.post {
@@ -201,15 +201,26 @@ class StylePreview(private val activity: Activity) {
         val dp = profile(look.iconScale, look.labelScale)
         val key = listOf(dp.iconSizePx, look.themed, look.themeAll, look.plateAlpha, look.dark, look.minimal, look.look, look.mode, look.shape, iconFactory.isNight())
         val draw = { made: Map<AppKey, Bitmap> ->
-            if (gen == generation) drawHome(l, dp, look, made, homeWidth, dockWidth).let { (h, d) -> done(h, d) }
+            if (gen == generation) {
+                // a failed preview leaves the placeholder up; it must never take the settings page down with it
+                val drawn = try { drawHome(l, dp, look, made, homeWidth, dockWidth) } catch (e: Throwable) {
+                    android.util.Log.w("OneUiHome", "style preview: draw failed", e); null
+                }
+                if (drawn != null) done(drawn.first, drawn.second)
+            }
         }
         if (key == iconsFor) { draw(icons); return }
         io.execute {
             val night = iconFactory.isNight()
-            val made = l.drawables.mapValues { (k, v) ->
-                iconFactory.homeIcon(v.second, dp.iconSizePx, night, look.themed, look.themeAll, look.plateAlpha, look.dark, k.component.packageName, look.minimal, look.look, look.mode).first
+            val made = try {
+                l.drawables.mapValues { (k, v) ->
+                    iconFactory.homeIcon(v.second, dp.iconSizePx, night, look.themed, look.themeAll, look.plateAlpha, look.dark, k.component.packageName, look.minimal, look.look, look.mode).first
+                }
+            } catch (e: Throwable) {
+                android.util.Log.w("OneUiHome", "style preview: icons failed", e); null
             }
             main.post {
+                if (made == null) return@post
                 if (io.isShutdown) return@post
                 icons = made; iconsFor = key
                 draw(made)
@@ -318,6 +329,7 @@ class StylePreview(private val activity: Activity) {
             .distinct().filter { it in l.drawables }.take(4)
         val wall = l.home ?: gradient(l.homeColors)
         io.execute {
+          try {
             // the wallpaper around the middle of the screen, where the icons sit
             val cw = (width * 0.8f).toInt()
             val ch = (cw * h / w.toFloat()).toInt().coerceAtMost(wall.height)
@@ -355,6 +367,9 @@ class StylePreview(private val activity: Activity) {
                 }
                 main.post { if (!io.isShutdown) done(i, out) }
             }
+          } catch (e: Throwable) {
+            android.util.Log.w("OneUiHome", "style preview: theme tiles failed", e)
+          }
         }
     }
 
