@@ -155,7 +155,7 @@ private fun applyColors() {
         rect.set(gap, gap, width - gap, height - gap)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
-        if (glassPaint.aim(glass, drawnAt)) {
+        if (prefs.drawerSearchBarBlur > 0 && glassPaint.aim(glass, drawnAt)) {
             glassPaint.paint.colorFilter = YunoGlass.saturation
             glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
             canvas.drawRoundRect(rect, r, r, glassPaint.paint)
