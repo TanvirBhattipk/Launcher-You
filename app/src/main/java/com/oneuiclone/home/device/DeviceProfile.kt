@@ -103,7 +103,7 @@ class DeviceProfile(
     // ---- apps screen ----
     val appsSidePadding = pageSidePadding                          // matches Home's horizontal icon columns symmetrically
     /** Side margin of the search bar: its ends line up with the outer edges of the first and last icon columns. */
-    val searchBarSide = dpi(13f)
+    val searchBarSide = dpi(18f)
     val searchBarWidth = widthPx - 2 * searchBarSide
     val searchBarHeight = dpi(60f)                                 // search_bar_wrapper_height
     val searchBarRadius = dp(32f)                                   // search_bar_bg_radius
