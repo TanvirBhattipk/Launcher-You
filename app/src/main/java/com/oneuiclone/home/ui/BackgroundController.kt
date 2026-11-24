@@ -42,22 +42,41 @@ class BackgroundController(
 
     /** 1 = the Apps screen's full blur and dimming. */
     var appsBlurScale = 1f
-    var appsDim = 0.4f
 
     /** Settings › Liquid glass: the blur radius (px) of the Apps screen's background, and of the search page's. */
     var appsRadiusPx = maxRadiusPx
     var searchRadiusPx = maxRadiusPx
-    /** The search page is open: the Apps screen's background is then blurred by [searchRadiusPx]. */
-    var searchOpen = false
+
 
     /** Applies the background again (after a radius or [searchOpen] changed). */
     fun refresh() = apply()
 
-    private fun radiusOf(k: Kind): Float =
-        if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * (if (searchOpen) searchRadiusPx else appsRadiusPx) else k.blurFactor * maxRadiusPx
+    /** Background tint 0..1: App Drawer › Background Opacity, and App Search › Background Opacity. */
+    var appsDim = 0.4f
+    var searchDim = 0.55f
 
-        private fun dimOf(k: Kind) =
-        if (k == Kind.APPS || k == Kind.APPS_FOLDER) appsDim * 255f / 0xA6 * appsBlurScale else k.dim
+    /** The search page is open: blends from the Drawer background settings (0) to the App Search ones (1). */
+    var searchOpen = false
+        set(v) {
+            if (field == v) return
+            field = v
+            searchAnim?.cancel()
+            searchAnim = android.animation.ValueAnimator.ofFloat(searchMix, if (v) 1f else 0f).apply {
+                duration = 300
+                addUpdateListener { searchMix = it.animatedValue as Float; apply() }
+                start()
+            }
+        }
+    private var searchMix = 0f
+    private var searchAnim: android.animation.ValueAnimator? = null
+
+    private fun isApps(k: Kind) = k == Kind.APPS || k == Kind.APPS_FOLDER
+
+    private fun radiusOf(k: Kind): Float =
+        if (isApps(k)) k.blurFactor * (appsRadiusPx + (searchRadiusPx - appsRadiusPx) * searchMix) else k.blurFactor * maxRadiusPx
+
+    private fun dimOf(k: Kind): Float =
+        if (isApps(k)) (appsDim + (searchDim - appsDim) * searchMix) * 255f / 0xA6 * appsBlurScale else k.dim
 
     private fun factor(k: Kind) = if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * appsBlurScale else k.blurFactor
 
