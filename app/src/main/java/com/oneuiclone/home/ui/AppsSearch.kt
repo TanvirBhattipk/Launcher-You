@@ -68,6 +68,7 @@ class AppsSearch(
     private val onDismiss: () -> Unit,
     private val barGlass: WidgetGlass? = null,
     private val cardGlass: WidgetGlass? = null,
+    private val backdrop: LiveBackdrop? = null,
     private val barOpacity: Float = 1f,
     private val recents: () -> List<AppInfo> = { emptyList() },
     private val contactsEnabled: Boolean = true,
@@ -246,22 +247,26 @@ class AppsSearch(
         }
     }
 
-        private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val glassPaint = GlassPaint()
         private val toWindow = android.graphics.Matrix()
         private val rect = RectF()
         private val rim = YunoRim()
 
         override fun draw(canvas: Canvas) {
-            // Search bar's own blur + lens. Blur at 0: only the App Search background shows behind the tint.
-            val g = barGlass
-            if (prefs.appSearchBarBlur > 0 && g != null) {
-                toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
+            if (prefs.appSearchBarBlur > 0) {
                 rect.set(bounds)
-                if (glassPaint.aimLens(g, toWindow, rect, pillBg.cornerRadius, dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP))) {
-                    glassPaint.paint.colorFilter = YunoGlass.saturation
-                    glassPaint.paint.alpha = 255
-                    canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
+                val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+                val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+                val live = backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), amount, depth) == true
+                val g = barGlass
+                if (!live && g != null) {
+                    toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
+                    if (glassPaint.aimLens(g, toWindow, rect, pillBg.cornerRadius, amount, depth)) {
+                        glassPaint.paint.colorFilter = YunoGlass.saturation
+                        glassPaint.paint.alpha = 255
+                        canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
+                    }
                 }
             }
             super.draw(canvas)
@@ -270,7 +275,10 @@ class AppsSearch(
             rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
         }
     }
-    
+    fun refreshBackdrop() {
+        pill.invalidate()
+        appsCard.invalidate(); contactsCard.invalidate(); suggestionsCard.invalidate()
+    }
     var isOpen = false; private set
     private var f = 0f
     private var anim: ValueAnimator? = null
