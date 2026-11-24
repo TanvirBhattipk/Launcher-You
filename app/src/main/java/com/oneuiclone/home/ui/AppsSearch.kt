@@ -143,7 +143,7 @@ class AppsSearch(
         get() = surfaceRgb
 
     private val backdropDimMaxAlpha: Int
-        get() = alphaFromPercent(prefs.appSearchBgOpacity, 55)
+        get() = 0   // the App Search background tint now comes from BackgroundController (searchDim)
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
