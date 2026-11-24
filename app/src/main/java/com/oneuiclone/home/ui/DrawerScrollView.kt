@@ -8,7 +8,9 @@ import com.oneuiclone.home.device.DeviceProfile
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -46,33 +48,35 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     var onPullToClose: (() -> Unit)? = null
     private var topPull = 0f
     private var closed = false
-   // Progressive alpha-masked blur under the search bar (from the Glass app's shader).
-    // Fully blurred above blurFullY, fading back to sharp by blurEndY (the top of the first row).
-    private val blurFullY = (dp.searchBarTop + dp.searchBarHeight).toFloat()   // fully blurred down to the bar's bottom
-    private val blurEndY = blurFullY + dp.dp(96f)                              // then fades back to sharp over 96dp
-    private val tintAmount = 0.5f                                              // dark tint strength, 0..1
-    // Black top tint: solid black from the top of the screen down to the middle of the search bar, then an eased
-    // fade to transparent a little below the bar.
-    private val blackFullY = dp.searchBarTop + dp.searchBarHeight / 2f
-    private val blackEndY = blurFullY + dp.dp(24f)
+    // Progressive blur under the search bar: blur radius is MAX_BLUR_DP at the very top of the screen and eases down
+    // to 0 (sharp) at blurEndY, with no tint. Built from a few blurred copies of the list, cross-faded per pixel.
+    private val blurFullY = (dp.searchBarTop + dp.searchBarHeight).toFloat()
+    private val blurEndY = blurFullY + dp.dp(96f)                              // sharp again from here down
     private val blurNode = RenderNode("drawerProgressiveBlur")
-    private val maskShader = RuntimeShader(MASK_AGSL).apply { setFloatUniform("range", blurFullY, blurEndY) }
-    private val maskPaint = Paint().apply {
-        shader = maskShader
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
-    }
-    private val blurEffect: RenderEffect by lazy {
-                val shader = RuntimeShader(BLUR_AGSL).apply {
-            setFloatUniform("range", blurFullY, blurEndY)
-            setFloatUniform("tintAmount", tintAmount)
-            setFloatUniform("blackRange", blackFullY, blackEndY)
+    private var blurEffect: RenderEffect? = null
+    private var blurEffectStep = -1
+
+    /** [step] (1..STEPS) scales the whole ramp, so the blur eases in over the first bit of scrolling. */
+    private fun progressiveBlur(step: Int): RenderEffect {
+        val k = step / STEPS.toFloat()
+        val rMax = dp.dp(MAX_BLUR_DP) * k
+        val n = LEVELS_DP.size
+        var acc: RenderEffect? = null
+        for (i in 0 until n) {
+            val cur = dp.dp(LEVELS_DP[i]) * k
+            val prev = if (i > 0) dp.dp(LEVELS_DP[i - 1]) * k else cur
+            val next = if (i < n - 1) dp.dp(LEVELS_DP[i + 1]) * k else cur
+            val shader = RuntimeShader(WEIGHT_AGSL).apply {
+                setFloatUniform("levels", prev, cur, next)
+                setFloatUniform("rMax", rMax)
+                setFloatUniform("bandEnd", blurEndY)
+            }
+            var e = RenderEffect.createRuntimeShaderEffect(shader, "content")
+            if (cur >= 1f) e = RenderEffect.createChainEffect(e, RenderEffect.createBlurEffect(cur, cur, Shader.TileMode.MIRROR))
+            acc = if (acc == null) e else RenderEffect.createBlendModeEffect(acc, e, BlendMode.PLUS)
         }
-        val r = dp.dp(12f)                       // blur radius
-        RenderEffect.createChainEffect(
-            RenderEffect.createRuntimeShaderEffect(shader, "content"),   // alpha mask, applied after the blur
-            RenderEffect.createBlurEffect(r, r, Shader.TileMode.MIRROR),
-        )
-    } 
+        return acc!!
+    }
     init {
         overScrollMode = OVER_SCROLL_NEVER                      // the stretch is drawn below
     }
@@ -144,12 +148,14 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         c.pivotY = if (pull > 0f) scrollY.toFloat() else (scrollY + height).toFloat()
         c.scaleY = 1f + s
     }
-            override fun dispatchDraw(canvas: Canvas) {
+    override fun dispatchDraw(canvas: Canvas) {
         if (scrollY <= 0 || width == 0 || !canvas.isHardwareAccelerated) { super.dispatchDraw(canvas); return }
+        val strength = (scrollY / dp.dp(48f)).coerceIn(0f, 1f)     // eases the effect in as you start to scroll
+        val step = (strength * STEPS).roundToInt()
+        if (step == 0) { super.dispatchDraw(canvas); return }
         val w = width.toFloat()
         val top = scrollY.toFloat()
         val band = minOf(blurEndY, height.toFloat())
-        val strength = (top / dp.dp(48f)).coerceIn(0f, 1f)     // eases the effect in as you start to scroll
 
         // 1) everything below the band, untouched
         canvas.save()
@@ -157,18 +163,10 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         super.dispatchDraw(canvas)
         canvas.restore()
 
-        // 2) inside the band, the sharp apps fade out toward the top
-        maskShader.setFloatUniform("range", top + blurFullY, top + blurEndY)
-        maskShader.setFloatUniform("strength", strength)
-        val layer = canvas.saveLayer(0f, top, w, top + band, null)
-        super.dispatchDraw(canvas)
-        canvas.drawRect(0f, top, w, top + band, maskPaint)
-        canvas.restoreToCount(layer)
-
-        // 3) the blurred, dark-tinted copy fades in toward the top
+        // 2) the band: the list with a blur that is strongest at the top and 0 at the bottom
+        if (step != blurEffectStep) { blurEffect = progressiveBlur(step); blurEffectStep = step }
         blurNode.setPosition(0, 0, width, band.toInt())
         blurNode.setRenderEffect(blurEffect)
-        blurNode.alpha = strength
         val rc = blurNode.beginRecording()
         try {
             rc.translate(0f, -top)
@@ -186,29 +184,27 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         removeCallbacks(tick); running = false
         super.onDetachedFromWindow()
     }
-        private companion object {
-        // Same alpha mask as the Glass app: 1 at the top, smoothly 0 lower down.
-        const val BLUR_AGSL = """
+    private companion object {
+        const val MAX_BLUR_DP = 100f                                   // blur radius at the very top
+        val LEVELS_DP = floatArrayOf(0f, 8f, 20f, 40f, 70f, 100f)      // blurred copies that get cross-faded
+        const val STEPS = 12                                           // ease-in steps (the effect is rebuilt per step)
+
+        // Weight of one blurred copy at each pixel: the wanted radius falls from rMax at y=0 to 0 at bandEnd, and
+        // each copy fades in/out linearly around its own radius (levels = previous, this, next radius).
+        const val WEIGHT_AGSL = """
             uniform shader content;
-            uniform float2 range;
-            uniform float tintAmount;
-            uniform float2 blackRange;
+            uniform float3 levels;
+            uniform float rMax;
+            uniform float bandEnd;
             half4 main(float2 coord) {
-                float blurAlpha = 1.0 - smoothstep(range.x, range.y, coord.y);
-                half4 c = content.eval(coord) * blurAlpha;
-                half4 tint = half4(0.07, 0.07, 0.07, 1.0) * half(blurAlpha * tintAmount);
-                half4 o = c + tint * (1.0 - c.a);
-                // solid black up to blackRange.x, easing to transparent by blackRange.y (covers the blurred icons too)
-                float k = 1.0 - smoothstep(blackRange.x, blackRange.y, coord.y);
-                return o * half(1.0 - k) + half4(0.0, 0.0, 0.0, 1.0) * half(k);
-            }
-        """
-        const val MASK_AGSL = """
-            uniform float2 range;
-            uniform float strength;
-            half4 main(float2 coord) {
-                float a = (1.0 - smoothstep(range.x, range.y, coord.y)) * strength;
-                return half4(0.0, 0.0, 0.0, a);
+                float r = rMax * (1.0 - smoothstep(0.0, bandEnd, coord.y));
+                float w;
+                if (r < levels.y) {
+                    w = (levels.y > levels.x) ? clamp((r - levels.x) / (levels.y - levels.x), 0.0, 1.0) : 1.0;
+                } else {
+                    w = (levels.z > levels.y) ? clamp((levels.z - r) / (levels.z - levels.y), 0.0, 1.0) : 1.0;
+                }
+                return content.eval(coord) * half(w);
             }
         """
     }

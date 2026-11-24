@@ -114,7 +114,15 @@ class LiveBackdrop(private val layers: () -> List<View>) {
                 float inside = -sdRoundedRect(p, halfSize, radius);
                 float t = clamp(1.0 - inside / depth, 0.0, 1.0);
                 float2 n = gradSdRoundedRect(p, halfSize, radius);
-                return content.eval(coord + n * (t * t * amount));
+                float2 src = coord + n * (t * t * amount);
+                // The layer only has a picture inside the view's own bounds, so a sample pulled in from outside
+                // them came back transparent: a see-through band (about 6dp) around the rim that shows once the
+                // fill is low. Fold those samples back inside so the glass is solid right to the edge.
+                float2 lo = origin + 1.0;
+                float2 hi = origin + size - 1.0;
+                src = hi - abs(hi - src);
+                src = lo + abs(src - lo);
+                return content.eval(src);
             }
         """
     }
