@@ -156,10 +156,16 @@ private fun applyColors() {
         rect.set(gap, gap, width - gap, height - gap)
         val r = rect.height() / 2f
         drawnAt.reset(); transformMatrixToGlobal(drawnAt)
-        if (prefs.drawerSearchBarBlur > 0 && glassPaint.aimLens(glass, drawnAt, rect, r, dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP))) {
-            glassPaint.paint.colorFilter = YunoGlass.saturation
-            glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
-            canvas.drawRoundRect(rect, r, r, glassPaint.paint)
+              if (prefs.drawerSearchBarBlur > 0) {
+            val live = backdrop?.draw(
+                canvas, this, rect, r, dp.dp(prefs.drawerSearchBarBlur.toFloat()),
+                dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP),
+            ) == true
+            if (!live && glassPaint.aimLens(glass, drawnAt, rect, r, dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP))) {
+                glassPaint.paint.colorFilter = YunoGlass.saturation
+                glassPaint.paint.alpha = (255 * backgroundOpacity).toInt()
+                canvas.drawRoundRect(rect, r, r, glassPaint.paint)
+            }
         }
         canvas.drawRoundRect(rect, r, r, fill)
         canvas.drawRoundRect(rect, r, r, border)
