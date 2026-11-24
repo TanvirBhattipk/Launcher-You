@@ -50,7 +50,7 @@ fun LauncherTopFadeBlur(
     hazeState: HazeState,
     topChromeHeight: Dp,
     modifier: Modifier = Modifier,
-    fadeRun: Dp = 15.dp,
+    fadeRun: Dp = 8.dp,
     maxBlur: Dp = 30.dp,
     tintColor: Color = Color(0x4D808080), // #808080 at 30% opacity
 ) {
