@@ -246,11 +246,24 @@ class AppsSearch(
         }
     }
 
-    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+        private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+        private val glassPaint = GlassPaint()
+        private val toWindow = android.graphics.Matrix()
         private val rect = RectF()
         private val rim = YunoRim()
 
         override fun draw(canvas: Canvas) {
+            // Search bar's own blur + lens. Blur at 0: only the App Search background shows behind the tint.
+            val g = barGlass
+            if (prefs.appSearchBarBlur > 0 && g != null) {
+                toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
+                rect.set(bounds)
+                if (glassPaint.aimLens(g, toWindow, rect, pillBg.cornerRadius, dp.dp(YunoGlass.LENS_AMOUNT_DP), dp.dp(YunoGlass.LENS_DEPTH_DP))) {
+                    glassPaint.paint.colorFilter = YunoGlass.saturation
+                    glassPaint.paint.alpha = 255
+                    canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
+                }
+            }
             super.draw(canvas)
             val w = searchBarBorderWidth
             rect.set(bounds); rect.inset(w / 2f, w / 2f)
