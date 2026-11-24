@@ -36,7 +36,56 @@ class GlassPaint {
         if (paint.colorFilter != null) paint.colorFilter = null
         return true
     }
+    private var lensShader: android.graphics.RuntimeShader? = null
 
+    /** Like [aim], but the glass bends the blurred wallpaper near its edges, like a convex lens. */
+    fun aimLens(glass: WidgetGlass?, toWindow: Matrix, rect: RectF, radius: Float, amountPx: Float, depthPx: Float): Boolean {
+        val s = aimBitmap(glass, toWindow) ?: return false
+        val lens = lensShader ?: android.graphics.RuntimeShader(LENS_AGSL).also { lensShader = it }
+        lens.setInputShader("content", s)
+        lens.setFloatUniform("origin", rect.left, rect.top)
+        lens.setFloatUniform("size", rect.width(), rect.height())
+        lens.setFloatUniform("radius", minOf(radius, rect.width() / 2f, rect.height() / 2f))
+        lens.setFloatUniform("amount", amountPx)
+        lens.setFloatUniform("depth", depthPx)
+        if (paint.shader !== lens) paint.shader = lens
+        if (paint.colorFilter != null) paint.colorFilter = null
+        return true
+    }
+
+    private companion object {
+        const val LENS_AGSL = """
+            uniform shader content;
+            uniform float2 origin;
+            uniform float2 size;
+            uniform float radius;
+            uniform float amount;
+            uniform float depth;
+
+            float sdRoundedRect(float2 p, float2 halfSize, float r) {
+                float2 q = abs(p) - (halfSize - float2(r));
+                return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+            }
+            float2 gradSdRoundedRect(float2 coord, float2 halfSize, float r) {
+                float2 cornerCoord = abs(coord) - (halfSize - float2(r));
+                if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
+                    return sign(coord) * normalize(max(cornerCoord, 0.0) + 0.00001);
+                } else {
+                    float gradX = step(cornerCoord.y, cornerCoord.x);
+                    return sign(coord) * float2(gradX, 1.0 - gradX);
+                }
+            }
+            half4 main(float2 coord) {
+                float2 halfSize = size * 0.5;
+                float2 p = coord - (origin + halfSize);
+                float inside = -sdRoundedRect(p, halfSize, radius);   // distance to the edge, > 0 inside
+                float t = clamp(1.0 - inside / depth, 0.0, 1.0);
+                float2 n = gradSdRoundedRect(p, halfSize, radius);    // outward normal
+                // edges show the scene from further out, squeezed into the rim
+                return content.eval(coord + n * (t * t * amount));
+            }
+        """
+    }
     fun aimLiquid(
         @Suppress("UNUSED_PARAMETER") canvas: android.graphics.Canvas,
         glass: WidgetGlass?,
