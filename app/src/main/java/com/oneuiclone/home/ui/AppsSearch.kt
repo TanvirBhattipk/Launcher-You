@@ -380,7 +380,7 @@ class AppsSearch(
         })
 
         content.orientation = LinearLayout.VERTICAL
-        content.gravity = Gravity.TOP
+        content.gravity = Gravity.BOTTOM
         content.clipChildren = false
 
         calcBox.apply {
@@ -433,7 +433,22 @@ class AppsSearch(
         })
         content.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
 
-        addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply { topMargin = contentTop() })
+        addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply {
+            topMargin = contentTop(); bottomMargin = contentBottom()
+        })
+        // Cards sit right above the bar; when they're too tall for the room above it (keyboard up), start from the
+        // top instead so it is the last card that gets cut, not the first.
+        content.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            var total = 0
+            for (i in 0 until content.childCount) {
+                val c = content.getChildAt(i)
+                if (c.visibility == GONE) continue
+                val m = c.layoutParams as ViewGroup.MarginLayoutParams
+                total += c.measuredHeight + m.topMargin + m.bottomMargin
+            }
+            val g = if (total > content.height - content.paddingTop - content.paddingBottom) Gravity.TOP else Gravity.BOTTOM
+            if (content.gravity != g) content.gravity = g
+        }
         addView(pill, LayoutParams(dp.searchBarWidth, dp.searchBarHeight))
 
         field.addTextChangedListener(object : TextWatcher {
@@ -929,8 +944,15 @@ class AppsSearch(
         onDismiss()
     }
 
-    private fun barTop() = dp.searchBarTop.toFloat()
-    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(18f)
+    /**
+     * The bar sits at the bottom: just above the gesture bar when there's no keyboard, and 10dp above the keyboard
+     * while it is up. [ime] is the live keyboard inset (it changes every frame while the keyboard slides), so the bar
+     * rides on the keyboard as it opens and drops back down as it closes.
+     */
+    private fun barGap(): Float = maxOf(dp.searchBarBottomMargin.toFloat(), ime + dp.dp(10f))
+    private fun barY(): Float = dp.heightPx - barGap() - dp.searchBarHeight
+    private fun contentTop() = dp.insets.top + dp.dpi(12f)
+    private fun contentBottom() = (barGap() + dp.searchBarHeight + dp.dp(14f)).roundToInt()
 
     private fun layoutPill() {
         if (!::origin.isInitialized) return
@@ -946,8 +968,9 @@ class AppsSearch(
         setBackgroundColor(android.graphics.Color.argb(dimAlpha, backdropDimColor, backdropDimColor, backdropDimColor))
 
         pill.x = dp.searchBarSide.toFloat()
-        pill.y = barTop() - dp.dp(BAR_SLIDE_DP) * (1f - f)
+        pill.y = barY() + dp.dp(BAR_SLIDE_DP) * (1f - f)          // slides up into place from below
         pill.alpha = f.coerceIn(0f, 1f)
+        updateContentInset()
         pillBg.cornerRadius = h / 2f
         pillBg.setColor(searchBarFillColor)
         pillBg.setStroke(searchBarBorderWidth.toInt(), searchBarBorderColor)
@@ -987,7 +1010,7 @@ class AppsSearch(
     private fun updateContentInset() {
         val lp = content.layoutParams as LayoutParams
         val top = contentTop()
-        val bottom = (maxOf(kbTarget, dp.insets.bottom.toFloat()) + dp.dp(8f)).roundToInt()
+        val bottom = contentBottom()
         if (lp.topMargin != top || lp.bottomMargin != bottom) {
             lp.topMargin = top; lp.bottomMargin = bottom
             content.layoutParams = lp
@@ -1031,7 +1054,7 @@ class AppsSearch(
         filter("")
         opening = false
         content.alpha = 0f
-        content.translationY = -dp.dp(OPEN_RISE_DP)
+        content.translationY = dp.dp(OPEN_RISE_DP)
         content.animate().alpha(1f).translationY(0f).setDuration(OPEN_MS).setInterpolator(Easing.IME).start()
         animateTo(1f)
         field.isCursorVisible = true
@@ -1074,7 +1097,7 @@ class AppsSearch(
         net.shutdownNow()
         context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(field.windowToken, 0)
         field.isCursorVisible = false
-        content.animate().alpha(0f).translationY(-dp.dp(OPEN_RISE_DP)).setDuration(CLOSE_MS).setInterpolator(Easing.IME).start()
+        content.animate().alpha(0f).translationY(dp.dp(OPEN_RISE_DP)).setDuration(CLOSE_MS).setInterpolator(Easing.IME).start()
         if (field.length() > 0) field.animate().alpha(0f).setDuration(110).withEndAction {
             field.text = null
             field.animate().alpha(1f).setDuration(150).start()
