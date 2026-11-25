@@ -90,7 +90,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass, sheetGlass)
     private val drawerBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim, appsScroll) }
     private val searchBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
-    private val sheetBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim, homeLayer) }
+    private val sheetBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(homeLayer) }   // only Home's icons/widgets; the wallpaper comes from sheetGlass
     init {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         val d = activity.resources.displayMetrics.density
