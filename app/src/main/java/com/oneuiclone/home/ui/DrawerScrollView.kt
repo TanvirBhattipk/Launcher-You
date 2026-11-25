@@ -44,18 +44,12 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private var last = 0L
     private val tick = Runnable { step() }
 
-    /** The blurred wallpaper the sheet shows through: redrawn when it changes and whenever the sheet moves on screen. */
-    var sheetGlass: WidgetGlass? = null
-        set(v) {
-            if (field === v) return
-            if (isAttachedToWindow) { field?.views?.remove(this); v?.views?.add(this) }
-            field = v
-            invalidate()
-        }
+    /** The sheet draws the live home screen behind it: redraw it whenever the sheet moves on screen. */
+    var trackSheet = false
     private val sheetAt = android.graphics.Matrix()
     private val sheetDrawnAt = android.graphics.Matrix()
     private val sheetMoved = android.view.ViewTreeObserver.OnPreDrawListener {
-        if (sheetGlass != null && alpha > 0f && isShown) {
+        if (trackSheet && alpha > 0f && isShown) {
             sheetAt.reset(); transformMatrixToGlobal(sheetAt)
             if (sheetAt != sheetDrawnAt) invalidate()
         }
@@ -64,7 +58,6 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        sheetGlass?.views?.add(this)
         viewTreeObserver.addOnPreDrawListener(sheetMoved)
     }
 
@@ -227,7 +220,6 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     }
     override fun onDetachedFromWindow() {
         viewTreeObserver.removeOnPreDrawListener(sheetMoved)
-        sheetGlass?.views?.remove(this)
         removeCallbacks(tick); running = false
         super.onDetachedFromWindow()
     }
