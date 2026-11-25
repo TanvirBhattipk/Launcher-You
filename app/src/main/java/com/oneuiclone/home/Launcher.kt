@@ -432,6 +432,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             background = com.oneuiclone.home.ui.DrawerSheetDrawable(activity, dp, prefs).also {   // rounded sheet + handle, fixed while the list scrolls
                 it.host = this
                 it.backdrop = sheetBackdrop
+                it.glass = sheetGlass
             }
             trackSheet = true
             onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
