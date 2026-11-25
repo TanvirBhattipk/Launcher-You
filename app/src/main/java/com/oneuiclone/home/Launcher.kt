@@ -416,8 +416,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             }
         }
 
-                val listTop = dp.appsListTop
-        appsScroll = com.oneuiclone.home.ui.DrawerScrollView(activity, dp).apply {
+            val listTop = dp.appsListTop
+            appsScroll = com.oneuiclone.home.ui.DrawerScrollView(activity, dp).apply {
             isVerticalScrollBarEnabled = false
             isVerticalFadingEdgeEnabled = false   // the progressive blur replaces the old fade
             clipToPadding = true
@@ -425,6 +425,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             background = com.oneuiclone.home.ui.DrawerSheetDrawable(activity, dp, prefs).also {   // rounded sheet + handle, fixed while the list scrolls
                 it.host = this
                 it.layers = { listOf(wallpaper, homeLayer) }
+            }
             trackSheet = true
             onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
             overScrollMode = View.OVER_SCROLL_NEVER
