@@ -87,7 +87,9 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private val barGlass = com.oneuiclone.home.ui.WidgetGlass()        // App Search bar
     private val cardGlass = com.oneuiclone.home.ui.WidgetGlass()       // App Search cards
     private val sheetGlass = com.oneuiclone.home.ui.WidgetGlass()      // App drawer sheet
-    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass)
+    private val glasses = listOf(
+        widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass, sheetGlass
+    )
     private val drawerBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim, appsScroll) }
     private val searchBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
     private val sheetBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
