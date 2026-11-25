@@ -86,8 +86,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private val drawerBarGlass = com.oneuiclone.home.ui.WidgetGlass()  // drawer search bar
     private val barGlass = com.oneuiclone.home.ui.WidgetGlass()        // App Search bar
     private val cardGlass = com.oneuiclone.home.ui.WidgetGlass()       // App Search cards
-    private val sheetGlass = com.oneuiclone.home.ui.WidgetGlass()      // drawer sheet
-    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass, sheetGlass)
+    private val homeBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, homeLayer) }  // drawer sheet
+    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass)
     private val drawerBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim, appsScroll) }
     private val searchBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
     init {
@@ -96,7 +96,6 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         widgetGlass.radiusPx = prefs.blurWidget * d; folderGlass.radiusPx = prefs.blurFolder * d
                 pillGlass.radiusPx = prefs.homePillBgBlur * d; drawerBarGlass.radiusPx = prefs.drawerSearchBarBlur * d
         barGlass.radiusPx = prefs.appSearchBarBlur * d; cardGlass.radiusPx = prefs.appSearchCardsBgBlur * d
-        sheetGlass.radiusPx = prefs.drawerSheetBlur * d
         wallpaper.onLoaded = {
             glasses.forEach { it.rebuild(wallpaper) }
             syncBlurredWallpaper()
@@ -118,7 +117,6 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
         pillGlass.setRadius(prefs.homePillBgBlur * d, wallpaper); drawerBarGlass.setRadius(prefs.drawerSearchBarBlur * d, wallpaper)
         barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper); cardGlass.setRadius(prefs.appSearchCardsBgBlur * d, wallpaper)
-        sheetGlass.setRadius(prefs.drawerSheetBlur * d, wallpaper)
         if (::appsScroll.isInitialized) (appsScroll.background as? com.oneuiclone.home.ui.DrawerSheetDrawable)?.refreshColors()
         background.appsDim = prefs.drawerBgOpacity / 100f
         background.searchDim = prefs.appSearchBgOpacity / 100f
@@ -426,9 +424,10 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             clipToPadding = true
             setPadding(0, listTop, 0, 0)          // the list clips just under the sheet's drag handle
             background = com.oneuiclone.home.ui.DrawerSheetDrawable(activity, dp, prefs).also {   // rounded sheet + handle, fixed while the list scrolls
-                it.host = this; it.glass = this@Launcher.sheetGlass
+                it.host = this
+                it.backdrop = homeBackdrop
             }
-            this.sheetGlass = this@Launcher.sheetGlass
+            trackSheet = true
             onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
             overScrollMode = View.OVER_SCROLL_NEVER
             addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> v.clipBounds = Rect(0, 0, v.width, v.height) }
