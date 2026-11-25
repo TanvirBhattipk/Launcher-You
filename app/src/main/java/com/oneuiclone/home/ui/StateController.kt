@@ -114,12 +114,13 @@ class StateController(
     /** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
         a = p
-        // the wallpaper blurs (all of it by 40% of the way) but is not darkened; Home stays exactly as it is
+        // the wallpaper blurs first (all of it by 40% of the way) and Home's icons blur, shrink a little and fade with it
         val blurP = smooth(p / 0.4f)
-        background.appsDimScale = 0f
         background.set(BackgroundController.Kind.APPS, blurP)
-        home.alpha = 1f
-        home.scaleX = 1f; home.scaleY = 1f
+        home.alpha = 1f - smooth(p / 0.35f)
+        val s = 1f - 0.04f * blurP
+        home.scaleX = s; home.scaleY = s
+        homeBlur(blurP)
         // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
         apps.translationY = apps.height * (1f - p)
         apps.alpha = smooth(p / 0.3f)
