@@ -118,9 +118,6 @@ class StateController(
         val blurP = smooth(p / 0.4f)
         background.set(BackgroundController.Kind.APPS, blurP)
         home.alpha = 1f - smooth(p / 0.35f)
-        val s = 1f - 0.04f * blurP
-        home.scaleX = s; home.scaleY = s
-        homeBlur(blurP)
         // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
         apps.translationY = apps.height * (1f - p)
         apps.alpha = smooth(p / 0.3f)
