@@ -167,17 +167,26 @@ class AppsSearch(
     }
 
     // Cards
-    private val appsCard = GlassCard(context, flatBottom = false, chrome = false)
+    private val appsCard = GlassCard(context, flatBottom = false)
     private val appsRow = LinearLayout(context)
-    private val contactsCard = GlassCard(context, flatBottom = false, chrome = false)
+    private val contactsCard = GlassCard(context, flatBottom = false)
     private val contactsListLayout = LinearLayout(context)
-    private val suggestionsCard = GlassCard(context, flatBottom = false, chrome = false)
+    private val suggestionsCard = GlassCard(context, flatBottom = false)
     private val suggestionsListLayout = LinearLayout(context)
+    private val mic = MicGlyph(context, secondaryInk)
+    // iOS-style sections: the title (and "Show More") sits above each card
+    private val appsSection by lazy { section(sectionHeader("Top Hits", true) { onSwipeUp() }, appsCard) }
+    private val suggestionsSection by lazy { section(sectionHeader("Suggestions", false, onShowAll = null), suggestionsCard) }
+    private val contactsSection by lazy {
+        section(sectionHeader("Contacts", true) {
+            onOpenIntent(it, Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }, contactsCard)
+    }
     private val calcBox = TextView(context)
     private var calcResult: String? = null
 
     private var favorites: List<SearchSources.Contact> = emptyList()
-    private val content = BottomBlurLayout(context, dp, dp.searchBarHeight / 2f + dp.dp(10f))   // blur ramp: bar mid -> keyboard
+    private val content = LinearLayout(context)
     private var scores: Map<AppKey, Double> = emptyMap()
     private var suggested: List<SearchSources.Contact> = emptyList()
     private var appsList: List<AppInfo> = emptyList()
@@ -219,7 +228,7 @@ class AppsSearch(
 
         override fun onDraw(canvas: Canvas) {
             if (!chrome) { super.onDraw(canvas); return }          // no glass, fill or border
-            val radius = dp.dp(24f)
+            val radius = dp.dp(20f)
             rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
             val radii = if (flatBottom) {
@@ -354,7 +363,7 @@ class AppsSearch(
         pill.background = GlassPill()
         field.apply {
             background = null
-            hint = "Search anything..."
+            hint = "Search"
             setHintTextColor(hintInk)
             setTextColor(primaryInk)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, openTextSize)
@@ -378,6 +387,17 @@ class AppsSearch(
         }
         pill.addView(clearBtn, LayoutParams(dp.dpi(22f), dp.dpi(22f), Gravity.END or Gravity.CENTER_VERTICAL).apply {
             rightMargin = dp.dpi(14f)
+        })
+        mic.apply {
+            contentDescription = "Voice search"
+            setOnClickListener {
+                try {
+                    onOpenIntent(this, Intent(android.speech.RecognizerIntent.ACTION_WEB_SEARCH).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {}
+            }
+        }
+        pill.addView(mic, LayoutParams(dp.dpi(22f), dp.dpi(22f), Gravity.END or Gravity.CENTER_VERTICAL).apply {
+            rightMargin = dp.dpi(16f)
         })
 
         content.orientation = LinearLayout.VERTICAL
@@ -403,36 +423,28 @@ class AppsSearch(
         }
         content.addView(calcBox, cardParams(top = 0))
 
-        appsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(14f))
-        appsCard.addView(sectionHeader("Apps", showAll = true, horizontalPadDp = 0f) { onSwipeUp() })
+        // Top Hits: the app row
+        appsCard.setPadding(dp.dpi(8f), dp.dpi(14f), dp.dpi(8f), dp.dpi(12f))
         appsRow.orientation = LinearLayout.HORIZONTAL
         appsRow.gravity = Gravity.TOP
-        appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp.dpi(12f)
-        })
-        content.addView(appsCard, cardParams(top = 0))
+        appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        content.addView(appsSection, cardParams(top = 0))
 
-        contactsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
-        contactsCard.addView(sectionHeader("Contacts", showAll = true, horizontalPadDp = 0f) {
-            onOpenIntent(it, Intent(Intent.ACTION_VIEW, ContactsContract.Contacts.CONTENT_URI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        })
-        contactsListLayout.orientation = LinearLayout.VERTICAL
-        contactsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
-        contactsListLayout.dividerDrawable = insetDivider(0, 0)
-        contactsCard.addView(contactsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp.dpi(6f)
-        })
-        content.addView(contactsCard, cardParams(top = dp.dpi(14f)))
-
-        suggestionsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(4f))
-        suggestionsCard.addView(sectionHeader("Suggestions", showAll = false, horizontalPadDp = 0f, onShowAll = null))
+        // Suggestions
+        suggestionsCard.setPadding(dp.dpi(16f), 0, dp.dpi(16f), 0)
         suggestionsListLayout.orientation = LinearLayout.VERTICAL
         suggestionsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
-        suggestionsListLayout.dividerDrawable = insetDivider(0, 0)
-        suggestionsCard.addView(suggestionsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp.dpi(6f)
-        })
-        content.addView(suggestionsCard, cardParams(top = dp.dpi(14f)))
+        suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(40f), 0)
+        suggestionsCard.addView(suggestionsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        content.addView(suggestionsSection, cardParams(top = dp.dpi(18f)))
+
+        // Contacts
+        contactsCard.setPadding(dp.dpi(16f), dp.dpi(4f), dp.dpi(16f), dp.dpi(4f))
+        contactsListLayout.orientation = LinearLayout.VERTICAL
+        contactsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
+        contactsListLayout.dividerDrawable = insetDivider(dp.dpi(56f), 0)
+        contactsCard.addView(contactsListLayout, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        content.addView(contactsSection, cardParams(top = dp.dpi(18f)))
 
         addView(content, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT).apply {
             topMargin = contentTop(); bottomMargin = contentBottom()
@@ -476,7 +488,7 @@ class AppsSearch(
         return android.graphics.drawable.InsetDrawable(line, startInsetPx, 0, endInsetPx, 0)
     }
 
-    private fun sectionHeader(title: String, showAll: Boolean, horizontalPadDp: Float = 2f, onShowAll: ((View) -> Unit)?): View {
+    private fun sectionHeader(title: String, showAll: Boolean, horizontalPadDp: Float = 6f, onShowAll: ((View) -> Unit)?): View {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -484,28 +496,30 @@ class AppsSearch(
             addView(TextView(context).apply {
                 text = title
                 setTextColor(primaryInk)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 typeface = Fonts.ui(context, 600)
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             if (showAll && onShowAll != null) {
-                val action = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                addView(TextView(context).apply {
+                    text = "Show More"
+                    setTextColor(secondaryInk)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    typeface = Fonts.ui(context, 400)
+                    setPadding(dp.dpi(10f), dp.dpi(4f), 0, dp.dpi(4f))
                     isClickable = true
                     setOnClickListener { onShowAll(this) }
-                    addView(TextView(context).apply {
-                        text = "Show All"
-                        setTextColor(secondaryInk)
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                        typeface = Fonts.ui(context, 400)
-                    })
-                    addView(ChevronGlyph(context, secondaryInk), LinearLayout.LayoutParams(dp.dpi(11f), dp.dpi(11f)).apply {
-                        leftMargin = dp.dpi(4f)
-                    })
-                }
-                addView(action)
+                })
             }
         }
+    }
+
+    /** One section: the title row above its card, like iOS Spotlight. */
+    private fun section(header: View, card: View): LinearLayout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = dp.dpi(8f)
+        })
+        addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
 
     private fun normalize(s: String) = Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(MARKS, "")
@@ -552,6 +566,9 @@ class AppsSearch(
     }.sortedWith(compareBy<Triple<AppInfo, Int, Double>> { it.second }.thenByDescending { it.third }).take(MAX_APPS).map { it.first }
 
     private fun render() {
+        val empty = field.text.isNullOrBlank()
+        clearBtn.visibility = if (empty) GONE else VISIBLE
+        mic.visibility = if (empty) VISIBLE else GONE
         showCalc()
         showApps(appsList)
         val activeContacts = if (!contactsEnabled) emptyList()
@@ -565,10 +582,10 @@ class AppsSearch(
         val r = calcResult
         if (r == null) {
             calcBox.visibility = GONE
-            (appsCard.layoutParams as LinearLayout.LayoutParams).topMargin = 0
+            (appsSection.layoutParams as LinearLayout.LayoutParams).topMargin = 0
             return
         }
-        (appsCard.layoutParams as LinearLayout.LayoutParams).topMargin = dp.dpi(10f)
+        (appsSection.layoutParams as LinearLayout.LayoutParams).topMargin = dp.dpi(10f)
         (calcBox.background as? GradientDrawable)?.apply {
             setColor(cardFillColor)
             setStroke(cardBorderWidth.toInt(), cardBorderColor)
@@ -640,7 +657,7 @@ class AppsSearch(
             appsRow.addView(holder, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             if (old.getOrNull(i) != a.key) reveal(holder)
         }
-        appsCard.visibility = if (keys.isEmpty()) GONE else VISIBLE
+        appsSection.visibility = if (keys.isEmpty()) GONE else VISIBLE
     }
 
     private fun initials(s: String) = s.split(' ', '-', '.').filter { it.isNotEmpty() }.joinToString("") { it.take(1) }
@@ -721,7 +738,7 @@ class AppsSearch(
         val old = shownSuggestions
         shownSuggestions = keys
         suggestionsListLayout.removeAllViews()
-        suggestionsCard.visibility = if (items.isEmpty()) GONE else VISIBLE
+        suggestionsSection.visibility = if (items.isEmpty()) GONE else VISIBLE
         items.forEachIndexed { i, item ->
             val iconView = if (item.app != null) {
                 BitmapIconView(context, item.app.drawerIcon, dp.dp(7f))
@@ -788,7 +805,7 @@ class AppsSearch(
         contactsListLayout.removeAllViews()
 
         if (invite) {
-            contactsCard.visibility = VISIBLE
+            contactsSection.visibility = VISIBLE
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -808,7 +825,7 @@ class AppsSearch(
             return
         }
 
-        contactsCard.visibility = if (visibleList.isEmpty()) GONE else VISIBLE
+        contactsSection.visibility = if (visibleList.isEmpty()) GONE else VISIBLE
         visibleList.forEachIndexed { i, c ->
             val row = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -932,21 +949,11 @@ class AppsSearch(
         onDismiss()
     }
 
-    /**
-     * The bar sits at the bottom: just above the gesture bar when there's no keyboard, and 10dp above the keyboard
-     * while it is up. [ime] is the live keyboard inset (it changes every frame while the keyboard slides), so the bar
-     * rides on the keyboard as it opens and drops back down as it closes.
-     */
-    private fun barGap(): Float = maxOf(dp.searchBarBottomMargin.toFloat(), ime + dp.dp(10f))
-    private fun barY(): Float = dp.heightPx - barGap() - dp.searchBarHeight
-    private fun contentTop() = dp.insets.top + dp.dpi(12f)
-    /** 0 = no keyboard, 1 = keyboard up (eases with the keyboard's live inset). */
-    private fun kbFrac() = ((ime - dp.insets.bottom) / dp.dp(80f)).coerceIn(0f, 1f)
-    private fun contentBottom(): Int {
-        val rest = barGap() + dp.searchBarHeight + dp.dp(14f)     // cards end above the bar
-        val t = kbFrac()
-        return (rest * (1f - t) + ime * t).roundToInt()           // keyboard up: cards run down to the keyboard
-    }
+    /** The bar sits at the top, exactly where the drawer's search bar is, so opening search doesn't move it. */
+    private fun barY(): Float = dp.searchBarTop.toFloat()
+    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(14f)
+    /** Cards run down to the keyboard (or the gesture bar when there's no keyboard). */
+    private fun contentBottom(): Int = maxOf(dp.insets.bottom, ime) + dp.dpi(8f)
 
     private fun layoutPill() {
         if (!::origin.isInitialized) return
@@ -962,7 +969,7 @@ class AppsSearch(
         setBackgroundColor(android.graphics.Color.argb(dimAlpha, backdropDimColor, backdropDimColor, backdropDimColor))
 
         pill.x = dp.searchBarSide.toFloat()
-        pill.y = barY() + dp.dp(BAR_SLIDE_DP) * (1f - f)          // slides up into place from below
+        pill.y = barY()
         pill.alpha = f.coerceIn(0f, 1f)
         updateContentInset()
         pillBg.cornerRadius = h / 2f
@@ -990,8 +997,8 @@ class AppsSearch(
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        contactsListLayout.dividerDrawable = insetDivider(0, 0)
-        suggestionsListLayout.dividerDrawable = insetDivider(0, 0)
+        contactsListLayout.dividerDrawable = insetDivider(dp.dpi(56f), 0)
+        suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(40f), 0)
         layoutPill()
         if (isOpen) {
             shownApps = emptyList()
@@ -1009,8 +1016,6 @@ class AppsSearch(
             lp.topMargin = top; lp.bottomMargin = bottom
             content.layoutParams = lp
         }
-        // While the keyboard is up, the cards behind the bar's lower half blur progressively (0 at the bar's middle)
-        content.setBlur(barY() + dp.searchBarHeight / 2f - top, (kbFrac() * BottomBlurLayout.STEPS).roundToInt())
     }
 
     private fun rememberedKeyboard(): Float =
@@ -1154,6 +1159,23 @@ class AppsSearch(
             val d = r * 0.38f
             canvas.drawLine(cx - d, cy - d, cx + d, cy + d, xPaint)
             canvas.drawLine(cx + d, cy - d, cx - d, cy + d, xPaint)
+        }
+    }
+
+    private class MicGlyph(context: Context, ink: Int) : View(context) {
+        private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = ink
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeWidth = 1.7f * context.resources.displayMetrics.density
+        }
+        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; style = Paint.Style.FILL }
+        override fun onDraw(canvas: Canvas) {
+            val w = width.toFloat(); val h = height.toFloat(); val cx = w / 2f
+            canvas.drawRoundRect(cx - w * 0.2f, h * 0.06f, cx + w * 0.2f, h * 0.58f, w * 0.2f, w * 0.2f, fill)
+            canvas.drawArc(cx - w * 0.34f, h * 0.30f, cx + w * 0.34f, h * 0.76f, 0f, 180f, false, stroke)
+            canvas.drawLine(cx, h * 0.76f, cx, h * 0.92f, stroke)
+            canvas.drawLine(cx - w * 0.16f, h * 0.92f, cx + w * 0.16f, h * 0.92f, stroke)
         }
     }
 
