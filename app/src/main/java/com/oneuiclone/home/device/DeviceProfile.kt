@@ -110,7 +110,7 @@ class DeviceProfile(
     /** Side margin of the search bar: its ends line up with the outer edges of the first and last icon columns. */
     val searchBarSide = dpi(18f)
     val searchBarWidth = widthPx - 2 * searchBarSide
-    val searchBarHeight = dpi(60f)                                 // search_bar_wrapper_height
+    val searchBarHeight = dpi(48f)                                 // search_bar_wrapper_height
     val searchBarRadius = dp(32f)                                   // search_bar_bg_radius
     val searchBarBottomMargin = (heightPx * 0.022f).roundToInt() + insets.bottom
     /** The Apps search bar sits at the top, a little way under the status bar. */
