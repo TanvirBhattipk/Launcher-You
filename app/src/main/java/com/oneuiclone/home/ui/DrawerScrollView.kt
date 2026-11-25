@@ -44,6 +44,14 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private var last = 0L
     private val tick = Runnable { step() }
 
+    /** The progressive blur under the old search bar (off: the sheet drawer has none). */
+    var progressiveBlurEnabled = false
+
+    /** A tap that lands above the sheet (on the blurred wallpaper) closes the drawer. */
+    var onTapOutside: (() -> Unit)? = null
+    private var downY = 0f
+    private val tapSlop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+
     /** Called once per gesture when the list is pulled down past its top: the Apps screen closes. */
     var onPullToClose: (() -> Unit)? = null
     private var topPull = 0f
@@ -87,8 +95,12 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { touching = true; topPull = 0f; closed = false }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { touching = false; start() }   // let the stretch spring back
+            MotionEvent.ACTION_DOWN -> { touching = true; topPull = 0f; closed = false; downY = ev.y }
+            MotionEvent.ACTION_UP -> {
+                touching = false; start()
+                if (downY < dp.sheetTop && ev.y < dp.sheetTop && abs(ev.y - downY) < tapSlop) onTapOutside?.invoke()
+            }
+            MotionEvent.ACTION_CANCEL -> { touching = false; start() }   // let the stretch spring back
         }
         return super.onTouchEvent(ev)
     }
@@ -152,7 +164,8 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         c.scaleY = 1f + s
     }
     override fun dispatchDraw(canvas: Canvas) {
-        if (scrollY <= 0 || width == 0 || !canvas.isHardwareAccelerated) { super.dispatchDraw(canvas); return }
+        // the sheet drawer has no search bar for the list to blur under: it simply clips at the sheet's handle
+        if (!progressiveBlurEnabled || scrollY <= 0 || width == 0 || !canvas.isHardwareAccelerated) { super.dispatchDraw(canvas); return }
         val strength = (scrollY / dp.dp(48f)).coerceIn(0f, 1f)     // eases the effect in as you start to scroll
         val step = (strength * STEPS).roundToInt()
         if (step == 0) { super.dispatchDraw(canvas); return }

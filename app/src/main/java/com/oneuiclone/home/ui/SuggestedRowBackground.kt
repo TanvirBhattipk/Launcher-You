@@ -7,21 +7,22 @@ import android.view.View
 import com.oneuiclone.home.device.DeviceProfile
 
 /**
- * The thin line under the Apps screen's first row of suggested apps (Pixel launcher), separating it from All apps.
- * The view is the suggested row's cell; the line is drawn just below it, in the middle of the gap the list leaves
- * there ([GAP_DP] tall, set in Launcher.bindApps), and like the search bar it ends where the outer icons do.
+ * The "All apps" header under the Apps screen's first row of suggested apps (Pixel launcher), separating it from the
+ * list. The view is the suggested row's cell; the header is drawn just below it, centred in the gap the list leaves
+ * there ([GAP_DP] tall, set in Launcher.bindApps).
  */
 class SuggestedRowBackground(context: Context, private val dp: DeviceProfile) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x59FFFFFF
-        strokeWidth = dp.dp(1f)
-        strokeCap = Paint.Cap.ROUND
+        color = DrawerInk.header(context)
+        textSize = dp.dp(14f)
+        typeface = Fonts.ui(context, 500)
+        textAlign = Paint.Align.CENTER
     }
 
     override fun onDraw(canvas: Canvas) {
-        val side = (dp.searchBarSide - dp.appsSidePadding).coerceAtLeast(0).toFloat()
-        val y = height + dp.dp(GAP_DP) / 2f                     // outside the cell: the grid doesn't clip its children
-        canvas.drawLine(side, y, width - side, y, paint)
+        val fm = paint.fontMetrics
+        val mid = height + dp.dp(GAP_DP) / 2f                   // outside the cell: the grid doesn't clip its children
+        canvas.drawText("All apps", width / 2f, mid - (fm.ascent + fm.descent) / 2f, paint)
     }
 
     companion object {
