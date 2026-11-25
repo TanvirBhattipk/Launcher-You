@@ -29,7 +29,7 @@ object DrawerInk {
 /**
  * The App drawer's sheet, used as the background of the drawer's list: it is as big as the list (the whole screen) and
  * stays put while the list scrolls. It draws, from [DeviceProfile.sheetTop] down: a deep shadow above the sheet's top
- * edge, the blurred wallpaper (Settings: Sheet Blur), the tint (Sheet Opacity), a thin rim (Border Size / Opacity) and
+ * edge, the live blurred background, like the App Search cards (Settings: Sheet Blur), the tint (Sheet Opacity), a thin rim (Border Size / Opacity) and
  * the drag handle.
  */
 class DrawerSheetDrawable(
@@ -44,15 +44,11 @@ class DrawerSheetDrawable(
     private val path = Path()
     private val rect = RectF()
 
-    /** The view this is the background of (for its place in the window) and the blurred wallpaper to show through. */
+    /** The view this is the background of (for its place in the window). */
     var host: android.view.View? = null
-    /** The views behind the sheet, bottom to top (wallpaper, Home). */
-    var layers: (() -> List<android.view.View>)? = null
-    private val blurNode = android.graphics.RenderNode("drawerSheetBlur")
-    private var blurEffect: android.graphics.RenderEffect? = null
-    private var blurEffectPx = -1f
-    private val at = IntArray(2)
-    private val layerAt = IntArray(2)
+    /** The same live backdrop the App Search cards use: wallpaper + background tint, blurred, bent at the edge, saturated. */
+    var backdrop: LiveBackdrop? = null
+    private val lensRect = RectF()
 
     init { refreshColors() }
 
@@ -94,40 +90,18 @@ class DrawerSheetDrawable(
         canvas.drawPath(path, shadow)
         canvas.restore()
 
-        // 2) the live home screen (wallpaper + icons) behind the sheet, blurred by Sheet Blur
-        // 2) the home screen (wallpaper + icons) behind the sheet, blurred by Sheet Blur
+        // 2) the blur: exactly the App Search cards' glass (Sheet Blur = blur strength; 0 = no blur layer)
         val h = host
-        val behind = layers?.invoke()
-        if (h != null && behind != null && h.width > 0 && h.height > 0 && canvas.isHardwareAccelerated) {
-            val blurPx = dp.dp(prefs.drawerSheetBlur.toFloat())
-            if (blurPx != blurEffectPx) {
-                blurEffectPx = blurPx
-                blurEffect = if (blurPx >= 1f)
-                    android.graphics.RenderEffect.createBlurEffect(blurPx, blurPx, android.graphics.Shader.TileMode.CLAMP)
-                else null
-            }
-            h.getLocationInWindow(at)
-            blurNode.setPosition(0, 0, h.width, h.height)
-            blurNode.setRenderEffect(blurEffect)
-            val rc = blurNode.beginRecording()
-            try {
-                rc.translate(-at[0].toFloat(), -at[1].toFloat())          // window coordinates -> this view
-                for (v in behind) {
-                    if (v.width == 0 || v.height == 0 || v.visibility != android.view.View.VISIBLE) continue
-                    v.getLocationInWindow(layerAt)
-                    rc.save()
-                    rc.translate(layerAt[0].toFloat(), layerAt[1].toFloat())
-                    rc.translate(-v.scrollX.toFloat(), -v.scrollY.toFloat())
-                    v.draw(rc)
-                    rc.restore()
-                }
-            } finally {
-                blurNode.endRecording()
-            }
-            canvas.save()
-            canvas.clipPath(path)
-            canvas.drawRenderNode(blurNode)
-            canvas.restore()
+        val live = backdrop
+        if (h != null && live != null && prefs.drawerSheetBlur > 0) {
+            val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+            val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+            val side = amount + depth + 2f      // the sides and bottom run off the screen, so only the top edge bends the background
+            lensRect.set(
+                bounds.left - side, bounds.top + dp.sheetTop.toFloat(),
+                bounds.right + side, bounds.bottom + dp.sheetRadius + side,
+            )
+            live.draw(canvas, h, lensRect, dp.sheetRadius, dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, path)
         }
         // 3) tint, rim, handle
         canvas.drawPath(path, fill)
