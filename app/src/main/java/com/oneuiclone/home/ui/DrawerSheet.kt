@@ -95,31 +95,28 @@ class DrawerSheetDrawable(
         canvas.drawPath(path, shadow)
         canvas.restore()
 
-        // 2) the blur: exactly the App Search cards' glass (Sheet Blur = blur strength; 0 = no blur layer)
+        // 2) the blur (Sheet Blur = strength; 0 = none). The wallpaper isn't drawn by the app at rest (the system
+        //    wallpaper shows through the window), so the live backdrop can't blur it: first the pre-blurred
+        //    wallpaper copy, then Home's icons and widgets blurred live on top of it.
         val h = host
         if (h != null && prefs.drawerSheetBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
             val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
             val side = amount + depth + 2f
-            lensRect.set(
-                bounds.left - side, bounds.top + dp.sheetTop.toFloat(),
-                bounds.right + side, bounds.bottom + dp.sheetRadius + side,
-            )
-            val live = backdrop?.draw(canvas, h, lensRect, dp.sheetRadius,
-                dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, path) == true
-            android.util.Log.i("OneUiHome", "sheet blur: live=$live hw=${canvas.isHardwareAccelerated} " +
-                "blur=${prefs.drawerSheetBlur} glassBitmap=${glass?.bitmap != null} hostW=${h.width}")
-            if (!live) {
-                sheetRect.set(bounds.left.toFloat(), bounds.top + dp.sheetTop.toFloat(),
-                    bounds.right.toFloat(), bounds.bottom + dp.sheetRadius)
-                toWindow.reset(); h.transformMatrixToGlobal(toWindow)
-                if (glassPaint.aimLens(glass, toWindow, sheetRect, dp.sheetRadius, amount, depth)) {
-                    glassPaint.paint.colorFilter = YunoGlass.saturation
-                    glassPaint.paint.alpha = 255
-                    canvas.drawPath(path, glassPaint.paint)
-                }
+            sheetRect.set(bounds.left.toFloat(), bounds.top + dp.sheetTop.toFloat(),
+                bounds.right.toFloat(), bounds.bottom + dp.sheetRadius)
+            toWindow.reset(); h.transformMatrixToGlobal(toWindow)
+            if (glassPaint.aimLens(glass, toWindow, sheetRect, dp.sheetRadius, amount, depth)) {
+                glassPaint.paint.colorFilter = YunoGlass.saturation
+                glassPaint.paint.alpha = 255
+                canvas.drawPath(path, glassPaint.paint)
             }
-        }        // 3) tint, rim, handle
+            lensRect.set(bounds.left - side, sheetRect.top, bounds.right + side, sheetRect.bottom + side)
+            backdrop?.draw(canvas, h, lensRect, dp.sheetRadius,
+                dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, path)
+        }
+
+        // 3) tint, rim, handle
         canvas.drawPath(path, fill)
         canvas.drawPath(path, rim)
         val cx = bounds.exactCenterX()
