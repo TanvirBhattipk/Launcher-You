@@ -46,7 +46,13 @@ class DrawerSheetDrawable(
 
     /** The view this is the background of (for its place in the window) and the blurred wallpaper to show through. */
     var host: android.view.View? = null
-    var backdrop: LiveBackdrop? = null
+    /** The views behind the sheet, bottom to top (wallpaper, Home). */
+    var layers: (() -> List<android.view.View>)? = null
+    private val blurNode = android.graphics.RenderNode("drawerSheetBlur")
+    private var blurEffect: android.graphics.RenderEffect? = null
+    private var blurEffectPx = -1f
+    private val at = IntArray(2)
+    private val layerAt = IntArray(2)
 
     init { refreshColors() }
 
@@ -89,10 +95,39 @@ class DrawerSheetDrawable(
         canvas.restore()
 
         // 2) the live home screen (wallpaper + icons) behind the sheet, blurred by Sheet Blur
-        val bd = backdrop; val h = host
-        if (bd != null && h != null) {
-            rect.set(bounds.left.toFloat(), bounds.top + dp.sheetTop.toFloat(), bounds.right.toFloat(), bounds.bottom + dp.sheetRadius)
-            bd.draw(canvas, h, rect, 0f, dp.dp(prefs.drawerSheetBlur.toFloat()), 0f, 1f, clip = path)
+        // 2) the home screen (wallpaper + icons) behind the sheet, blurred by Sheet Blur
+        val h = host
+        val behind = layers?.invoke()
+        if (h != null && behind != null && h.width > 0 && h.height > 0 && canvas.isHardwareAccelerated) {
+            val blurPx = dp.dp(prefs.drawerSheetBlur.toFloat())
+            if (blurPx != blurEffectPx) {
+                blurEffectPx = blurPx
+                blurEffect = if (blurPx >= 1f)
+                    android.graphics.RenderEffect.createBlurEffect(blurPx, blurPx, android.graphics.Shader.TileMode.CLAMP)
+                else null
+            }
+            h.getLocationInWindow(at)
+            blurNode.setPosition(0, 0, h.width, h.height)
+            blurNode.setRenderEffect(blurEffect)
+            val rc = blurNode.beginRecording()
+            try {
+                rc.translate(-at[0].toFloat(), -at[1].toFloat())          // window coordinates -> this view
+                for (v in behind) {
+                    if (v.width == 0 || v.height == 0 || v.visibility != android.view.View.VISIBLE) continue
+                    v.getLocationInWindow(layerAt)
+                    rc.save()
+                    rc.translate(layerAt[0].toFloat(), layerAt[1].toFloat())
+                    rc.translate(-v.scrollX.toFloat(), -v.scrollY.toFloat())
+                    v.draw(rc)
+                    rc.restore()
+                }
+            } finally {
+                blurNode.endRecording()
+            }
+            canvas.save()
+            canvas.clipPath(path)
+            canvas.drawRenderNode(blurNode)
+            canvas.restore()
         }
         // 3) tint, rim, handle
         canvas.drawPath(path, fill)
