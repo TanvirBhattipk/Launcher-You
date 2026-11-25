@@ -70,6 +70,7 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
                 setFloatUniform("levels", prev, cur, next)
                 setFloatUniform("rMax", rMax)
                 setFloatUniform("bandEnd", blurEndY)
+                setFloatUniform("fade", fadeStartY, blurEndY)
             }
             var e = RenderEffect.createRuntimeShaderEffect(shader, "content")
             if (cur >= 1f) e = RenderEffect.createChainEffect(e, RenderEffect.createBlurEffect(cur, cur, Shader.TileMode.MIRROR))
@@ -196,6 +197,7 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
             uniform float3 levels;
             uniform float rMax;
             uniform float bandEnd;
+            uniform float2 fade;
             half4 main(float2 coord) {
                 float r = rMax * (1.0 - smoothstep(0.0, bandEnd, coord.y));
                 float w;
@@ -204,7 +206,9 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
                 } else {
                     w = (levels.z > levels.y) ? clamp((levels.z - r) / (levels.z - levels.y), 0.0, 1.0) : 1.0;
                 }
-                return content.eval(coord) * half(w);
+                // fully transparent down to the bar's top, fully visible at the end of the blur
+                float a = smoothstep(fade.x, fade.y, coord.y);
+                return content.eval(coord) * half(w) * half(a);
             }
         """
     }
