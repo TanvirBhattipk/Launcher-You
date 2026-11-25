@@ -19,15 +19,8 @@ object DrawerInk {
     /** Labels and the "All apps" header sit on the sheet: dark text on the light sheet. */
     fun darkLabels(c: Context) = !isNight(c)
 
-    /**
-     * The sheet's glass, like the reference buttons: by day a frosted white that lets the wallpaper through, at night
-     * a deep navy that is darker than what is behind it.
-     */
-    fun sheetFill(c: Context): Int = if (isNight(c)) 0x8C081430.toInt() else 0x73FFFFFF
-
-    /** The thin light rim around the sheet: brightest along the top edge, fading down the sides. */
-    fun rimTop(c: Context): Int = if (isNight(c)) 0x8CFFFFFF.toInt() else 0xE6FFFFFF.toInt()
-    fun rimBottom(c: Context): Int = if (isNight(c)) 0x14FFFFFF else 0x33FFFFFF
+    /** The sheet's tint (opaque): a frosted white by day, a deep navy at night, like the reference buttons. */
+    fun sheetTint(c: Context): Int = if (isNight(c)) 0x081430 else 0xFFFFFF
 
     fun handle(c: Context) = if (isNight(c)) 0x99FFFFFF.toInt() else 0xB30B1230.toInt()
     fun header(c: Context) = if (isNight(c)) 0xF2FFFFFF.toInt() else 0xD90B1230.toInt()
@@ -35,29 +28,46 @@ object DrawerInk {
 
 /**
  * The App drawer's sheet, used as the background of the drawer's list: it is as big as the list (the whole screen) and
- * stays put while the list scrolls. It draws the rounded top of the sheet from [DeviceProfile.sheetTop] down and the
- * drag handle on it.
+ * stays put while the list scrolls. It draws, from [DeviceProfile.sheetTop] down: a deep shadow above the sheet's top
+ * edge, the blurred wallpaper (Settings: Sheet Blur), the tint (Sheet Opacity), a thin rim (Border Size / Opacity) and
+ * the drag handle.
  */
-class DrawerSheetDrawable(private val context: Context, private val dp: DeviceProfile) : Drawable() {
+class DrawerSheetDrawable(
+    private val context: Context,
+    private val dp: DeviceProfile,
+    private val prefs: com.oneuiclone.home.settings.Prefs,
+) : Drawable() {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val handle = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = dp.dp(1.2f) }
+    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
 
+    /** The view this is the background of (for its place in the window) and the blurred wallpaper to show through. */
+    var host: android.view.View? = null
+    var glass: WidgetGlass? = null
+    private val glassPaint = GlassPaint()
+    private val toWindow = android.graphics.Matrix()
+
     init { refreshColors() }
 
+    /** Reads Sheet Opacity, Sheet Blur and the border settings again. */
     fun refreshColors() {
-        fill.color = DrawerInk.sheetFill(context)
+        val a = (prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100)
+        fill.color = (DrawerInk.sheetTint(context) and 0x00FFFFFF) or (a shl 24)
         handle.color = DrawerInk.handle(context)
+        rim.strokeWidth = maxOf(1f, dp.dp(prefs.drawerSheetBorderSize / 10f))
         rimShader()
         invalidateSelf()
     }
 
     private fun rimShader() {
         val top = bounds.top + dp.sheetTop.toFloat()
+        val peak = (prefs.drawerSheetBorderOpacity.coerceIn(0, 100) * 255 / 100)
+        // brightest along the top edge, fading down the sides
         rim.shader = android.graphics.LinearGradient(0f, top, 0f, top + dp.sheetRadius * 3f,
-            DrawerInk.rimTop(context), DrawerInk.rimBottom(context), android.graphics.Shader.TileMode.CLAMP)
+            (peak shl 24) or 0xFFFFFF, ((peak * 0.2f).toInt() shl 24) or 0xFFFFFF, android.graphics.Shader.TileMode.CLAMP)
     }
 
     override fun onBoundsChange(b: android.graphics.Rect) {
@@ -71,6 +81,25 @@ class DrawerSheetDrawable(private val context: Context, private val dp: DevicePr
     }
 
     override fun draw(canvas: Canvas) {
+        // 1) the deep shadow that lifts the sheet off the background: only what falls outside the sheet shows
+        canvas.save()
+        canvas.clipOutPath(path)
+        shadow.setShadowLayer(dp.dp(64f), 0f, -dp.dp(14f), 0x8C000000.toInt())
+        canvas.drawPath(path, shadow)
+        shadow.setShadowLayer(dp.dp(18f), 0f, -dp.dp(3f), 0x66000000)
+        canvas.drawPath(path, shadow)
+        canvas.restore()
+
+        // 2) the blurred wallpaper behind the sheet
+        val g = glass; val h = host
+        if (prefs.drawerSheetBlur > 0 && g != null && h != null) {
+            toWindow.reset(); h.transformMatrixToGlobal(toWindow)
+            if (glassPaint.aim(g, toWindow)) {
+                glassPaint.paint.colorFilter = YunoGlass.saturation
+                canvas.drawPath(path, glassPaint.paint)
+            }
+        }
+        // 3) tint, rim, handle
         canvas.drawPath(path, fill)
         canvas.drawPath(path, rim)
         val cx = bounds.exactCenterX()

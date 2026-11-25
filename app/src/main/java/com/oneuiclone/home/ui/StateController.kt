@@ -13,9 +13,8 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /**
- * HOME ⇄ APPS, the way Pixel's drawer opens (with no sheet behind it): the wallpaper blurs and Home's icons blur and
- * fade away first, while the drawer's own content (the search bar, the suggested apps, the list) rises from the
- * bottom edge, fading in as it leaves it. The drawer follows the finger exactly (one pixel for one pixel, never
+ * HOME ⇄ APPS: the wallpaper blurs while Home's icons and widgets stay as they are, and the drawer sheet (the suggested
+ * apps and the list on it) rises from the bottom edge over Home, fading in as it leaves it. The drawer follows the finger exactly (one pixel for one pixel, never
  * ahead of it); when the finger lets go the rest of the way is finished from where it is. Back and swipe down run it
  * the other way. Search asks for a [goTo] with a
  * duration instead: that only crossfades Home into the Apps screen's background (and back), so the search page can
@@ -115,14 +114,12 @@ class StateController(
     /** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
         a = p
-        // the wallpaper blurs first (all of it by 40% of the way) and Home's icons blur, shrink a little and fade with it
+        // only the wallpaper blurs (all of it by 40% of the way): Home's icons and widgets stay exactly as they are
         val blurP = smooth(p / 0.4f)
         background.set(BackgroundController.Kind.APPS, blurP)
-        home.alpha = 1f - smooth(p / 0.35f)
-        val s = 1f - 0.04f * blurP
-        home.scaleX = s; home.scaleY = s
-        homeBlur(blurP)
-        // the drawer comes up from the bottom edge, fading in as it leaves it (nothing behind it: no sheet)
+        home.alpha = 1f
+        home.scaleX = 1f; home.scaleY = 1f
+        // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
         apps.translationY = apps.height * (1f - p)
         apps.alpha = smooth(p / 0.3f)
     }
@@ -146,7 +143,7 @@ class StateController(
             addListener(object : AnimatorListenerAdapter() {
                 var cancelled = false
                 override fun onAnimationCancel(animation: Animator) { cancelled = true }
-                override fun onAnimationEnd(animation: Animator) { if (!cancelled) settle(target) }
+                override fun onAnimationEnd(animation: Animator) { if (!cancelled) settle(target, keepHome = true) }
             })
             start()
         }
@@ -180,13 +177,13 @@ class StateController(
     }
 
     /** Shows exactly [target]'s screen. */
-    private fun settle(target: State) {
+    private fun settle(target: State, keepHome: Boolean = false) {
         val showApps = target == State.APPS
         home.setLayerType(View.LAYER_TYPE_NONE, null)
         apps.setLayerType(View.LAYER_TYPE_NONE, null)
         homeBlur(0f)
         setScreen(apps, showApps)
-        setScreen(home, !showApps)
+        setScreen(home, !showApps || keepHome)
         a = if (showApps) 1f else 0f
         background.set(BackgroundController.Kind.APPS, a)
         f = 0f

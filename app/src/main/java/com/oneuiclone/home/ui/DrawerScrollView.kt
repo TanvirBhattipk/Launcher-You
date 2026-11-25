@@ -44,6 +44,35 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private var last = 0L
     private val tick = Runnable { step() }
 
+    /** The blurred wallpaper the sheet shows through: redrawn when it changes and whenever the sheet moves on screen. */
+    var sheetGlass: WidgetGlass? = null
+        set(v) {
+            if (field === v) return
+            if (isAttachedToWindow) { field?.views?.remove(this); v?.views?.add(this) }
+            field = v
+            invalidate()
+        }
+    private val sheetAt = android.graphics.Matrix()
+    private val sheetDrawnAt = android.graphics.Matrix()
+    private val sheetMoved = android.view.ViewTreeObserver.OnPreDrawListener {
+        if (sheetGlass != null && alpha > 0f && isShown) {
+            sheetAt.reset(); transformMatrixToGlobal(sheetAt)
+            if (sheetAt != sheetDrawnAt) invalidate()
+        }
+        true
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        sheetGlass?.views?.add(this)
+        viewTreeObserver.addOnPreDrawListener(sheetMoved)
+    }
+
+    override fun draw(canvas: Canvas) {
+        sheetDrawnAt.reset(); transformMatrixToGlobal(sheetDrawnAt)
+        super.draw(canvas)
+    }
+
     /** The progressive blur under the old search bar (off: the sheet drawer has none). */
     var progressiveBlurEnabled = false
 
@@ -197,6 +226,8 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         canvas.restore()
     }
     override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnPreDrawListener(sheetMoved)
+        sheetGlass?.views?.remove(this)
         removeCallbacks(tick); running = false
         super.onDetachedFromWindow()
     }
