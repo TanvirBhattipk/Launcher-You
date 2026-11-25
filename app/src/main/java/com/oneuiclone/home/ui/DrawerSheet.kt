@@ -19,8 +19,8 @@ object DrawerInk {
     /** Labels and the "All apps" header sit on the sheet: dark text on the light sheet. */
     fun darkLabels(c: Context) = !isNight(c)
 
-    /** The sheet's tint (opaque): a frosted white by day, a deep navy at night, like the reference buttons. */
-    fun sheetTint(c: Context): Int = if (isNight(c)) 0x081430 else 0xFFFFFF
+  // DrawerInk: slightly grey instead of white
+fun sheetTint(c: Context): Int = if (isNight(c)) 0x081430 else 0xE4E4E7
 
     fun handle(c: Context) = if (isNight(c)) 0x99FFFFFF.toInt() else 0xB30B1230.toInt()
     fun header(c: Context) = if (isNight(c)) 0xF2FFFFFF.toInt() else 0xD90B1230.toInt()
@@ -44,11 +44,8 @@ class DrawerSheetDrawable(
     private val path = Path()
     private val rect = RectF()
 
-    /** The view this is the background of (for its place in the window) and the blurred wallpaper to show through. */
-    var host: android.view.View? = null
+    val bd = backdrop; val h = host
     var glass: WidgetGlass? = null
-    private val glassPaint = GlassPaint()
-    private val toWindow = android.graphics.Matrix()
 
     init { refreshColors() }
 
@@ -90,14 +87,12 @@ class DrawerSheetDrawable(
         canvas.drawPath(path, shadow)
         canvas.restore()
 
-        // 2) the blurred wallpaper behind the sheet
-        val g = glass; val h = host
-        if (prefs.drawerSheetBlur > 0 && g != null && h != null) {
-            toWindow.reset(); h.transformMatrixToGlobal(toWindow)
-            if (glassPaint.aim(g, toWindow)) {
-                glassPaint.paint.colorFilter = YunoGlass.saturation
-                canvas.drawPath(path, glassPaint.paint)
-            }
+        // 2) the live home screen (wallpaper + icons) behind the sheet, blurred by Sheet Blur
+        val bd = backdrop; val h = host
+        if (bd != null && h != null) {
+            rect.set(bounds.left.toFloat(), bounds.top + dp.sheetTop.toFloat(), bounds.right.toFloat(), bounds.bottom + dp.sheetRadius)
+            bd.draw(canvas, h, rect, 0f, dp.dp(prefs.drawerSheetBlur.toFloat()), 0f, 1f, clip = path)
+        } }
         }
         // 3) tint, rim, handle
         canvas.drawPath(path, fill)
