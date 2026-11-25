@@ -115,8 +115,6 @@ class StateController(
     private fun frame(p: Float) {
         a = p
         // only the wallpaper blurs (all of it by 40% of the way): Home's icons and widgets stay exactly as they are
-        val blurP = smooth(p / 0.4f)
-        background.set(BackgroundController.Kind.APPS, blurP)
         home.alpha = 1f
         home.scaleX = 1f; home.scaleY = 1f
         // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
@@ -184,8 +182,9 @@ class StateController(
         homeBlur(0f)
         setScreen(apps, showApps)
         setScreen(home, !showApps || keepHome)
-        a = if (showApps) 1f else 0f
-        background.set(BackgroundController.Kind.APPS, a)
+       a = if (showApps) 1f else 0f
+        if (keepHome) background.set(BackgroundController.Kind.NONE, 0f)
+        else background.set(BackgroundController.Kind.APPS, a)
         f = 0f
         dragging = false
         state = target
