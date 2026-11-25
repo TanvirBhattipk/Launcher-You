@@ -43,6 +43,7 @@ class DrawerSheetDrawable(
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
+    private val sheetRect = RectF()
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
     /** Pre-blurred wallpaper copy, used when the live backdrop can't draw (same fallback the App Search cards have). */
