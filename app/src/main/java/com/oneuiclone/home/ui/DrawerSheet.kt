@@ -20,7 +20,7 @@ object DrawerInk {
     fun darkLabels(c: Context) = !isNight(c)
 
     /** The sheet's tint (opaque): a frosted white by day, a deep navy at night, like the reference buttons. */
-    fun sheetTint(c: Context): Int = if (isNight(c)) 0x081430 else 0xE4E4E7
+    fun sheetTint(c: Context): Int = if (isNight(c)) 0x0212124 else 0xF2F2F6
 
     fun handle(c: Context) = if (isNight(c)) 0x99FFFFFF.toInt() else 0xB30B1230.toInt()
     fun header(c: Context) = if (isNight(c)) 0xF2FFFFFF.toInt() else 0xD90B1230.toInt()
