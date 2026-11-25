@@ -43,6 +43,7 @@ class DrawerSheetDrawable(
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
+    private val clipPath = Path()
 
     /** The view this is the background of (for its place in the window). */
     var host: android.view.View? = null
