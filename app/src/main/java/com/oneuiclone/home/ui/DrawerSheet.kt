@@ -19,8 +19,8 @@ object DrawerInk {
     /** Labels and the "All apps" header sit on the sheet: dark text on the light sheet. */
     fun darkLabels(c: Context) = !isNight(c)
 
-  // DrawerInk: slightly grey instead of white
-fun sheetTint(c: Context): Int = if (isNight(c)) 0x081430 else 0xE4E4E7
+    /** The sheet's tint (opaque): a frosted white by day, a deep navy at night, like the reference buttons. */
+    fun sheetTint(c: Context): Int = if (isNight(c)) 0x081430 else 0xE4E4E7
 
     fun handle(c: Context) = if (isNight(c)) 0x99FFFFFF.toInt() else 0xB30B1230.toInt()
     fun header(c: Context) = if (isNight(c)) 0xF2FFFFFF.toInt() else 0xD90B1230.toInt()
@@ -44,8 +44,9 @@ class DrawerSheetDrawable(
     private val path = Path()
     private val rect = RectF()
 
-    val bd = backdrop; val h = host
-    var glass: WidgetGlass? = null
+    /** The view this is the background of (for its place in the window) and the blurred wallpaper to show through. */
+    var host: android.view.View? = null
+    var backdrop: LiveBackdrop? = null
 
     init { refreshColors() }
 
@@ -92,7 +93,6 @@ class DrawerSheetDrawable(
         if (bd != null && h != null) {
             rect.set(bounds.left.toFloat(), bounds.top + dp.sheetTop.toFloat(), bounds.right.toFloat(), bounds.bottom + dp.sheetRadius)
             bd.draw(canvas, h, rect, 0f, dp.dp(prefs.drawerSheetBlur.toFloat()), 0f, 1f, clip = path)
-        } }
         }
         // 3) tint, rim, handle
         canvas.drawPath(path, fill)
