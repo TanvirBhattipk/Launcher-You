@@ -425,8 +425,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             setPadding(0, listTop, 0, 0)          // the list clips just under the sheet's drag handle
             background = com.oneuiclone.home.ui.DrawerSheetDrawable(activity, dp, prefs).also {   // rounded sheet + handle, fixed while the list scrolls
                 it.host = this
-                it.backdrop = homeBackdrop
-            }
+                it.layers = { listOf(wallpaper, homeLayer) }
             trackSheet = true
             onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
             overScrollMode = View.OVER_SCROLL_NEVER
