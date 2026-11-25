@@ -115,17 +115,27 @@ class DeviceProfile(
     val searchBarBottomMargin = (heightPx * 0.022f).roundToInt() + insets.bottom
     /** The Apps search bar sits at the top, a little way under the status bar. */
     val searchBarTop = insets.top + (heightPx * 0.028f).roundToInt()
-    /** Where the apps list starts: just under the search bar. */
-    val appsListTop = searchBarTop + searchBarHeight + dpi(8f)
+    // The App drawer is a bottom sheet (Pixel style): rounded top corners, a drag handle, the suggested row, an
+    // "All apps" header and the grid. It has no search bar; the search bar values above are still used by the search page.
+    /** Top edge of the sheet: ~12.3 % down the screen, never closer than a little under the status bar. */
+    val sheetTop = maxOf(insets.top + dpi(24f), (heightPx * 0.123f).roundToInt())
+    /** Radius of the sheet's two top corners. */
+    val sheetRadius = dp(36f)
+    val sheetHandleWidth = dp(32f)
+    val sheetHandleHeight = dp(4f)
+    /** Distance from the sheet's top edge to the middle of the drag handle. */
+    val sheetHandleCenterY = dp(17f)
+    /** Where the apps list starts (and clips): just under the drag handle. */
+    val appsListTop = sheetTop + dpi(30f)
     val appsIndicatorHeight = (heightPx * 0.044f).roundToInt()     // apps_page_indicator_height_ratio
-    // same grid height as when the bar was at the bottom, so the cells keep their size
-    private val appsGridHeight = (heightPx - searchBarBottomMargin - searchBarHeight) - appsIndicatorHeight -
-        (heightPx * 0.012f).roundToInt() - (heightPx * 0.088f).roundToInt()
+    private val appsGridTop = appsListTop + dpi(6f) + dpi(appsTopPadDp)
+    // rows apps rows fill the sheet and part of one more peeks in at the bottom, so it is clear the list scrolls
+    private val appsGridHeight = ((heightPx - appsGridTop - insets.bottom - dpi(8f)) * appsRows / (appsRows + 1f)).roundToInt()
     val appsGrid = Rect(
         appsSidePadding,
-        appsListTop + dpi(6f) + dpi(appsTopPadDp),
+        appsGridTop,
         widthPx - appsSidePadding,
-        appsListTop + dpi(6f) + dpi(appsTopPadDp) + appsGridHeight,
+        appsGridTop + appsGridHeight,
     )
     /** Space the Apps list keeps under its last row. */
     val appsBottomPad = dpi(appsBottomPadDp)
