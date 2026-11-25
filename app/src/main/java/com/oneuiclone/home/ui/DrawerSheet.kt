@@ -43,7 +43,10 @@ class DrawerSheetDrawable(
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
-    private val clipPath = Path()
+    private val glassPaint = GlassPaint()
+    private val toWindow = android.graphics.Matrix()
+    /** Pre-blurred wallpaper copy, used when the live backdrop can't draw (same fallback the App Search cards have). */
+    var glass: WidgetGlass? = null
 
     /** The view this is the background of (for its place in the window). */
     var host: android.view.View? = null
@@ -93,24 +96,29 @@ class DrawerSheetDrawable(
 
         // 2) the blur: exactly the App Search cards' glass (Sheet Blur = blur strength; 0 = no blur layer)
         val h = host
-        val live = backdrop
-                if (h != null && live != null && prefs.drawerSheetBlur > 0) {
-            val sx = h.scrollX.toFloat()
-            val sy = h.scrollY.toFloat()
+        if (h != null && prefs.drawerSheetBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
             val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
-            val side = amount + depth + 2f      // the sides and bottom run off the screen, so only the top edge bends the background
+            val side = amount + depth + 2f
             lensRect.set(
-                bounds.left - side + sx, bounds.top + dp.sheetTop.toFloat() + sy,
-                bounds.right + side + sx, bounds.bottom + dp.sheetRadius + side + sy,
+                bounds.left - side, bounds.top + dp.sheetTop.toFloat(),
+                bounds.right + side, bounds.bottom + dp.sheetRadius + side,
             )
-            clipPath.set(path); clipPath.offset(sx, sy)
-            canvas.save()
-            canvas.translate(-sx, -sy)          // a background is drawn scrolled with its list; LiveBackdrop records in window coordinates
-            live.draw(canvas, h, lensRect, dp.sheetRadius, dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, clipPath)
-            canvas.restore()
-        }
-        // 3) tint, rim, handle
+            val live = backdrop?.draw(canvas, h, lensRect, dp.sheetRadius,
+                dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, path) == true
+            android.util.Log.i("OneUiHome", "sheet blur: live=$live hw=${canvas.isHardwareAccelerated} " +
+                "blur=${prefs.drawerSheetBlur} glassBitmap=${glass?.bitmap != null} hostW=${h.width}")
+            if (!live) {
+                sheetRect.set(bounds.left.toFloat(), bounds.top + dp.sheetTop.toFloat(),
+                    bounds.right.toFloat(), bounds.bottom + dp.sheetRadius)
+                toWindow.reset(); h.transformMatrixToGlobal(toWindow)
+                if (glassPaint.aimLens(glass, toWindow, sheetRect, dp.sheetRadius, amount, depth)) {
+                    glassPaint.paint.colorFilter = YunoGlass.saturation
+                    glassPaint.paint.alpha = 255
+                    canvas.drawPath(path, glassPaint.paint)
+                }
+            }
+        }        // 3) tint, rim, handle
         canvas.drawPath(path, fill)
         canvas.drawPath(path, rim)
         val cx = bounds.exactCenterX()
