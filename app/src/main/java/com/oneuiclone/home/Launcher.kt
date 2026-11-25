@@ -432,6 +432,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
                 it.backdrop = sheetBackdrop
                 it.glass = sheetGlass
             }
+            this@Launcher.sheetGlass.views.add(this)      // redraw the sheet when the blurred wallpaper copy is rebuilt
             trackSheet = true
             onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
             overScrollMode = View.OVER_SCROLL_NEVER
