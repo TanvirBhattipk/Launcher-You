@@ -113,6 +113,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             search?.refreshBackdrop()
             if (::appsScroll.isInitialized) appsScroll.invalidate()   // redraw the sheet's blur when the background animates
         }
+    }
     private fun applyGlassPrefs() {
         val d = activity.resources.displayMetrics.density
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
