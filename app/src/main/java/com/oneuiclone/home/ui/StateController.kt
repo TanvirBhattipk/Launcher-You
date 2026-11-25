@@ -177,15 +177,23 @@ class StateController(
         }
     }
 
-    /** Shows exactly [target]'s screen. */
     private fun settle(target: State, keepHome: Boolean = false) {
         val showApps = target == State.APPS
         home.setLayerType(View.LAYER_TYPE_NONE, null)
         apps.setLayerType(View.LAYER_TYPE_NONE, null)
-        homeBlur(0f)
         setScreen(apps, showApps)
-        setScreen(home, !showApps || keepHome)
-       a = if (showApps) 1f else 0f
+        if (!showApps) {
+            homeBlur(0f)
+            setScreen(home, true)
+        } else if (keepHome) {
+            home.visibility = View.VISIBLE
+            home.alpha = 1f
+            homeBlur(1f)
+        } else {
+            homeBlur(0f)
+            setScreen(home, false)
+        }
+        a = if (showApps) 1f else 0f
         background.appsDimScale = if (keepHome) 0f else 1f
         background.set(BackgroundController.Kind.APPS, a)
         f = 0f
@@ -193,6 +201,7 @@ class StateController(
         state = target
         onStateChanged?.invoke(state)
     }
+
 
     private fun setScreen(v: View, shown: Boolean) {
         v.scaleX = 1f; v.scaleY = 1f; v.translationY = 0f
