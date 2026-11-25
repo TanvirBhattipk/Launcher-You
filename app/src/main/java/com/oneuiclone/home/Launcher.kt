@@ -89,6 +89,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass)
     private val drawerBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim, appsScroll) }
     private val searchBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
+    private val sheetBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
     init {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         val d = activity.resources.displayMetrics.density
@@ -107,9 +108,11 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d
         appsDim = prefs.drawerBgOpacity / 100f
         searchDim = prefs.appSearchBgOpacity / 100f
-        onChange = { if (::searchPill.isInitialized) searchPill.invalidate(); search?.refreshBackdrop() }
-    }
-
+        onChange = {
+            if (::searchPill.isInitialized) searchPill.invalidate()
+            search?.refreshBackdrop()
+            if (::appsScroll.isInitialized) appsScroll.invalidate()   // redraw the sheet's blur when the background animates
+        }
     private fun applyGlassPrefs() {
         val d = activity.resources.displayMetrics.density
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
@@ -424,7 +427,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             setPadding(0, listTop, 0, 0)          // the list clips just under the sheet's drag handle
             background = com.oneuiclone.home.ui.DrawerSheetDrawable(activity, dp, prefs).also {   // rounded sheet + handle, fixed while the list scrolls
                 it.host = this
-                it.layers = { listOf(wallpaper, homeLayer) }
+                it.backdrop = sheetBackdrop
             }
             trackSheet = true
             onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
