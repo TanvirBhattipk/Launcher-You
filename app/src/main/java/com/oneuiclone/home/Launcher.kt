@@ -95,9 +95,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         val d = activity.resources.displayMetrics.density
         widgetGlass.radiusPx = prefs.blurWidget * d; folderGlass.radiusPx = prefs.blurFolder * d
-                pillGlass.radiusPx = prefs.homePillBgBlur * d; drawerBarGlass.radiusPx = prefs.drawerSearchBarBlur * d
-        barGlass.radiusPx = prefs.appSearchBarBlur * d; cardGlass.radiusPx = prefs.appSearchCardsBgBlur * d
-        sheetGlass.radiusPx = prefs.drawerSheetBlur * d
+        pillGlass.radiusPx = prefs.homePillBgBlur * d; drawerBarGlass.radiusPx = prefs.drawerSearchBarBlur * d
+        barGlass.radiusPx = prefs.appSearchBarBlur * d; cardGlass.radiusPx = prefs.appSearchCardsBgBlur * d; sheetGlass.radiusPx = prefs.drawerSheetBlur * d
         wallpaper.onLoaded = {
             glasses.forEach { it.rebuild(wallpaper) }
             syncBlurredWallpaper()
@@ -121,8 +120,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
         pillGlass.setRadius(prefs.homePillBgBlur * d, wallpaper); drawerBarGlass.setRadius(prefs.drawerSearchBarBlur * d, wallpaper)
-        barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper); cardGlass.setRadius(prefs.appSearchCardsBgBlur * d, wallpaper)
-        sheetGlass.setRadius(prefs.drawerSheetBlur * d, wallpaper)
+        barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper); cardGlass.setRadius(prefs.appSearchCardsBgBlur * d, wallpaper); sheetGlass.setRadius(prefs.drawerSheetBlur * d, wallpaper)
         if (::appsScroll.isInitialized) (appsScroll.background as? com.oneuiclone.home.ui.DrawerSheetDrawable)?.refreshColors()
         background.appsDim = prefs.drawerBgOpacity / 100f
         background.searchDim = prefs.appSearchBgOpacity / 100f
