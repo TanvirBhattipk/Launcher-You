@@ -114,7 +114,10 @@ class StateController(
     /** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
         a = p
-        // only the wallpaper blurs (all of it by 40% of the way): Home's icons and widgets stay exactly as they are
+        // the wallpaper blurs (all of it by 40% of the way) but is not darkened; Home stays exactly as it is
+        val blurP = smooth(p / 0.4f)
+        background.appsDimScale = 0f
+        background.set(BackgroundController.Kind.APPS, blurP)
         home.alpha = 1f
         home.scaleX = 1f; home.scaleY = 1f
         // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
@@ -155,6 +158,7 @@ class StateController(
         apps.translationY = 0f
         home.scaleX = 1f; home.scaleY = 1f
         homeBlur(0f)
+        background.appsDimScale = 1f      // the search crossfade keeps the drawer's usual darkening
         val end = if (toApps) 1f else 0f
         anim = ValueAnimator.ofFloat(a, end).apply {
             this.duration = max(100L, (duration * abs(end - a)).toLong())
@@ -183,8 +187,8 @@ class StateController(
         setScreen(apps, showApps)
         setScreen(home, !showApps || keepHome)
        a = if (showApps) 1f else 0f
-        if (keepHome) background.set(BackgroundController.Kind.NONE, 0f)
-        else background.set(BackgroundController.Kind.APPS, a)
+        background.appsDimScale = if (keepHome) 0f else 1f
+        background.set(BackgroundController.Kind.APPS, a)
         f = 0f
         dragging = false
         state = target
