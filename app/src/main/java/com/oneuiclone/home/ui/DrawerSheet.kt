@@ -94,15 +94,21 @@ class DrawerSheetDrawable(
         // 2) the blur: exactly the App Search cards' glass (Sheet Blur = blur strength; 0 = no blur layer)
         val h = host
         val live = backdrop
-        if (h != null && live != null && prefs.drawerSheetBlur > 0) {
+                if (h != null && live != null && prefs.drawerSheetBlur > 0) {
+            val sx = h.scrollX.toFloat()
+            val sy = h.scrollY.toFloat()
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
             val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
             val side = amount + depth + 2f      // the sides and bottom run off the screen, so only the top edge bends the background
             lensRect.set(
-                bounds.left - side, bounds.top + dp.sheetTop.toFloat(),
-                bounds.right + side, bounds.bottom + dp.sheetRadius + side,
+                bounds.left - side + sx, bounds.top + dp.sheetTop.toFloat() + sy,
+                bounds.right + side + sx, bounds.bottom + dp.sheetRadius + side + sy,
             )
-            live.draw(canvas, h, lensRect, dp.sheetRadius, dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, path)
+            clipPath.set(path); clipPath.offset(sx, sy)
+            canvas.save()
+            canvas.translate(-sx, -sy)          // a background is drawn scrolled with its list; LiveBackdrop records in window coordinates
+            live.draw(canvas, h, lensRect, dp.sheetRadius, dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, clipPath)
+            canvas.restore()
         }
         // 3) tint, rim, handle
         canvas.drawPath(path, fill)
