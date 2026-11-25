@@ -43,6 +43,14 @@ class SearchBlurSettingsActivity : ComponentActivity() {
                             SliderRow("Border Opacity", prefs.drawerSearchBorderOpacity) { prefs.drawerSearchBorderOpacity = it }
                         }
 
+                        // App Drawer sheet
+                        SettingsCard(title = "App Drawer Sheet") {
+                            SliderRow("Sheet Opacity", prefs.drawerSheetOpacity) { prefs.drawerSheetOpacity = it }
+                            SliderRow("Sheet Blur", prefs.drawerSheetBlur) { prefs.drawerSheetBlur = it }
+                            SliderRow("Border Size", prefs.drawerSheetBorderSize, max = 50) { prefs.drawerSheetBorderSize = it }
+                            SliderRow("Border Opacity", prefs.drawerSheetBorderOpacity) { prefs.drawerSheetBorderOpacity = it }
+                        }
+
                         // Card 2: Search Pill (Home)
                         SettingsCard(title = "Home Search Pill") {
                             SliderRow("Background Opacity", prefs.homePillBgOpacity) { prefs.homePillBgOpacity = it }

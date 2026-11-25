@@ -58,6 +58,12 @@ var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edi
     var drawerSearchBorderSize: Int get() = sp.getInt("drawer_search_border_size", 10); set(v) = sp.edit().putInt("drawer_search_border_size", v).apply()
     var drawerSearchBorderOpacity: Int get() = sp.getInt("drawer_search_border_opacity", 20); set(v) = sp.edit().putInt("drawer_search_border_opacity", v).apply()
 
+    // App Drawer sheet (the rounded sheet the drawer's apps sit on)
+    var drawerSheetOpacity: Int get() = sp.getInt("drawer_sheet_opacity", 55); set(v) = sp.edit().putInt("drawer_sheet_opacity", v).apply()
+    var drawerSheetBlur: Int get() = sp.getInt("drawer_sheet_blur", 40); set(v) = sp.edit().putInt("drawer_sheet_blur", v).apply()
+    var drawerSheetBorderSize: Int get() = sp.getInt("drawer_sheet_border_size", 12); set(v) = sp.edit().putInt("drawer_sheet_border_size", v).apply()
+    var drawerSheetBorderOpacity: Int get() = sp.getInt("drawer_sheet_border_opacity", 85); set(v) = sp.edit().putInt("drawer_sheet_border_opacity", v).apply()
+
     // Card 2: Home Search Pill
     var homePillBgOpacity: Int get() = sp.getInt("home_pill_bg_opacity", 40); set(v) = sp.edit().putInt("home_pill_bg_opacity", v).apply()
     var homePillBgBlur: Int get() = sp.getInt("home_pill_bg_blur", 20); set(v) = sp.edit().putInt("home_pill_bg_blur", v).apply()
