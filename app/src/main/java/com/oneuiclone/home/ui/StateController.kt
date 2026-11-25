@@ -114,31 +114,14 @@ class StateController(
     /** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
         a = p
+        // Both wallpaper and Home blur over the first 40% of the swipe while Home stays visible
         val blurP = smooth(p / 0.4f)
         background.set(BackgroundController.Kind.APPS, blurP)
         homeBlur(blurP)
+        home.alpha = 1f
         // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
         apps.translationY = apps.height * (1f - p)
         apps.alpha = smooth(p / 0.3f)
-    }
-
-    /** Shows exactly [target]'s screen. */
-    private fun settle(target: State, keepHome: Boolean = false) {
-        val showApps = target == State.APPS
-        home.setLayerType(View.LAYER_TYPE_NONE, null)
-        apps.setLayerType(View.LAYER_TYPE_NONE, null)
-        if (!showApps) {
-            homeBlur(0f)
-        }
-        setScreen(apps, showApps)
-        setScreen(home, !showApps || keepHome)
-        a = if (showApps) 1f else 0f
-        background.appsDimScale = if (keepHome) 0f else 1f
-        background.set(BackgroundController.Kind.APPS, a)
-        f = 0f
-        dragging = false
-        state = target
-        onStateChanged?.invoke(state)
     }
 
     private fun homeBlur(x: Float) {
