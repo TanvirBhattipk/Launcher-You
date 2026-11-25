@@ -51,7 +51,9 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     // Progressive blur under the search bar: blur radius is MAX_BLUR_DP at the very top of the screen and eases down
     // to 0 (sharp) at blurEndY, with no tint. Built from a few blurred copies of the list, cross-faded per pixel.
     private val blurEndY = dp.searchBarTop + dp.searchBarHeight * 0.95f        // blur reaches 0% at 95% of the search bar's height
-    private val fadeStartY = dp.searchBarTop.toFloat() 
+        private val barBottomY = (dp.searchBarTop + dp.searchBarHeight).toFloat()
+    private val fadeStartY = (barBottomY + dp.appsGrid.top) / 2f   // icons fully visible below this: the middle of the gap between the bar and the first row
+    private val fadeEndY = 2f * barBottomY - fadeStartY            // icons fully gone from here up, so 50% lands exactly on the bar's bottom edge
     private val blurNode = RenderNode("drawerProgressiveBlur")
     private var blurEffect: RenderEffect? = null
     private var blurEffectStep = -1
@@ -70,7 +72,7 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
                 setFloatUniform("levels", prev, cur, next)
                 setFloatUniform("rMax", rMax)
                 setFloatUniform("bandEnd", blurEndY)
-                setFloatUniform("fade", fadeStartY, blurEndY)
+                setFloatUniform("fade", fadeEndY, fadeStartY)
             }
             var e = RenderEffect.createRuntimeShaderEffect(shader, "content")
             if (cur >= 1f) e = RenderEffect.createChainEffect(e, RenderEffect.createBlurEffect(cur, cur, Shader.TileMode.MIRROR))
@@ -156,7 +158,7 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
         if (step == 0) { super.dispatchDraw(canvas); return }
         val w = width.toFloat()
         val top = scrollY.toFloat()
-        val band = minOf(blurEndY, height.toFloat())
+                val band = minOf(maxOf(blurEndY, fadeStartY), height.toFloat())
 
         // 1) everything below the band, untouched
         canvas.save()
