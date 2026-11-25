@@ -419,8 +419,10 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         appsScroll = com.oneuiclone.home.ui.DrawerScrollView(activity, dp).apply {
             isVerticalScrollBarEnabled = false
             isVerticalFadingEdgeEnabled = false   // the progressive blur replaces the old fade
-            clipToPadding = false
-            setPadding(0, listTop, 0, 0)          // first row still starts at listTop; apps scroll under the bar
+            clipToPadding = true
+            setPadding(0, listTop, 0, 0)          // the list clips just under the sheet's drag handle
+            background = com.oneuiclone.home.ui.DrawerSheetDrawable(activity, dp)   // rounded sheet + handle, fixed while the list scrolls
+            onTapOutside = { if (state.state == StateController.State.APPS && !state.isTransitioning) state.goTo(StateController.State.HOME) }
             overScrollMode = View.OVER_SCROLL_NEVER
             addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> v.clipBounds = Rect(0, 0, v.width, v.height) }
         }
@@ -435,30 +437,19 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             topMargin = listTop
         })
         appsScroll.setOnScrollChangeListener { _, _, _, _, _ -> scrollbar.onScrolled(); searchPill.invalidate() }
+        // The drawer is a sheet with no search bar. The pill and the menu button are still created (the search page
+        // morphs from / to them) but are not added to the drawer, so nothing is drawn or touched there.
         searchPill = SearchPill(activity, dp, activity.getString(R.string.search_hint))
         searchPill.glassTransparency = homeSearch.glassTransparency
         searchPill.glass = barGlass
         searchPill.backdrop = drawerBackdrop
         searchPill.setOnClickListener { openSearch() }
-        val columnWidth = dp.appsGrid.width() / dp.appsCols
-        val iconPad = (columnWidth - dp.iconSizePx) / 2
-        val barLeft = dp.appsGrid.left + iconPad
-        val barWidth = dp.appsGrid.width() - (iconPad * 2)
-
-        appsLayer.addView(searchPill, FrameLayout.LayoutParams(barWidth, dp.searchBarHeight).apply {
-            leftMargin = barLeft
-            topMargin = dp.searchBarTop
-        })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
             glassTransparency = homeSearch.glassTransparency
             glass = barGlass
             setOnClickListener { showAppsMenu(this) }
         }
-        appsLayer.addView(moreButton, FrameLayout.LayoutParams(dp.searchBarHeight, dp.searchBarHeight).apply {
-            leftMargin = barLeft + barWidth - dp.searchBarHeight
-            topMargin = dp.searchBarTop
-        })
-        
+
         bound = false
         if (repo?.apps?.isNotEmpty() == true) bindAll()
     }
@@ -554,6 +545,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             }
         }
         walk(homeLayer, wallpaperBright)
+        walk(appsLayer, com.oneuiclone.home.ui.DrawerInk.darkLabels(activity))
+        if (::appsScroll.isInitialized) (appsScroll.background as? com.oneuiclone.home.ui.DrawerSheetDrawable)?.refreshColors()
         indicator.darkDots = wallpaperBright
         @Suppress("DEPRECATION")
         val flags = activity.window.decorView.systemUiVisibility
@@ -1445,7 +1438,9 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         val bottomGap = insets.bottom + dp.dpi(16f) + dp.appsBottomPad
         appsGrid.setPadding(dp.appsGrid.left, topGap, dp.widthPx - dp.appsGrid.right, bottomGap)
         appsGrid.layoutParams = appsGrid.layoutParams.apply { height = topGap + rows * (dp.appsGrid.height() / dp.appsRows) + appsGrid.gapPx + bottomGap }
+        val sheetDark = com.oneuiclone.home.ui.DrawerInk.darkLabels(activity)
         fun appIcon(app: AppInfo) = IconView(activity, dp).apply {
+            darkText = sheetDark                                  // the sheet is light by day: dark labels
             setAppsIcon(this, app)
             label = app.label
             contentDescription = app.label
@@ -2281,7 +2276,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             MotionEvent.ACTION_DOWN -> {
                 downX = ev.x; downY = ev.y; tracking = false; consumed = false
                 downOnWidgetScroller = state.state == StateController.State.HOME && widgetScrollerAt(ev.rawX.toInt(), ev.rawY.toInt())
-                downAppsAtTop = state.state == StateController.State.APPS && appsScroll.scrollY <= 0
+                downAppsAtTop = state.state == StateController.State.APPS &&
+                    (appsScroll.scrollY <= 0 || ev.y < dp.appsListTop)   // the handle area always drags the sheet
                 vt?.recycle(); vt = VelocityTracker.obtain(); vt?.addMovement(ev)
             }
             MotionEvent.ACTION_MOVE -> {
