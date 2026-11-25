@@ -91,9 +91,9 @@ class SearchPill(context: Context, private val dp: DeviceProfile, private val hi
         isClickable = true
         applyColors()
                 if (!menuIcon) {
-            elevation = dp.dp(10f)
-            outlineAmbientShadowColor = 0x33000000
-            outlineSpotShadowColor = 0x59000000
+            elevation = dp.dp(24f)
+            outlineAmbientShadowColor = 0x4D000000
+            outlineSpotShadowColor = 0xA6000000.toInt()
             outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) {
                     outline.setRoundRect(0, 0, view.width, view.height, view.height / 2f)
