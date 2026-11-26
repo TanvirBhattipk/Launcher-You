@@ -62,7 +62,6 @@ class BackgroundController(
     /** true = the Drawer background opacity setting darkens the Apps wallpaper again (the wash stays). */
     var darkenApps = true
     var searchDim = 0.55f
-    set(v) { }
     /** The search page is open: blends from the Drawer background settings (0) to the App Search ones (1). */
     var searchOpen = false
         set(v) {
@@ -88,7 +87,7 @@ class BackgroundController(
         if (isApps(k)) appsWash * (1f - searchMix) * appsBlurScale else 0f
 
     private fun dimOf(k: Kind): Float =
-        if (isApps(k)) ((if (darkenApps) appsDim else 0f) + (searchDim - (if (darkenApps) appsDim else 0f)) * searchMix) * 255f / 0xA6 * appsBlurScale * appsDimScale else k.dim
+        if (isApps(k)) (if (darkenApps) appsDim else 0f) * (1f - searchMix) * 255f / 0xA6 * appsBlurScale * appsDimScale else k.dim
 
     private fun factor(k: Kind) = if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * appsBlurScale else k.blurFactor
 
