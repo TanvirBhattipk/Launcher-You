@@ -279,13 +279,7 @@ class AppsSearch(
             super.onDraw(canvas)
         }
     }
-    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
-        private val glassPaint = GlassPaint()
-        private val toWindow = android.graphics.Matrix()
-        private val rect = RectF()
-        private val rim = YunoRim()
-
-    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+        private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
         private val glassPaint = GlassPaint()
         private val toWindow = android.graphics.Matrix()
         private val rect = RectF()
