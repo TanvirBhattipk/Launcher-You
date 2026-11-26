@@ -58,15 +58,12 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
     }
 
 /** A swipe starts. */
-    fun begin(towardApps: Boolean) {
+fun begin(towardApps: Boolean) {
         anim?.cancel()
         springAnim?.cancel()
+        springRunning = false
+        apps.removeCallbacks(springTick)
         toApps = towardApps
-        dragging = true
-        visible = false
-        dragStartMs = SystemClock.uptimeMillis()
-        f = 0f
-        onTransitionStart?.invoke(towardApps)
     }
 
     /**
@@ -108,9 +105,11 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         if (duration <= 0L) run(target) else fade(target, duration)
     }
 
-    fun setImmediate(target: State) {
+fun setImmediate(target: State) {
         anim?.cancel()
         springAnim?.cancel()
+        springRunning = false
+        apps.removeCallbacks(springTick)
         toApps = target == State.APPS
         settle(target)
     }
@@ -125,6 +124,7 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         a = p
         // Steady linear blur across the full drag (0f -> 1f)
         val blurP = p.coerceIn(0f, 1f)
+        background.appsDimScale = 1f
         background.set(BackgroundController.Kind.APPS, blurP)
         home.alpha = 1f
         homeBlur(blurP)
@@ -140,31 +140,55 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         home.setRenderEffect(if (r > 0.5f) RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP) else null)
     }
 
+private val drawerStiffness = 200f
+    private val drawerDamping = 2f * 0.8f * kotlin.math.sqrt(drawerStiffness)
+    private var springTargetState: State? = null
+    private var springTargetProgress = 0f
+    private var springVel = 0f
+    private var springRunning = false
+    private var springLastMs = 0L
+    private val springTick = Runnable { stepDrawerSpring() }
+
     private fun run(target: State, velocityPxPerSec: Float = 0f) {
         anim?.cancel()
         springAnim?.cancel()
-        val end = if (target == State.APPS) 1f else 0f
-        val range = apps.height.toFloat().coerceAtLeast(1f)
-        val startVel = (-velocityPxPerSec / range).coerceIn(-8f, 8f)
+        apps.removeCallbacks(springTick)
 
-        springAnim = SpringAnimation(FloatValueHolder(a)).apply {
-            spring = SpringForce(end).apply {
-                stiffness = 420f
-                dampingRatio = 1f
-            }
-            setStartVelocity(startVel)
-            minimumVisibleChange = 0.002f
-            addUpdateListener { _, value, _ ->
-                frame(value.coerceIn(0f, 1f))
-            }
-            addEndListener { _, canceled, _, _ ->
-                springAnim = null
-                if (!canceled) settle(target, keepHome = target == State.APPS)
-            }
-            start()
-        }
+        springTargetState = target
+        springTargetProgress = if (target == State.APPS) 1f else 0f
+        val range = apps.height.toFloat().coerceAtLeast(1f)
+        springVel = (-velocityPxPerSec / range).coerceIn(-8f, 8f)
+        springRunning = true
+        springLastMs = android.view.animation.AnimationUtils.currentAnimationTimeMillis()
+        apps.postOnAnimation(springTick)
     }
 
+    private fun stepDrawerSpring() {
+        if (!springRunning) return
+        val targetState = springTargetState ?: run {
+            springRunning = false
+            return
+        }
+        val now = android.view.animation.AnimationUtils.currentAnimationTimeMillis()
+        val dt = ((now - springLastMs).coerceIn(1L, 32L)) / 1000f
+        springLastMs = now
+
+        val displacement = a - springTargetProgress
+        springVel += (-drawerStiffness * displacement - drawerDamping * springVel) * dt
+        val nextA = a + springVel * dt
+
+        if (kotlin.math.abs(springTargetProgress - nextA) < 0.004f && kotlin.math.abs(springVel) < 0.05f) {
+            springRunning = false
+            springTargetState = null
+            springVel = 0f
+            frame(springTargetProgress)
+            settle(targetState, keepHome = targetState == State.APPS)
+            return
+        }
+
+        frame(nextA.coerceIn(0f, 1f))
+        apps.postOnAnimation(springTick)
+    }
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
     private fun fade(target: State, duration: Long) {
         anim?.cancel()
