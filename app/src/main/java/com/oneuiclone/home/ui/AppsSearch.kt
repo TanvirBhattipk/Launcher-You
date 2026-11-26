@@ -346,15 +346,17 @@ class AppsSearch(
             if (running.any { it.isIme() }) {
                 ime = insets.getInsets(WindowInsets.Type.ime()).bottom
                 layoutPill()
+                refreshBackdrop()                       // keep the cards' and bar's blur drawn while the keyboard moves them
             }
             return insets
         }
 
         override fun onEnd(animation: WindowInsetsAnimation) {
             if (!animation.isIme()) return
-            imeAnimating = false
             ime = rootWindowInsets?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0
             layoutPill()
+            refreshBackdrop()
+            postDelayed({ if (isOpen) refreshBackdrop() }, 120)   // once more after the layout has settled
         }
     }
 
@@ -467,6 +469,7 @@ class AppsSearch(
                 ime = insets.getInsets(WindowInsets.Type.ime()).bottom
                 if (isOpen && ime > 0) retargetKeyboard(ime.toFloat())
                 layoutPill()
+                refreshBackdrop()
             }
             insets
         }
