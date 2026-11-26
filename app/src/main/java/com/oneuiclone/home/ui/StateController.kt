@@ -171,11 +171,9 @@ fun setImmediate(target: State) {
         )
     }
 
-private val drawerStiffness = 500f                      // lower = slower
+private val drawerStiffness = 380f                      // lower = slower
     private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)      // closing: no bounce
-    private val drawerDampingOpen = 2f * 0.72f * kotlin.math.sqrt(drawerStiffness) // opening: overshoots a little at the top
-    // critically damped: the sheet carries the finger's speed, glides in and stops dead at the top, no bounce past the edge
-    private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)
+    private val drawerDampingOpen = 2f * 0.65f * kotlin.math.sqrt(drawerStiffness) // opening: overshoots a little at the top
     private var springTargetState: State? = null
     private var springTargetProgress = 0f
     private var springVel = 0f
