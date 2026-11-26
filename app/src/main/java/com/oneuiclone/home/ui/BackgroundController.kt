@@ -62,7 +62,7 @@ class BackgroundController(
     /** true = the Drawer background opacity setting darkens the Apps wallpaper again (the wash stays). */
     var darkenApps = true
     var searchDim = 0.55f
-
+    set(v) { }
     /** The search page is open: blends from the Drawer background settings (0) to the App Search ones (1). */
     var searchOpen = false
         set(v) {
