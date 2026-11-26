@@ -58,12 +58,18 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
     }
 
 /** A swipe starts. */
-fun begin(towardApps: Boolean) {
+    fun begin(towardApps: Boolean) {
         anim?.cancel()
         springAnim?.cancel()
         springRunning = false
         apps.removeCallbacks(springTick)
         toApps = towardApps
+        dragging = true
+        visible = true
+        dragStartMs = SystemClock.uptimeMillis()
+        f = 0f
+        prepare()
+        onTransitionStart?.invoke(towardApps)
     }
 
     /**
@@ -73,15 +79,12 @@ fun begin(towardApps: Boolean) {
     fun drag(progress: Float, distancePx: Float) {
         f = progress.coerceIn(0f, 1f)
         if (!visible) {
-            // nothing shows for the first moments of a swipe, so a really quick one that goes nowhere never flashes
-            if (SystemClock.uptimeMillis() - dragStartMs < QUICK_MS && f < COMMIT_AT) return
             visible = true
             prepare()
         }
         val shown = (distancePx / max(1f, apps.height.toFloat())).coerceIn(0f, 1f)
         frame(if (toApps) shown else 1f - shown)
     }
-
     /**
      * The swipe is let go: it goes through when it was a fling or went far enough (a fling back cancels it); either
      * way the rest is animated from where it is.
@@ -149,10 +152,12 @@ private val drawerStiffness = 200f
     private var springLastMs = 0L
     private val springTick = Runnable { stepDrawerSpring() }
 
-    private fun run(target: State, velocityPxPerSec: Float = 0f) {
+private fun run(target: State, velocityPxPerSec: Float = 0f) {
         anim?.cancel()
         springAnim?.cancel()
+        springRunning = false
         apps.removeCallbacks(springTick)
+        prepare()
 
         springTargetState = target
         springTargetProgress = if (target == State.APPS) 1f else 0f
