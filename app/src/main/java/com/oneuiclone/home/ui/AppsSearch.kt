@@ -141,11 +141,18 @@ class AppsSearch(
         get() = maxOf(1f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
         
     private val backdropDimColor: Int
-        get() = DrawerInk.sheetTint(context) and 0x00FFFFFF      // the drawer sheet's tint: light by day, dark at night
+        get() = DrawerInk.sheetTint(context) and 0x00FFFFFF
 
     private val backdropDimMaxAlpha: Int
-        get() = prefs.appSearchBgOpacity.coerceIn(0, 100) * 255 / 100   // App Search opacity slider
+        get() = prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100
 
+    private val backdropBlurRadius: Float
+        get() = dp.dp(prefs.drawerSheetBlur.toFloat())
+
+    private val backdropGlassPaint = GlassPaint()
+    private val backdropToWindow = android.graphics.Matrix()
+    private val backdropRect = RectF()
+   
     private val field = EditText(context)
     private val pill = FrameLayout(context)
     private val pillBg = GradientDrawable()
@@ -359,6 +366,7 @@ class AppsSearch(
 
     init {
         isClickable = true
+        setWillNotDraw(false)
         pill.background = GlassPill()
         field.apply {
             background = null
@@ -1039,6 +1047,7 @@ setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
     private val noKeyboard = Runnable { if (isOpen && ime == 0 && !imeAnimating) retargetKeyboard(0f) }
 
     fun open(from: Origin, fromAbove: Boolean = false) {
+        DrawerInk.refreshWallpaper(context)
         sources.snapshot.let { scores = it.scores; suggested = it.contacts }
         origin = from
         field.setTextColor(primaryInk)
