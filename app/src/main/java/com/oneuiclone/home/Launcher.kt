@@ -109,7 +109,6 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         appsRadiusPx = prefs.drawerBgBlur * d; searchRadiusPx = prefs.appSearchBgBlur * d
         appsDim = prefs.drawerBgOpacity / 100f
         searchDim = prefs.appSearchBgOpacity / 100f
-        searchTintAlpha = prefs.drawerSheetOpacity / 100f
         onChange = {
             if (::searchPill.isInitialized) searchPill.invalidate()
             search?.refreshBackdrop()
@@ -125,7 +124,6 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         if (::appsScroll.isInitialized) (appsScroll.background as? com.oneuiclone.home.ui.DrawerSheetDrawable)?.refreshColors()
         background.appsDim = prefs.drawerBgOpacity / 100f
         background.searchDim = prefs.appSearchBgOpacity / 100f
-        background.searchTintAlpha = prefs.drawerSheetOpacity / 100f
         background.appsRadiusPx = prefs.drawerBgBlur * d; background.searchRadiusPx = prefs.appSearchBgBlur * d
         background.refresh()
         glasses.forEach { g -> g.views.toList().forEach { it.invalidate() } }
