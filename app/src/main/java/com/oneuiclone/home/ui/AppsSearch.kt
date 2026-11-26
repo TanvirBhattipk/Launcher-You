@@ -285,18 +285,18 @@ class AppsSearch(
         private val rect = RectF()
         private val rim = YunoRim()
 
+    private inner class GlassPill : android.graphics.drawable.DrawableWrapper(pillBg) {
+        private val glassPaint = GlassPaint()
+        private val toWindow = android.graphics.Matrix()
+        private val rect = RectF()
+        private val rim = YunoRim()
+
         override fun draw(canvas: Canvas) {
             if (prefs.appSearchBarBlur > 0) {
                 rect.set(bounds)
                 val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
                 val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
                 backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), amount, depth)
-            }
-            super.draw(canvas)
-            val w = searchBarBorderWidth
-            rect.set(bounds); rect.inset(w / 2f, w / 2f)
-            rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
-        }
             }
             super.draw(canvas)
             val w = searchBarBorderWidth
