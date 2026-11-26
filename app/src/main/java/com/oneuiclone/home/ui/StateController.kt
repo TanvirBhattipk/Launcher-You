@@ -57,11 +57,18 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         apps.setLayerType(View.LAYER_TYPE_HARDWARE, null)
     }
 
-    /** A swipe starts. */
+/** A swipe starts. */
     fun begin(towardApps: Boolean) {
         anim?.cancel()
         springAnim?.cancel()
         toApps = towardApps
+        dragging = true
+        visible = false
+        dragStartMs = SystemClock.uptimeMillis()
+        f = 0f
+        onTransitionStart?.invoke(towardApps)
+    }
+
     /**
      * The finger moves: [progress] (0…1 of the swipe's distance) is what decides on release, while the screens follow
      * the finger itself, [distancePx] from where it went down, exactly.
@@ -79,11 +86,6 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
     }
 
     /**
-     * The swipe is let go: it goes through when it was a fling or went far enough (a fling back cancels it); either
-     * way the rest is animated from where it is.
-     * @param velocity Samsung-px/ms, positive toward the target screen.
-     */
-/**
      * The swipe is let go: it goes through when it was a fling or went far enough (a fling back cancels it); either
      * way the rest is animated from where it is.
      * @param velocity Samsung-px/ms, positive toward the target screen.
@@ -220,14 +222,6 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         v.visibility = if (shown) View.VISIBLE else View.INVISIBLE
     }
 
-    private companion object {
-        const val OPEN_MS = 420L
-        /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
-        const val COMMIT_AT = 0.65f
-        /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */
-        const val QUICK_MS = 120L
-    }
-}
     private companion object {
         const val OPEN_MS = 420L
         /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
