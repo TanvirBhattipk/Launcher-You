@@ -13,6 +13,9 @@ import kotlin.math.abs
 import kotlin.math.max
 import android.view.animation.PathInterpolator
 import androidx.core.animation.doOnEnd
+import androidx.dynamicanimation.animation.FloatValueHolder
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
 
 /**
  * HOME ⇄ APPS: the wallpaper blurs while Home's icons and widgets stay as they are, and the drawer sheet (the suggested
@@ -135,16 +138,22 @@ class StateController(
 
 private fun run(target: State, velocityPxPerSec: Float = 0f) {
         val end = if (target == State.APPS) 1f else 0f
-        val distance = kotlin.math.abs(end - a)
-        // Faster when flung quickly, capped between 160ms and 300ms
-        val speedFactor = (kotlin.math.abs(velocityPxPerSec) / 4000f).coerceIn(0f, 1f)
-        val durationMs = ((280f - 110f * speedFactor) * distance.coerceAtLeast(0.35f)).toLong().coerceIn(150L, 300L)
+        val range = apps.height.toFloat().coerceAtLeast(1f)
+        val startVel = (-velocityPxPerSec / range).coerceIn(-6f, 6f)
 
-        ValueAnimator.ofFloat(a, end).apply {
-            duration = durationMs
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
-            addUpdateListener { frame(it.animatedValue as Float) }
-            doOnEnd { settle(target, keepHome = target == State.APPS) }
+        SpringAnimation(FloatValueHolder(a)).apply {
+            spring = SpringForce(end).apply {
+                stiffness = 420f
+                dampingRatio = 1f
+            }
+            setStartVelocity(startVel)
+            minimumVisibleChange = 0.002f
+            addUpdateListener { _, value, _ ->
+                frame(value.coerceIn(0f, 1f))
+            }
+            addEndListener { _, canceled, _, _ ->
+                if (!canceled) settle(target, keepHome = target == State.APPS)
+            }
             start()
         }
     }
@@ -193,7 +202,7 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
             setScreen(home, false)
         }
         a = if (showApps) 1f else 0f
-        background.appsDimScale = if (keepHome) 0f else 1f
+        background.appsDimScale = 1f
         background.set(BackgroundController.Kind.APPS, a)
         f = 0f
         dragging = false
