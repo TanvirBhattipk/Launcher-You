@@ -64,7 +64,14 @@ class DrawerSheetDrawable(
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
-    const val STACK_LAYERS = 0
+        // the cards stacked behind the sheet: narrower, peeking out above its top edge
+    private val stackPaths = Array(STACK_LAYERS) { Path() }
+    private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private companion object {
+        const val STACK_LAYERS = 0       // 2 = two cards behind
+        const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
+        const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
+    }
     private val sheetRect = RectF()
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
