@@ -32,9 +32,10 @@ class StateController(
     private val apps: View,
     private val background: BackgroundController,
     @Suppress("UNUSED_PARAMETER") private val transitionY: () -> Float,
-    /** Where the sheet's top edge sits inside the Apps view (DeviceProfile.sheetTop). Lets the sheet's edge follow the finger 1:1. */
-    private val sheetTop: () -> Float = { 0f },
 ) {
+    /** Where the sheet's top edge sits inside the Apps view (DeviceProfile.sheetTop). Lets the sheet's edge follow the finger 1:1. */
+    var sheetTop: () -> Float = { 0f }
+
     enum class State { HOME, APPS }
 
     var state = State.HOME; private set
