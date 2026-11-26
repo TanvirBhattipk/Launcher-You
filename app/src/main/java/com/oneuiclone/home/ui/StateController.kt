@@ -237,7 +237,7 @@ private val drawerStiffness = 380f                      // higher = faster
         // Home's icons and widgets stay on screen the whole time and only their blur follows the fade, exactly as at
         // rest in the Apps state; fading them out and snapping them back in at the end made them pop in late.
         home.alpha = 1f
-        homeBlur(a)
+        homeBlur(ramp(a))
         background.appsDimScale = 1f      // the search crossfade keeps the drawer's usual darkening
         val end = if (toApps) 1f else 0f
         anim = ValueAnimator.ofFloat(a, end).apply {
@@ -247,7 +247,7 @@ private val drawerStiffness = 380f                      // higher = faster
                 a = it.animatedValue as Float
                 apps.alpha = a
                 home.alpha = 1f
-                homeBlur(a)
+                homeBlur(ramp(a))
                 background.set(BackgroundController.Kind.APPS, a)
             }
             addListener(object : AnimatorListenerAdapter() {

@@ -119,13 +119,15 @@ class AppsSearch(
     private val rippleColor: Int
         get() = 0x1F000000 or inkRgb
 
+    /** Search bar: the primary container (the more colourful one); alpha still from the bar's own opacity. */
     private val searchBarFillColor: Int
         get() {
-            val tint = DrawerInk.sheetTint(context) or 0xFF000000.toInt()
-            val lighter = androidx.core.graphics.ColorUtils.blendARGB(tint, 0xFFFFFFFF.toInt(), if (isNight()) 0.14f else 0.45f)
-            return (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or (lighter and 0x00FFFFFF)
+            val base = dynamicContainer(secondary = false)
+                ?: androidx.core.graphics.ColorUtils.blendARGB(
+                    DrawerInk.sheetTint(context) or 0xFF000000.toInt(), 0xFFFFFFFF.toInt(), if (isNight()) 0.14f else 0.45f)
+            return (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or (base and 0x00FFFFFF)
         }
-        
+
     private val searchBarBorderColor: Int
         get() = YunoGlass.border(prefs.appSearchBorderOpacity)
     
@@ -133,13 +135,27 @@ class AppsSearch(
     private val searchBarBorderWidth: Float
         get() = maxOf(1f, dp.dp(prefs.appSearchBorderSize / 10f))
         
+    /** Material You (Android 12+): a tonal container colour from the wallpaper palette; null before Android 12. */
+    private fun dynamicContainer(secondary: Boolean): Int? {
+        if (android.os.Build.VERSION.SDK_INT < 31) return null
+        return try {
+            val id = if (secondary) {
+                if (isNight()) android.R.color.system_accent2_700 else android.R.color.system_accent2_100
+            } else {
+                if (isNight()) android.R.color.system_accent1_700 else android.R.color.system_accent1_100
+            }
+            context.getColor(id) or 0xFF000000.toInt()
+        } catch (_: Exception) { null }
+    }
+
+    /** Top Hits card: the secondary container; alpha = Cards "Background Opacity". Falls back to the darker tint. */
     private val cardFillColor: Int
         get() {
-            val tint = DrawerInk.sheetTint(context) or 0xFF000000.toInt()
-            val shifted = androidx.core.graphics.ColorUtils.blendARGB(
-                tint, 0xFF000000.toInt(), if (isNight()) 0.25f else 0.10f)
+            val base = dynamicContainer(secondary = true)
+                ?: androidx.core.graphics.ColorUtils.blendARGB(
+                    DrawerInk.sheetTint(context) or 0xFF000000.toInt(), 0xFF000000.toInt(), if (isNight()) 0.25f else 0.10f)
             val a = prefs.appSearchCardsBgOpacity.coerceIn(0, 100) * 255 / 100
-            return (shifted and 0x00FFFFFF) or (a shl 24)
+            return (base and 0x00FFFFFF) or (a shl 24)
         }
 
     private val cardBorderColor: Int
@@ -152,7 +168,7 @@ class AppsSearch(
         get() = DrawerInk.sheetTint(context) and 0x00FFFFFF
 
     private val backdropDimMaxAlpha: Int
-        get() = prefs.appSearchBgOpacity.coerceIn(0, 100) * 255 / 100   // App Search › Background Opacity
+        get() = prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100   // same as the drawer sheet
 
     private val backdropBlurRadius: Float
         get() = dp.dp(prefs.drawerSheetBlur.toFloat())
@@ -160,6 +176,36 @@ class AppsSearch(
     private val backdropGlassPaint = GlassPaint()
     private val backdropToWindow = android.graphics.Matrix()
     private val backdropRect = RectF()
+    private val pagePath = android.graphics.Path()
+    /** 0…1: how much of the page's blur and tint is showing (follows the open/close, faster on the way out). */
+    private var pageProgress = 0f
+
+    /** The page behind the search: the drawer sheet's blur (Sheet Blur) and tint (Sheet Opacity), drawn the way the sheet draws them. */
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val p = pageProgress
+        if (p <= 0.003f || width == 0 || height == 0) return
+        val w = width.toFloat(); val h = height.toFloat()
+        if (prefs.drawerSheetBlur > 0) {
+            val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+            val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+            val r = dp.sheetRadius
+            val pad = amount + depth + 2f + r              // the lens edge and its corners stay off screen
+            pagePath.reset(); pagePath.addRect(0f, 0f, w, h, android.graphics.Path.Direction.CW)
+            backdropRect.set(-pad, -pad, w + pad, h + pad)
+            backdropToWindow.reset(); transformMatrixToGlobal(backdropToWindow)
+            val layer = canvas.saveLayerAlpha(0f, 0f, w, h, (255 * p).roundToInt().coerceIn(0, 255))
+            if (backdropGlassPaint.aimLens(cardGlass ?: barGlass, backdropToWindow, backdropRect, r, amount, depth)) {
+                backdropGlassPaint.paint.colorFilter = YunoGlass.saturation
+                backdropGlassPaint.paint.alpha = 255
+                canvas.drawPath(pagePath, backdropGlassPaint.paint)
+            }
+            backdrop?.draw(canvas, this, backdropRect, r, dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, pagePath)
+            canvas.restoreToCount(layer)
+        }
+        val a = (backdropDimMaxAlpha * p).roundToInt().coerceIn(0, 255)
+        canvas.drawColor((a shl 24) or backdropDimColor)
+    }
    
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -257,7 +303,9 @@ class AppsSearch(
 
             // Cards' own blur (flat: no lens bending, no saturation boost). 0 = no extra layer.
             if (prefs.appSearchCardsBgBlur > 0) {
-                backdrop?.draw(canvas, this, rect, radius, dp.dp(prefs.appSearchCardsBgBlur.toFloat()), 0f, 0f, cardPath)
+                val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+                val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+                backdrop?.draw(canvas, this, rect, radius, dp.dp(prefs.appSearchCardsBgBlur.toFloat()), amount, depth, cardPath)
             }
             canvas.drawPath(cardPath, fillPaint)
 
@@ -286,7 +334,9 @@ class AppsSearch(
         override fun draw(canvas: Canvas) {
             if (prefs.appSearchBarBlur > 0) {
                 rect.set(bounds)
-                backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), 0f, 0f)
+                val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+                val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+                backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), amount, depth)
             }
             super.draw(canvas)
         }
@@ -959,8 +1009,8 @@ class AppsSearch(
         }
 
         val progress = f.coerceIn(0f, 1f).let { if (isOpen) it else it * it }
-val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
-setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
+pageProgress = progress
+        invalidate()
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barY()
