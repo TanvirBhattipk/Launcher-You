@@ -113,16 +113,14 @@ class StateController(
 
     /** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
-        a = p
-        // Both wallpaper and Home blur over the first 40% of the swipe while Home stays visible
-        val blurP = smooth(p)
-        background.set(BackgroundController.Kind.APPS, blurP)
-        homeBlur(blurP)
-        home.alpha = 1f
-        // the drawer sheet comes up from the bottom edge over Home, fading in as it leaves it
-        apps.translationY = apps.height * (1f - p)
-        apps.alpha = smooth(p / 0.3f)
-    }
+    a = p
+    val blurP = p.coerceIn(0f, 1f)
+    background.set(BackgroundController.Kind.APPS, blurP)
+    home.alpha = 1f
+    homeBlur(blurP)
+    apps.translationY = apps.height * (1f - p)
+    apps.alpha = smooth(p / 0.3f)
+}
 
     private fun homeBlur(x: Float) {
         if (Build.VERSION.SDK_INT < 31) return
