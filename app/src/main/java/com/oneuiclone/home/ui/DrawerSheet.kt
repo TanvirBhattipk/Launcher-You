@@ -25,7 +25,6 @@ object DrawerInk {
 
     private var wallColor: Int? = null
 
-    /** Reads the wallpaper's main colour (the sheet is tinted with it, like Pixel's). Cheap; call when the sheet refreshes. */
     fun refreshWallpaper(c: Context) {
         wallColor = try {
             if (Build.VERSION.SDK_INT >= 27)
@@ -64,15 +63,7 @@ class DrawerSheetDrawable(
     private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
-    private val lensRect = RectF()
-    // the cards stacked behind the sheet (like the iOS sheet): narrower, peeking out above its top edge
-    private val stackPaths = Array(STACK_LAYERS) { Path() }
-    private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private companion object {
-        const val STACK_LAYERS = 1          // 2 = two cards behind
-        const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
-        const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
-    }
+    private val rect = RectF()
     private val sheetRect = RectF()
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
@@ -84,6 +75,15 @@ class DrawerSheetDrawable(
     /** The same live backdrop the App Search cards use: wallpaper + background tint, blurred, bent at the edge, saturated. */
     var backdrop: LiveBackdrop? = null
     private val lensRect = RectF()
+
+    // the cards stacked behind the sheet: narrower, peeking out above its top edge
+    private val stackPaths = Array(STACK_LAYERS) { Path() }
+    private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private companion object {
+        const val STACK_LAYERS = 1          // 2 = two cards behind
+        const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
+        const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
+    }
 
     init { refreshColors() }
 
@@ -118,6 +118,7 @@ class DrawerSheetDrawable(
                 b.right - dp.dp(STACK_INSET_DP) * n, b.bottom + r, r * (1f - 0.1f * n))
         }
         rimShader()
+    }
 
     override fun draw(canvas: Canvas) {
         // 2) the blur (Sheet Blur = strength; 0 = none). The wallpaper isn't drawn by the app at rest (the system
@@ -130,6 +131,7 @@ class DrawerSheetDrawable(
             canvas.drawPath(stackPaths[i], stackPaint)
         }
         canvas.restore()
+
         val h = host
         if (h != null && prefs.drawerSheetBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
@@ -164,6 +166,7 @@ class DrawerSheetDrawable(
     @Deprecated("Deprecated in Java")
     override fun getOpacity() = PixelFormat.TRANSLUCENT
 }
+
 /** A sheet outline with iOS-style continuous top corners; the sides and bottom run off the screen. */
 fun smoothTopPath(p: Path, l: Float, t: Float, r: Float, b: Float, rad: Float) {
     val e = 1.52866483f * rad
