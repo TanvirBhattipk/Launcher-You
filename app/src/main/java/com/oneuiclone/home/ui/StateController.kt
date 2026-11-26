@@ -171,9 +171,9 @@ fun setImmediate(target: State) {
         )
     }
 
-private val drawerStiffness = 380f                      // lower = slower
+private val drawerStiffness = 380f                      // higher = faster
     private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)      // closing: no bounce
-    private val drawerDampingOpen = 2f * 0.65f * kotlin.math.sqrt(drawerStiffness) // opening: overshoots a little at the top
+    private val drawerDampingOpen = 2f * 0.72f * kotlin.math.sqrt(drawerStiffness) // opening: overshoots a little at the top
     private var springTargetState: State? = null
     private var springTargetProgress = 0f
     private var springVel = 0f
@@ -181,7 +181,7 @@ private val drawerStiffness = 380f                      // lower = slower
     private var springLastMs = 0L
     private val springTick = Runnable { stepDrawerSpring() }
 
-private fun run(target: State, velocityPxPerSec: Float = 0f) {
+    private fun run(target: State, velocityPxPerSec: Float = 0f) {
         anim?.cancel()
         springAnim?.cancel()
         springRunning = false
