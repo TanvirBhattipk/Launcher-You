@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.view.View
 import android.view.WindowManager
+import androidx.core.graphics.ColorUtils
 import java.util.function.Consumer
 import kotlin.math.roundToInt
 
@@ -79,6 +80,7 @@ class BackgroundController(
 
     private fun isApps(k: Kind) = k == Kind.APPS || k == Kind.APPS_FOLDER
     private val SEARCH_TINT_RGB = 0x121212              // the drawer's tint
+    private val SEARCH_BASE_RGB = 0x121212             // the dim colour outside search
 
     private fun radiusOf(k: Kind): Float =
         if (isApps(k)) k.blurFactor * (appsRadiusPx + (searchRadiusPx - appsRadiusPx) * searchMix) else k.blurFactor * maxRadiusPx
@@ -129,6 +131,10 @@ class BackgroundController(
         val blur = p * factor(kind) + q * factor(from)
         // the App Search tint belongs to the search page itself: it must not follow the Home/Apps crossfade progress
         val dim = maxOf(p * dimOf(kind) + q * dimOf(from), searchMix * searchDim * 255f / 0xA6 * appsBlurScale)
+        // the App Search page darkens with the drawer's tint (light by day, dark at night) instead of a fixed near-black
+        scrim.dimRgb = ColorUtils.blendARGB(
+            0xFF000000.toInt() or SEARCH_BASE_RGB, 0xFF000000.toInt() or DrawerInk.sheetTint(activity), searchMix
+        ) and 0x00FFFFFF
         scrim.washColor = DrawerInk.wash(activity)
         scrim.washAlpha = p * washOf(kind) + q * washOf(from)
         if (wallpaper.available) {
