@@ -70,7 +70,10 @@ class BackgroundController(
             field = v
             searchAnim?.cancel()
             searchAnim = android.animation.ValueAnimator.ofFloat(searchMix, if (v) 1f else 0f).apply {
-                duration = 300
+                // leaving search: start fading at once (decelerate) and finish with the page; entering keeps its ease
+                duration = if (v) 300 else 200
+                interpolator = if (v) android.view.animation.AccelerateDecelerateInterpolator()
+                               else android.view.animation.DecelerateInterpolator(1.4f)
                 addUpdateListener { searchMix = it.animatedValue as Float; apply() }
                 start()
             }

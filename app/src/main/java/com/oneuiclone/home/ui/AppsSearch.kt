@@ -120,7 +120,11 @@ class AppsSearch(
         get() = 0x1F000000 or inkRgb
 
     private val searchBarFillColor: Int
-        get() = (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or backdropDimColor
+        get() {
+            val tint = DrawerInk.sheetTint(context) or 0xFF000000.toInt()
+            val lighter = androidx.core.graphics.ColorUtils.blendARGB(tint, 0xFFFFFFFF.toInt(), if (isNight()) 0.14f else 0.45f)
+            return (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or (lighter and 0x00FFFFFF)
+        }
         
     private val searchBarBorderColor: Int
         get() = YunoGlass.border(prefs.appSearchBorderOpacity)
@@ -133,7 +137,7 @@ class AppsSearch(
         get() {
             val tint = DrawerInk.sheetTint(context) or 0xFF000000.toInt()
             val shifted = androidx.core.graphics.ColorUtils.blendARGB(
-                tint, if (isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt(), 0.10f)
+                tint, 0xFF000000.toInt(), if (isNight()) 0.25f else 0.10f)
             val a = prefs.appSearchCardsBgOpacity.coerceIn(0, 100) * 255 / 100
             return (shifted and 0x00FFFFFF) or (a shl 24)
         }
@@ -251,18 +255,9 @@ class AppsSearch(
             cardPath.reset()
             cardPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
 
-            // Cards' own blur: live App Search background, blurred and bent at the edges. 0 = no extra layer.
+            // Cards' own blur (flat: no lens bending, no saturation boost). 0 = no extra layer.
             if (prefs.appSearchCardsBgBlur > 0) {
-                val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
-                val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
-                val live = backdrop?.draw(canvas, this, rect, radius, dp.dp(prefs.appSearchCardsBgBlur.toFloat()), amount, depth, cardPath) == true
-                val g = cardGlass
-                if (!live && g != null &&
-                    glassPaint.aimLens(g, toWindow.apply { reset(); transformMatrixToGlobal(this) }, rect, radius, amount, depth)) {
-                    glassPaint.paint.colorFilter = YunoGlass.saturation
-                    glassPaint.paint.alpha = 255
-                    canvas.drawPath(cardPath, glassPaint.paint)
-                }
+                backdrop?.draw(canvas, this, rect, radius, dp.dp(prefs.appSearchCardsBgBlur.toFloat()), 0f, 0f, cardPath)
             }
             canvas.drawPath(cardPath, fillPaint)
 
@@ -278,7 +273,6 @@ class AppsSearch(
                 strokePath.reset()
                 strokePath.addRoundRect(strokeRect, strokeRadii, android.graphics.Path.Direction.CW)
                 canvas.drawPath(strokePath, strokePaint)
-                rim.drawPath(canvas, strokePath, strokeRect, cr, strokePaint.strokeWidth, YunoGlass.rimPeak(prefs.appSearchCardsBorderOpacity))
             }
             super.onDraw(canvas)
         }
@@ -292,14 +286,9 @@ class AppsSearch(
         override fun draw(canvas: Canvas) {
             if (prefs.appSearchBarBlur > 0) {
                 rect.set(bounds)
-                val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
-                val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
-                backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), amount, depth)
+                backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), 0f, 0f)
             }
             super.draw(canvas)
-            val w = searchBarBorderWidth
-            rect.set(bounds); rect.inset(w / 2f, w / 2f)
-            rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
         }
     }
     fun refreshBackdrop() {
@@ -969,7 +958,7 @@ class AppsSearch(
             pill.layoutParams = lp
         }
 
-        val progress = f.coerceIn(0f, 1f)
+        val progress = f.coerceIn(0f, 1f).let { if (isOpen) it else it * it }
 val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
 setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
 
@@ -990,15 +979,7 @@ setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
         field.setHintTextColor(hintInk)
         clearBtn.setInk(primaryInk, isNight())
         mic.ink = secondaryInk
-        pill.elevation = dp.dp(24f)
-        pill.outlineAmbientShadowColor = 0x4D000000
-        pill.outlineSpotShadowColor = 0xA6000000.toInt()
-        pill.outlineProvider = object : android.view.ViewOutlineProvider() {
-            override fun getOutline(view: android.view.View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, pillBg.cornerRadius)
-                outline.alpha = 1f
-            }
-        }
+        pill.elevation = 0f
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
