@@ -133,26 +133,16 @@ class StateController(
 
 private fun run(target: State, velocityPxPerSec: Float = 0f) {
         val end = if (target == State.APPS) 1f else 0f
-        val range = apps.height.toFloat().coerceAtLeast(1f)
-        // Convert pixel/sec fling velocity into progress/sec (note: upward swipe is negative Y, positive progress)
-        val startVel = (-velocityPxPerSec / range).coerceIn(-6f, 6f)
+        val distance = kotlin.math.abs(end - a)
+        // Faster when flung quickly, capped between 160ms and 300ms
+        val speedFactor = (kotlin.math.abs(velocityPxPerSec) / 4000f).coerceIn(0f, 1f)
+        val durationMs = ((280f - 110f * speedFactor) * distance.coerceAtLeast(0.35f)).toLong().coerceIn(150L, 300L)
 
-        SpringAnimation(FloatValueHolder(a)).apply {
-            spring = SpringForce(end).apply {
-                // Higher stiffness = faster settle (380f–500f matches Pixel; 250f is slower/floatier)
-                stiffness = 420f
-                // 1f = critically damped (zero bounce); 0.92f = tiny soft settle
-                dampingRatio = 1f
-            }
-            setStartVelocity(startVel)
-            // Crucial: 0.002f minimum visible change prevents premature cutoff or micro-jitter at the end
-            minimumVisibleChange = 0.002f
-            addUpdateListener { _, value, _ ->
-                frame(value.coerceIn(0f, 1f))
-            }
-            addEndListener { _, canceled, _, _ ->
-                if (!canceled) settle(target, keepHome = target == State.APPS)
-            }
+        ValueAnimator.ofFloat(a, end).apply {
+            duration = durationMs
+            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            addUpdateListener { frame(it.animatedValue as Float) }
+            doOnEnd { settle(target, keepHome = target == State.APPS) }
             start()
         }
     }
