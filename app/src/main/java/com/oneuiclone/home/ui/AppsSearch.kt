@@ -141,10 +141,10 @@ class AppsSearch(
         get() = maxOf(1f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
         
     private val backdropDimColor: Int
-        get() = surfaceRgb
+        get() = DrawerInk.sheetTint(context) and 0x00FFFFFF      // the drawer sheet's tint: light by day, dark at night
 
     private val backdropDimMaxAlpha: Int
-        get() = 0   // the App Search background tint now comes from BackgroundController (searchDim)
+        get() = prefs.appSearchBgOpacity.coerceIn(0, 100) * 255 / 100   // App Search opacity slider
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -966,7 +966,7 @@ class AppsSearch(
 
         val progress = f.coerceIn(0f, 1f)
         val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
-        setBackgroundColor(android.graphics.Color.argb(dimAlpha, backdropDimColor, backdropDimColor, backdropDimColor))
+setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barY()
