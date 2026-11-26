@@ -108,10 +108,10 @@ class AppsSearch(
         get() = 0xFF000000.toInt() or inkRgb
 
     private val secondaryInk: Int
-        get() = 0xCC000000.toInt() or inkRgb
+        get() = primaryInk
 
     private val hintInk: Int
-        get() = 0x99000000.toInt() or inkRgb
+        get() = primaryInk
 
     private val dividerLineColor: Int
         get() = 0x26000000 or inkRgb
@@ -174,9 +174,9 @@ class AppsSearch(
     // Cards
     private val appsCard = GlassCard(context, flatBottom = false)
     private val appsRow = LinearLayout(context)
-    private val contactsCard = GlassCard(context, flatBottom = false, chrome = false)
+    private val contactsCard = GlassCard(context, flatBottom = false, surface = false)
     private val contactsListLayout = LinearLayout(context)
-    private val suggestionsCard = GlassCard(context, flatBottom = false, chrome = false)
+    private val suggestionsCard = GlassCard(context, flatBottom = false, surface = false)
     private val suggestionsListLayout = LinearLayout(context)
     private val mic = MicGlyph(context, secondaryInk)
     // iOS-style sections: the title (and "Show More") sits above each card
@@ -208,7 +208,7 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean, private val chrome: Boolean = true) : LinearLayout(ctx) {
+       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean, private val surface: Boolean = true) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
@@ -232,7 +232,6 @@ class AppsSearch(
         }
 
         override fun onDraw(canvas: Canvas) {
-            if (!chrome) { super.onDraw(canvas); return }          // no glass, fill or border
             val radius = dp.dp(20f)
             rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
@@ -258,9 +257,11 @@ class AppsSearch(
                     canvas.drawPath(cardPath, glassPaint.paint)
                 }
             }
-            canvas.drawPath(cardPath, fillPaint)
+            // Only the Apps card has a visible surface. Contacts and Suggestions remain
+            // transparent, but still receive the same live background blur.
+            if (surface) canvas.drawPath(cardPath, fillPaint)
 
-            if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
+            if (surface && strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
                 val inset = strokePaint.strokeWidth / 2f
                 val strokeRect = RectF(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
                 val cr = maxOf(0f, radius - inset)
@@ -627,10 +628,15 @@ class AppsSearch(
     }
 
     private fun reveal(v: View) {
-        if (opening) return
         v.animate().cancel()
         v.alpha = 0f
-        v.animate().alpha(1f).setDuration(FADE_MS).setInterpolator(Easing.BASIC).start()
+        v.translationY = dp.dp(5f)
+        v.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(if (opening) OPEN_MS else FADE_MS)
+            .setInterpolator(Easing.BASIC)
+            .start()
     }
 
     private fun showApps(list: List<AppInfo>) {
@@ -658,7 +664,8 @@ class AppsSearch(
                     isSingleLine = true
                     ellipsize = TextUtils.TruncateAt.END
                     gravity = Gravity.CENTER_HORIZONTAL
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    maxWidth = iconPx
+                }, LinearLayout.LayoutParams(iconPx, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp.dpi(5f)
                 })
             }
