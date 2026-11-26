@@ -641,7 +641,7 @@ class AppsSearch(
         v.animate()
             .alpha(1f)
             .translationY(0f)
-            .setDuration(if (opening) OPEN_MS else FADE_MS)
+            .setDuration(if (opening) 170L else FADE_MS)
             .setInterpolator(Easing.BASIC)
             .start()
     }
@@ -986,19 +986,13 @@ class AppsSearch(
         val progress = f.coerceIn(0f, 1f)
         if (progress <= 0f || width <= 0 || height <= 0) return
 
+        // Blur the live Home surface (icons/widgets included), not the wallpaper
+        // snapshot. LiveBackdrop captures the content behind this overlay; the
+        // translucent tint is drawn afterward so the Home screen remains visible.
         searchBackdropRect.set(0f, 0f, width.toFloat(), height.toFloat())
         if (prefs.drawerSheetBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
             val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
-            val glass = cardGlass ?: barGlass ?: if (::origin.isInitialized) origin.glass else null
-            if (glass != null && searchGlassPaint.aimLens(
-                    glass, searchToWindow.apply { reset(); transformMatrixToGlobal(this) },
-                    searchBackdropRect, 0f, amount, depth
-                )) {
-                searchGlassPaint.paint.colorFilter = YunoGlass.saturation
-                searchGlassPaint.paint.alpha = 255
-                canvas.drawRect(searchBackdropRect, searchGlassPaint.paint)
-            }
             backdrop?.draw(
                 canvas, this, searchBackdropRect, 0f,
                 dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth
@@ -1188,10 +1182,10 @@ class AppsSearch(
         const val OPEN_MS = 425L
         /** Left/right inset of the section titles; the rows under them use the same one. */
         private const val TITLE_INSET_DP = 6f
-        private const val OPEN_BAR_MS = 360L
+        private const val OPEN_BAR_MS = 230L
         private const val CLOSE_MS = 240L
         private const val BAR_SLIDE_DP = 36f
-        const val OPEN_RISE_DP = 48f
+        const val OPEN_RISE_DP = 28f
         private const val FADE_MS = 150L
         private const val KEYBOARD_RETRY_MS = 1500L
         private val R_ENTERABLE = com.oneuiclone.home.R.id.search_enterable
