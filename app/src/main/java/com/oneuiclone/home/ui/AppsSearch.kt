@@ -167,11 +167,11 @@ class AppsSearch(
     }
 
     // Cards
-    private val appsCard = GlassCard(context, flatBottom = false)
+    private val appsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val appsRow = LinearLayout(context)
-    private val contactsCard = GlassCard(context, flatBottom = false)
+    private val contactsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val contactsListLayout = LinearLayout(context)
-    private val suggestionsCard = GlassCard(context, flatBottom = false)
+    private val suggestionsCard = GlassCard(context, flatBottom = false, chrome = false)
     private val suggestionsListLayout = LinearLayout(context)
     private val mic = MicGlyph(context, secondaryInk)
     // iOS-style sections: the title (and "Show More") sits above each card
@@ -968,7 +968,7 @@ class AppsSearch(
         }
 
         val progress = f.coerceIn(0f, 1f)
-        val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
+val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
 setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
 
         pill.x = dp.searchBarSide.toFloat()
