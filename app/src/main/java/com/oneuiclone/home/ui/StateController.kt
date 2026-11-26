@@ -115,7 +115,7 @@ class StateController(
     private fun frame(p: Float) {
         a = p
         // Both wallpaper and Home blur over the first 40% of the swipe while Home stays visible
-        val blurP = smooth(p / 0.4f)
+        val blurP = smooth(p)
         background.set(BackgroundController.Kind.APPS, blurP)
         homeBlur(blurP)
         home.alpha = 1f
