@@ -83,8 +83,14 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
      * way the rest is animated from where it is.
      * @param velocity Samsung-px/ms, positive toward the target screen.
      */
-fun release(velocity: Float) {
+/**
+     * The swipe is let go: it goes through when it was a fling or went far enough (a fling back cancels it); either
+     * way the rest is animated from where it is.
+     * @param velocity Samsung-px/ms, positive toward the target screen.
+     */
+    fun release(velocity: Float) {
         dragging = false
+        // it takes a longer swipe than before and speed doesn't count: a quick flick that goes only a short way falls back
         val commit = f > COMMIT_AT && velocity > -1f
         f = 0f
         if (!visible && !commit) return                      // nothing was shown: nothing to undo
@@ -94,13 +100,13 @@ fun release(velocity: Float) {
 
     /** [duration] 0 or less: the drawer's own open/close; otherwise a crossfade over that long (search). */
     fun goTo(target: State, duration: Long = -1L) {
-        if (target == state && anim?.isRunning != true && !dragging) return
-        if (anim?.isRunning == true && (target == State.APPS) == toApps) return
+        if (target == state && anim?.isRunning != true && springAnim?.isRunning != true && !dragging) return
+        if ((anim?.isRunning == true || springAnim?.isRunning == true) && (target == State.APPS) == toApps) return
         onTransitionStart?.invoke(target == State.APPS)
         if (duration <= 0L) run(target) else fade(target, duration)
     }
 
-fun setImmediate(target: State) {
+    fun setImmediate(target: State) {
         anim?.cancel()
         springAnim?.cancel()
         toApps = target == State.APPS
@@ -112,7 +118,7 @@ fun setImmediate(target: State) {
         return t * t * (3f - 2f * t)
     }
 
-/** One frame of the open/close at [p] (0 Home … 1 Apps). */
+    /** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
         a = p
         // Steady linear blur across the full drag (0f -> 1f)
@@ -132,7 +138,7 @@ fun setImmediate(target: State) {
         home.setRenderEffect(if (r > 0.5f) RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP) else null)
     }
 
-private fun run(target: State, velocityPxPerSec: Float = 0f) {
+    private fun run(target: State, velocityPxPerSec: Float = 0f) {
         anim?.cancel()
         springAnim?.cancel()
         val end = if (target == State.APPS) 1f else 0f
@@ -156,9 +162,11 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
             start()
         }
     }
+
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
     private fun fade(target: State, duration: Long) {
         anim?.cancel()
+        springAnim?.cancel()
         toApps = target == State.APPS
         prepare()
         apps.translationY = 0f
@@ -192,13 +200,10 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
         if (!showApps) {
             homeBlur(0f)
             setScreen(home, true)
-        } else if (keepHome) {
+        } else {
             home.visibility = View.VISIBLE
             home.alpha = 1f
             homeBlur(1f)
-        } else {
-            homeBlur(0f)
-            setScreen(home, false)
         }
         a = if (showApps) 1f else 0f
         background.appsDimScale = 1f
@@ -209,13 +214,20 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
         onStateChanged?.invoke(state)
     }
 
-
     private fun setScreen(v: View, shown: Boolean) {
         v.scaleX = 1f; v.scaleY = 1f; v.translationY = 0f
         v.alpha = if (shown) 1f else 0f
         v.visibility = if (shown) View.VISIBLE else View.INVISIBLE
     }
 
+    private companion object {
+        const val OPEN_MS = 420L
+        /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
+        const val COMMIT_AT = 0.65f
+        /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */
+        const val QUICK_MS = 120L
+    }
+}
     private companion object {
         const val OPEN_MS = 420L
         /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
