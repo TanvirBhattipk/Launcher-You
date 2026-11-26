@@ -146,7 +146,14 @@ fun setImmediate(target: State) {
         homeBlur(r)
 
         // the sheet's top edge is exactly under the finger: it starts at the screen's bottom edge, no gap, no lag
-        apps.translationY = travel() * (1f - p)
+        if (p > 1f) {
+            apps.translationY = 0f
+            apps.pivotY = apps.height.toFloat()
+            apps.scaleY = 1f + (p - 1f)
+        } else {
+            apps.translationY = travel() * (1f - p)
+            apps.scaleY = 1f
+        }
         apps.alpha = 1f
     }
 
@@ -164,7 +171,9 @@ fun setImmediate(target: State) {
         )
     }
 
-private val drawerStiffness = 300f
+private val drawerStiffness = 500f                      // lower = slower
+    private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)      // closing: no bounce
+    private val drawerDampingOpen = 2f * 0.72f * kotlin.math.sqrt(drawerStiffness) // opening: overshoots a little at the top
     // critically damped: the sheet carries the finger's speed, glides in and stops dead at the top, no bounce past the edge
     private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)
     private var springTargetState: State? = null
@@ -182,6 +191,7 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
         prepare()
 
         springTargetState = target
+        state = target                                  // the swipe counts as done as soon as it's released
         springTargetProgress = if (target == State.APPS) 1f else 0f
         // velocity is positive toward the swipe's target; progress `a` rises when opening and falls when closing
         val dir = if (toApps) 1f else -1f
@@ -202,7 +212,8 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
         springLastMs = now
 
         val displacement = a - springTargetProgress
-        springVel += (-drawerStiffness * displacement - drawerDamping * springVel) * dt
+        val damp = if (targetState == State.APPS) drawerDampingOpen else drawerDamping
+        springVel += (-drawerStiffness * displacement - damp * springVel) * dt
         val nextA = a + springVel * dt
 
         if (kotlin.math.abs(springTargetProgress - nextA) < 0.004f && kotlin.math.abs(springVel) < 0.05f) {
@@ -214,7 +225,7 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
             return
         }
 
-        frame(nextA.coerceIn(0f, 1f))
+        frame(nextA.coerceIn(0f, 1.08f))                // past 1 = the overshoot at the top
         apps.postOnAnimation(springTick)
     }
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
@@ -279,7 +290,7 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
         /** Blur radius of Home's icons and widgets at full blur, in dp. */
         const val HOME_BLUR_DP = 14f
         /** How much of the sheet's colour washes over Home at full blur (0..1). */
-        const val HOME_WASH_ALPHA = 0.18f
+        const val HOME_WASH_ALPHA = 0f
         /** Share of the swipe after which the blur is complete. */
         const val BLUR_FULL_AT = 0.6f
         /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
