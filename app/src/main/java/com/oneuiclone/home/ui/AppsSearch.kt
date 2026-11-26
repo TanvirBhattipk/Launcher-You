@@ -151,6 +151,11 @@ class AppsSearch(
     private val backdropDimMaxAlpha: Int
         get() = prefs.appSearchBgOpacity.coerceIn(0, 100) * 255 / 100   // App Search opacity slider
 
+    private val searchBackdropRect = RectF()
+    private val searchBackdropPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val searchGlassPaint = GlassPaint()
+    private val searchToWindow = Matrix()
+
     private val field = EditText(context)
     private val pill = FrameLayout(context)
     private val pillBg = GradientDrawable()
@@ -307,6 +312,7 @@ class AppsSearch(
         }
     }
     fun refreshBackdrop() {
+        invalidate()
         pill.invalidate()
         appsCard.invalidate(); contactsCard.invalidate(); suggestionsCard.invalidate()
     }
@@ -367,6 +373,7 @@ class AppsSearch(
     }
 
     init {
+        setWillNotDraw(false)
         isClickable = true
         pill.background = GlassPill()
         field.apply {
@@ -970,6 +977,39 @@ class AppsSearch(
     /** Cards run down to the keyboard (or the gesture bar when there's no keyboard). */
     private fun contentBottom(): Int = maxOf(dp.insets.bottom, ime) + dp.dpi(8f)
 
+    /** Draw the App Search backdrop with the exact drawer-sheet tint and blur strength.
+     * The same `f` progress drives the search bar and this layer, so the tint/blur
+     * leave in lockstep with the rest of the closing transition.
+     */
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val progress = f.coerceIn(0f, 1f)
+        if (progress <= 0f || width <= 0 || height <= 0) return
+
+        searchBackdropRect.set(0f, 0f, width.toFloat(), height.toFloat())
+        if (prefs.drawerSheetBlur > 0) {
+            val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
+            val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
+            val glass = cardGlass ?: barGlass ?: if (::origin.isInitialized) origin.glass else null
+            if (glass != null && searchGlassPaint.aimLens(
+                    glass, searchToWindow.apply { reset(); transformMatrixToGlobal(this) },
+                    searchBackdropRect, 0f, amount, depth
+                )) {
+                searchGlassPaint.paint.colorFilter = YunoGlass.saturation
+                searchGlassPaint.paint.alpha = 255
+                canvas.drawRect(searchBackdropRect, searchGlassPaint.paint)
+            }
+            backdrop?.draw(
+                canvas, this, searchBackdropRect, 0f,
+                dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth
+            )
+        }
+
+        val alpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
+        searchBackdropPaint.color = (alpha shl 24) or backdropDimColor
+        canvas.drawRect(searchBackdropRect, searchBackdropPaint)
+    }
+
     private fun layoutPill() {
         if (!::origin.isInitialized) return
         val h = dp.searchBarHeight
@@ -980,8 +1020,7 @@ class AppsSearch(
         }
 
         val progress = f.coerceIn(0f, 1f)
-        val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
-setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
+        invalidate()
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barY()
@@ -1126,7 +1165,8 @@ setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
     private fun animateTo(to: Float, end: (() -> Unit)? = null) {
         anim?.cancel()
         anim = ValueAnimator.ofFloat(f, to).apply {
-            duration = ((if (to > f) OPEN_BAR_MS else CLOSE_MS) * abs(to - f)).toLong().coerceAtLeast(120L)
+            duration = if (to < f) CLOSE_MS else
+                ((OPEN_BAR_MS * abs(to - f)).toLong().coerceAtLeast(120L))
             interpolator = Easing.IME
             addUpdateListener { f = it.animatedValue as Float; layoutPill() }
             if (end != null) addListener(object : AnimatorListenerAdapter() {
