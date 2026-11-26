@@ -94,3 +94,4 @@ class StylePreview(private val activity: Activity) {
         val i = m.windowInsets.getInsets(WindowInsets.Type.systemBars())
         insets = Rect(i.left, i.top, i.right, i.bottom)
     }
+}
