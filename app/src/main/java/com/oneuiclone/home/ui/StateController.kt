@@ -11,6 +11,8 @@ import android.view.View
 import com.oneuiclone.home.motion.Easing
 import kotlin.math.abs
 import kotlin.math.max
+import android.view.animation.PathInterpolator
+import androidx.core.animation.doOnEnd
 
 /**
  * HOME ⇄ APPS: the wallpaper blurs while Home's icons and widgets stay as they are, and the drawer sheet (the suggested
