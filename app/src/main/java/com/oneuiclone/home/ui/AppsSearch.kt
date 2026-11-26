@@ -622,10 +622,9 @@ class AppsSearch(
     }
 
     private fun reveal(v: View) {
-        if (opening) return
         v.animate().cancel()
-        v.alpha = 0f
-        v.animate().alpha(1f).setDuration(FADE_MS).setInterpolator(Easing.BASIC).start()
+        v.alpha = 1f
+        v.translationY = 0f
     }
 
     private fun showApps(list: List<AppInfo>) {
