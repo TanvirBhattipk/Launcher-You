@@ -126,7 +126,8 @@ class BackgroundController(
         val p = progress
         val q = 1f - p
         val blur = p * factor(kind) + q * factor(from)
-        val dim = p * dimOf(kind) + q * dimOf(from)
+        // the App Search tint belongs to the search page itself: it must not follow the Home/Apps crossfade progress
+        val dim = maxOf(p * dimOf(kind) + q * dimOf(from), searchMix * searchDim * 255f / 0xA6 * appsBlurScale)
         scrim.washColor = DrawerInk.wash(activity)
         scrim.washAlpha = p * washOf(kind) + q * washOf(from)
         if (wallpaper.available) {
