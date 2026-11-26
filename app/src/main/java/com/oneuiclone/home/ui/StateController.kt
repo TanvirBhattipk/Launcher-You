@@ -3,6 +3,8 @@ package com.oneuiclone.home.ui
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.os.Build
@@ -30,6 +32,8 @@ class StateController(
     private val apps: View,
     private val background: BackgroundController,
     @Suppress("UNUSED_PARAMETER") private val transitionY: () -> Float,
+    /** Where the sheet's top edge sits inside the Apps view (DeviceProfile.sheetTop). Lets the sheet's edge follow the finger 1:1. */
+    private val sheetTop: () -> Float = { 0f },
 ) {
     enum class State { HOME, APPS }
 
@@ -82,7 +86,7 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
             visible = true
             prepare()
         }
-        val shown = (distancePx / max(1f, apps.height.toFloat())).coerceIn(0f, 1f)
+        val shown = (distancePx / travel()).coerceIn(0f, 1f)
         frame(if (toApps) shown else 1f - shown)
     }
     /**
@@ -122,29 +126,46 @@ fun setImmediate(target: State) {
         return t * t * (3f - 2f * t)
     }
 
-    /** One frame of the open/close at [p] (0 Home … 1 Apps). */
+    /** Distance the Apps view travels: the sheet's top edge goes from the screen's bottom edge to its resting place. */
+    private fun travel() = (apps.height - sheetTop()).coerceAtLeast(1f)
+
+    /** The blur / tint ramp: fast at the start (as on Pixel), full by [BLUR_FULL_AT] of the swipe. */
+    private fun ramp(p: Float): Float {
+        val x = (p / BLUR_FULL_AT).coerceIn(0f, 1f)
+        return 1f - (1f - x) * (1f - x)
+    }
+
+    /** One frame of the open/close at [p] (0 Home ... 1 Apps). */
     private fun frame(p: Float) {
         a = p
-        // Steady linear blur across the full drag (0f -> 1f)
-        val blurP = p.coerceIn(0f, 1f)
+        val r = ramp(p.coerceIn(0f, 1f))
         background.appsDimScale = 1f
-        background.set(BackgroundController.Kind.APPS, blurP)
+        background.set(BackgroundController.Kind.APPS, r)
         home.alpha = 1f
-        homeBlur(blurP)
+        homeBlur(r)
 
-        // Drawer rises from bottom immediately at full opacity without a delayed fade-in
-        apps.translationY = apps.height * (1f - p)
+        // the sheet's top edge is exactly under the finger: it starts at the screen's bottom edge, no gap, no lag
+        apps.translationY = travel() * (1f - p)
         apps.alpha = 1f
     }
 
+    /** Home's icons and widgets: blurred and washed with the sheet's colour as the sheet rises. */
     private fun homeBlur(x: Float) {
         if (Build.VERSION.SDK_INT < 31) return
-        val r = 28f * x
-        home.setRenderEffect(if (r > 0.5f) RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP) else null)
+        val r = home.resources.displayMetrics.density * HOME_BLUR_DP * x
+        if (r <= 0.5f) { home.setRenderEffect(null); return }
+        val blur = RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP)
+        val wash = DrawerInk.wash(home.context)
+        val alpha = (HOME_WASH_ALPHA * x * 255f).toInt().coerceIn(0, 255)
+        val tint = (wash and 0x00FFFFFF) or (alpha shl 24)
+        home.setRenderEffect(
+            RenderEffect.createColorFilterEffect(PorterDuffColorFilter(tint, PorterDuff.Mode.SRC_ATOP), blur)
+        )
     }
 
-private val drawerStiffness = 200f
-    private val drawerDamping = 2f * 0.8f * kotlin.math.sqrt(drawerStiffness)
+private val drawerStiffness = 300f
+    // critically damped: the sheet carries the finger's speed, glides in and stops dead at the top, no bounce past the edge
+    private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)
     private var springTargetState: State? = null
     private var springTargetProgress = 0f
     private var springVel = 0f
@@ -161,8 +182,9 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
 
         springTargetState = target
         springTargetProgress = if (target == State.APPS) 1f else 0f
-        val range = apps.height.toFloat().coerceAtLeast(1f)
-        springVel = (-velocityPxPerSec / range).coerceIn(-8f, 8f)
+        // velocity is positive toward the swipe's target; progress `a` rises when opening and falls when closing
+        val dir = if (toApps) 1f else -1f
+        springVel = (dir * velocityPxPerSec / travel()).coerceIn(-8f, 8f)
         springRunning = true
         springLastMs = android.view.animation.AnimationUtils.currentAnimationTimeMillis()
         apps.postOnAnimation(springTick)
@@ -253,6 +275,12 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
 
     private companion object {
         const val OPEN_MS = 420L
+        /** Blur radius of Home's icons and widgets at full blur, in dp. */
+        const val HOME_BLUR_DP = 14f
+        /** How much of the sheet's colour washes over Home at full blur (0..1). */
+        const val HOME_WASH_ALPHA = 0.18f
+        /** Share of the swipe after which the blur is complete. */
+        const val BLUR_FULL_AT = 0.6f
         /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
         const val COMMIT_AT = 0.65f
         /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */

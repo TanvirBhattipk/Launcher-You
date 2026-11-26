@@ -2,7 +2,11 @@ package com.oneuiclone.home.ui
 
 import android.content.Context
 import android.content.res.Configuration
+import android.app.WallpaperManager
 import android.graphics.Canvas
+import android.graphics.Color
+import android.os.Build
+import androidx.core.graphics.ColorUtils
 import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.Path
@@ -19,8 +23,26 @@ object DrawerInk {
     /** Labels and the "All apps" header sit on the sheet: dark text on the light sheet. */
     fun darkLabels(c: Context) = !isNight(c)
 
-    /** The sheet's tint (opaque): a frosted white by day, a deep navy at night, like the reference buttons. */
-    fun sheetTint(c: Context): Int = if (isNight(c)) 0x0212124 else 0xF2F2F6
+    private var wallColor: Int? = null
+
+    /** Reads the wallpaper's main colour (the sheet is tinted with it, like Pixel's). Cheap; call when the sheet refreshes. */
+    fun refreshWallpaper(c: Context) {
+        wallColor = try {
+            if (Build.VERSION.SDK_INT >= 27)
+                WallpaperManager.getInstance(c).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()
+            else null
+        } catch (e: Exception) { null }
+    }
+
+    /** The sheet's tint (RGB): the wallpaper's colour pushed far toward white by day / toward black at night. */
+    fun sheetTint(c: Context): Int {
+        val base = wallColor ?: return if (isNight(c)) 0x212124 else 0xF2F2F6
+        val to = if (isNight(c)) Color.BLACK else Color.WHITE
+        return ColorUtils.blendARGB(base, to, if (isNight(c)) 0.80f else 0.86f) and 0x00FFFFFF
+    }
+
+    /** The same colour, opaque: what Home is washed with while the sheet rises. */
+    fun wash(c: Context): Int = sheetTint(c) or 0xFF000000.toInt()
 
     fun handle(c: Context) = if (isNight(c)) 0x99FFFFFF.toInt() else 0xB30B1230.toInt()
     fun header(c: Context) = if (isNight(c)) 0xF2FFFFFF.toInt() else 0xD90B1230.toInt()
@@ -59,6 +81,7 @@ class DrawerSheetDrawable(
 
     /** Reads Sheet Opacity, Sheet Blur and the border settings again. */
     fun refreshColors() {
+        DrawerInk.refreshWallpaper(context)
         val a = (prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100)
         fill.color = (DrawerInk.sheetTint(context) and 0x00FFFFFF) or (a shl 24)
         handle.color = DrawerInk.handle(context)

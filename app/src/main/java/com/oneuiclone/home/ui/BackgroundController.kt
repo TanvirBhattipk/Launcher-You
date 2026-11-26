@@ -55,6 +55,11 @@ class BackgroundController(
     var appsDim = 0.4f
     /** 0 = the Apps screen's background blurs but is not darkened (the drawer sheet); 1 = darkened as set. */
     var appsDimScale = 1f
+
+    /** Pixel-style: the Apps screen's wallpaper is washed with the sheet's light colour (0..1 at full blur) instead of darkened. */
+    var appsWash = 0.22f
+    /** true = the Drawer background opacity setting darkens the Apps wallpaper again (the wash stays). */
+    var darkenApps = false
     var searchDim = 0.55f
 
     /** The search page is open: blends from the Drawer background settings (0) to the App Search ones (1). */
@@ -77,8 +82,11 @@ class BackgroundController(
     private fun radiusOf(k: Kind): Float =
         if (isApps(k)) k.blurFactor * (appsRadiusPx + (searchRadiusPx - appsRadiusPx) * searchMix) else k.blurFactor * maxRadiusPx
 
+    private fun washOf(k: Kind): Float =
+        if (isApps(k)) appsWash * (1f - searchMix) * appsBlurScale else 0f
+
     private fun dimOf(k: Kind): Float =
-        if (isApps(k)) (appsDim + (searchDim - appsDim) * searchMix) * 255f / 0xA6 * appsBlurScale * appsDimScale else k.dim
+        if (isApps(k)) ((if (darkenApps) appsDim else 0f) + (searchDim - (if (darkenApps) appsDim else 0f)) * searchMix) * 255f / 0xA6 * appsBlurScale * appsDimScale else k.dim
 
     private fun factor(k: Kind) = if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * appsBlurScale else k.blurFactor
 
@@ -87,6 +95,7 @@ class BackgroundController(
     private var lastRadius = -1
 
     fun attach() {
+        DrawerInk.refreshWallpaper(activity)
         wm.addCrossWindowBlurEnabledListener(listener)
         android.util.Log.i("OneUiHome", "cross-window blur enabled=" + wm.isCrossWindowBlurEnabled)
     }
@@ -118,6 +127,8 @@ class BackgroundController(
         val q = 1f - p
         val blur = p * factor(kind) + q * factor(from)
         val dim = p * dimOf(kind) + q * dimOf(from)
+        scrim.washColor = DrawerInk.wash(activity)
+        scrim.washAlpha = p * washOf(kind) + q * washOf(from)
         if (wallpaper.available) {
             // launcher-drawn wallpaper: exact One UI pipeline (blur + colour curve), dim on top
             if (lastRadius != 0) { activity.window.setBackgroundBlurRadius(0); lastRadius = 0 }
@@ -151,6 +162,9 @@ class BackgroundController(
 class ScrimView(context: Context) : View(context) {
     var curveAlpha = 0f
     var dimAlpha = 0f
+    /** The light wash over the blurred wallpaper (the sheet's colour). */
+    var washColor = 0xFFF2F2F6.toInt()
+    var washAlpha = 0f
 
     private val frostedNoisePaint by lazy {
         val size = 128
@@ -167,10 +181,11 @@ class ScrimView(context: Context) : View(context) {
 
         override fun onDraw(canvas: Canvas) {
         if (curveAlpha > 0f) canvas.drawColor(((curveAlpha * 255).roundToInt() shl 24) or 0xA5A5A5)
+        if (washAlpha > 0f) canvas.drawColor(((washAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24) or (washColor and 0x00FFFFFF))
         if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24) or 0x121212)
         
         // Add Acrylic Frost Texture
-        val progress = maxOf(curveAlpha.coerceAtMost(1f), dimAlpha.coerceAtMost(1f))
+        val progress = maxOf(curveAlpha.coerceAtMost(1f), dimAlpha.coerceAtMost(1f), washAlpha.coerceAtMost(1f))
         if (progress > 0.01f) {
             Acrylic.noise.alpha = (255 * progress).toInt()
             canvas.drawPaint(Acrylic.noise)
