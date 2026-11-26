@@ -64,14 +64,6 @@ class DrawerSheetDrawable(
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
-        // the cards stacked behind the sheet: narrower, peeking out above its top edge
-    private val stackPaths = Array(STACK_LAYERS) { Path() }
-    private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private companion object {
-        const val STACK_LAYERS = 0       // 2 = two cards behind
-        const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
-        const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
-    }
     private val sheetRect = RectF()
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
@@ -83,6 +75,16 @@ class DrawerSheetDrawable(
     /** The same live backdrop the App Search cards use: wallpaper + background tint, blurred, bent at the edge, saturated. */
     var backdrop: LiveBackdrop? = null
     private val lensRect = RectF()
+
+    // the cards stacked behind the sheet: narrower, peeking out above its top edge
+    private val stackPaths = Array(STACK_LAYERS) { Path() }
+    private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private companion object {
+        const val STACK_LAYERS = 1          // 2 = two cards behind
+        const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
+        const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
+    }
+
     init { refreshColors() }
 
     /** Reads Sheet Opacity, Sheet Blur and the border settings again. */
@@ -91,6 +93,7 @@ class DrawerSheetDrawable(
         val a = (prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100)
         fill.color = (DrawerInk.sheetTint(context) and 0x00FFFFFF) or (a shl 24)
         handle.color = DrawerInk.handle(context)
+        stackPaint.color = (DrawerInk.sheetTint(context) and 0x00FFFFFF) or (0x99 shl 24)
         rim.strokeWidth = maxOf(1f, dp.dp(prefs.drawerSheetBorderSize / 10f))
         rimShader()
         invalidateSelf()
@@ -121,6 +124,14 @@ class DrawerSheetDrawable(
         // 2) the blur (Sheet Blur = strength; 0 = none). The wallpaper isn't drawn by the app at rest (the system
         //    wallpaper shows through the window), so the live backdrop can't blur it: first the pre-blurred
         //    wallpaper copy, then Home's icons and widgets blurred live on top of it.
+        canvas.save()
+        canvas.clipOutPath(path)                        // only the parts peeking out around the sheet
+        for (i in stackPaths.indices.reversed()) {
+            stackPaint.alpha = 0x99 - i * 0x30          // the further back, the fainter
+            canvas.drawPath(stackPaths[i], stackPaint)
+        }
+        canvas.restore()
+
         val h = host
         if (h != null && prefs.drawerSheetBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
