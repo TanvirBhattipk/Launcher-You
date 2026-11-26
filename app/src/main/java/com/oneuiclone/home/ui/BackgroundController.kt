@@ -57,9 +57,9 @@ class BackgroundController(
     var appsDimScale = 1f
 
     /** Pixel-style: the Apps screen's wallpaper is washed with the sheet's light colour (0..1 at full blur) instead of darkened. */
-    var appsWash = 0.22f
+    var appsWash = 0f
     /** true = the Drawer background opacity setting darkens the Apps wallpaper again (the wash stays). */
-    var darkenApps = false
+    var darkenApps = true
     var searchDim = 0.55f
 
     /** The search page is open: blends from the Drawer background settings (0) to the App Search ones (1). */
