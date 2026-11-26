@@ -118,7 +118,7 @@ class DeviceProfile(
     // The App drawer is a bottom sheet (Pixel style): rounded top corners, a drag handle, the suggested row, an
     // "All apps" header and the grid. It has no search bar; the search bar values above are still used by the search page.
     /** Top edge of the sheet: ~12.3 % down the screen, never closer than a little under the status bar. */
-    val sheetTop = maxOf(insets.top + dpi(10f), (heightPx * 0.08f).roundToInt())
+    val sheetTop = maxOf(insets.top + dpi(6f), (heightPx * 0.08f).roundToInt())
     /** Radius of the sheet's two top corners. */
     val sheetRadius = dp(36f)
     val sheetHandleWidth = dp(32f)
