@@ -64,6 +64,7 @@ class DrawerSheetDrawable(
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
     private val rect = RectF()
+    const val STACK_LAYERS = 0
     private val sheetRect = RectF()
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
