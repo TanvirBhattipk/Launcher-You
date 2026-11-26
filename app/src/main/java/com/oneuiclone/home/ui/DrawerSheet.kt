@@ -80,7 +80,7 @@ class DrawerSheetDrawable(
     private val stackPaths = Array(STACK_LAYERS) { Path() }
     private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private companion object {
-        const val STACK_LAYERS = 1          // 2 = two cards behind
+        const val STACK_LAYERS = 0          // 2 = two cards behind
         const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
         const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
     }
