@@ -136,7 +136,7 @@ class BackgroundController(
         val dim = maxOf(p * dimOf(kind) + q * dimOf(from), searchMix * searchDim * 255f / 0xA6 * appsBlurScale)
         // the App Search page darkens with the drawer's tint (light by day, dark at night) instead of a fixed near-black
         scrim.dimRgb = ColorUtils.blendARGB(
-            0xFF000000.toInt() or SEARCH_BASE_RGB, 0xFF000000.toInt() or DrawerInk.sheetTint(activity), searchMix
+            0xFF000000.toInt() or SEARCH_BASE_RGB, SearchInk.page(activity), searchMix
         ) and 0x00FFFFFF
         scrim.washColor = DrawerInk.wash(activity)
         scrim.washAlpha = p * washOf(kind) + q * washOf(from)

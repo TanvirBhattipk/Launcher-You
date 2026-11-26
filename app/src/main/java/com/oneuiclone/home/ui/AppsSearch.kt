@@ -119,14 +119,9 @@ class AppsSearch(
     private val rippleColor: Int
         get() = 0x1F000000 or inkRgb
 
-    /** Search bar: the primary container (the more colourful one); alpha still from the bar's own opacity. */
+    /** Search bar: the same shade surface colour as the card; alpha still from the bar's own opacity. */
     private val searchBarFillColor: Int
-        get() {
-            val base = dynamicContainer(secondary = false)
-                ?: androidx.core.graphics.ColorUtils.blendARGB(
-                    DrawerInk.sheetTint(context) or 0xFF000000.toInt(), 0xFFFFFFFF.toInt(), if (isNight()) 0.14f else 0.45f)
-            return (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or (base and 0x00FFFFFF)
-        }
+        get() = (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or (SearchInk.surface(context) and 0x00FFFFFF)
 
     private val searchBarBorderColor: Int
         get() = YunoGlass.border(prefs.appSearchBorderOpacity)
@@ -135,27 +130,11 @@ class AppsSearch(
     private val searchBarBorderWidth: Float
         get() = maxOf(1f, dp.dp(prefs.appSearchBorderSize / 10f))
         
-    /** Material You (Android 12+): a tonal container colour from the wallpaper palette; null before Android 12. */
-    private fun dynamicContainer(secondary: Boolean): Int? {
-        if (android.os.Build.VERSION.SDK_INT < 31) return null
-        return try {
-            val id = if (secondary) {
-                if (isNight()) android.R.color.system_accent2_700 else android.R.color.system_accent2_100
-            } else {
-                if (isNight()) android.R.color.system_accent1_700 else android.R.color.system_accent1_100
-            }
-            context.getColor(id) or 0xFF000000.toInt()
-        } catch (_: Exception) { null }
-    }
-
-    /** Top Hits card: the secondary container; alpha = Cards "Background Opacity". Falls back to the darker tint. */
+    /** Top Hits card: the notification-shade surface colour; alpha = Cards "Background Opacity". */
     private val cardFillColor: Int
         get() {
-            val base = dynamicContainer(secondary = true)
-                ?: androidx.core.graphics.ColorUtils.blendARGB(
-                    DrawerInk.sheetTint(context) or 0xFF000000.toInt(), 0xFF000000.toInt(), if (isNight()) 0.25f else 0.10f)
             val a = prefs.appSearchCardsBgOpacity.coerceIn(0, 100) * 255 / 100
-            return (base and 0x00FFFFFF) or (a shl 24)
+            return (SearchInk.surface(context) and 0x00FFFFFF) or (a shl 24)
         }
 
     private val cardBorderColor: Int
@@ -165,7 +144,7 @@ class AppsSearch(
         get() = maxOf(1f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
         
     private val backdropDimColor: Int
-        get() = DrawerInk.sheetTint(context) and 0x00FFFFFF
+        get() = SearchInk.page(context) and 0x00FFFFFF      // the shade's background colour
 
     private val backdropDimMaxAlpha: Int
         get() = prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100   // same as the drawer sheet
@@ -1321,4 +1300,33 @@ pageProgress = progress
             canvas.drawText(letters, r, r - (fm.ascent + fm.descent) / 2f, paint)
         }
     }
+}
+
+
+/**
+ * App Search colours, taken from the notification shade: the page is the shade's background (a mid-light wash by day,
+ * deep navy at night) and the search bar and Top Hits card are the notification surface (lighter than the page by day,
+ * darker at night). Material You palette on Android 12+, the drawer tint otherwise.
+ */
+object SearchInk {
+    private fun isNight(c: Context) =
+        (c.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+    private fun palette(c: Context, id: Int): Int? {
+        if (android.os.Build.VERSION.SDK_INT < 31) return null
+        return try { c.getColor(id) or 0xFF000000.toInt() } catch (_: Exception) { null }
+    }
+
+    /** The page behind the search (App Search tint). */
+    fun page(c: Context): Int =
+        palette(c, if (isNight(c)) android.R.color.system_accent1_900 else android.R.color.system_accent1_200)
+            ?: (DrawerInk.sheetTint(c) or 0xFF000000.toInt())
+
+    /** The search bar and the Top Hits card (the notification colour). */
+    fun surface(c: Context): Int =
+        palette(c, if (isNight(c)) android.R.color.system_neutral1_900 else android.R.color.system_neutral1_50)
+            ?: androidx.core.graphics.ColorUtils.blendARGB(
+                DrawerInk.sheetTint(c) or 0xFF000000.toInt(),
+                if (isNight(c)) 0xFF000000.toInt() else 0xFFFFFFFF.toInt(),
+                if (isNight(c)) 0.40f else 0.50f)
 }
