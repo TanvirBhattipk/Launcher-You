@@ -111,16 +111,19 @@ class StateController(
         return t * t * (3f - 2f * t)
     }
 
-    /** One frame of the open/close at [p] (0 Home … 1 Apps). */
+/** One frame of the open/close at [p] (0 Home … 1 Apps). */
     private fun frame(p: Float) {
-    a = p
-    val blurP = p.coerceIn(0f, 1f)
-    background.set(BackgroundController.Kind.APPS, blurP)
-    home.alpha = 1f
-    homeBlur(blurP)
-    apps.translationY = apps.height * (1f - p)
-    apps.alpha = smooth(p / 0.3f)
-}
+        a = p
+        // Steady linear blur across the full drag (0f -> 1f)
+        val blurP = p.coerceIn(0f, 1f)
+        background.set(BackgroundController.Kind.APPS, blurP)
+        home.alpha = 1f
+        homeBlur(blurP)
+
+        // Drawer rises from bottom and fades in more gradually over the drag
+        apps.translationY = apps.height * (1f - p)
+        apps.alpha = smooth(((p - 0.12f) / 0.68f).coerceIn(0f, 1f))
+    }
 
     private fun homeBlur(x: Float) {
         if (Build.VERSION.SDK_INT < 31) return
@@ -128,25 +131,31 @@ class StateController(
         home.setRenderEffect(if (r > 0.5f) RenderEffect.createBlurEffect(r, r, Shader.TileMode.CLAMP) else null)
     }
 
-    /** Finishes the open/close at [target] from wherever it is. */
-    private fun run(target: State) {
-        anim?.cancel()
-        toApps = target == State.APPS
-        prepare()
-        val end = if (toApps) 1f else 0f
-        anim = ValueAnimator.ofFloat(a, end).apply {
-            duration = max(140L, (OPEN_MS * abs(end - a)).toLong())
-            interpolator = Easing.CUBIC_OUT
-            addUpdateListener { frame(it.animatedValue as Float) }
-            addListener(object : AnimatorListenerAdapter() {
-                var cancelled = false
-                override fun onAnimationCancel(animation: Animator) { cancelled = true }
-                override fun onAnimationEnd(animation: Animator) { if (!cancelled) settle(target, keepHome = true) }
-            })
+private fun run(target: State, velocityPxPerSec: Float = 0f) {
+        val end = if (target == State.APPS) 1f else 0f
+        val range = apps.height.toFloat().coerceAtLeast(1f)
+        // Convert pixel/sec fling velocity into progress/sec (note: upward swipe is negative Y, positive progress)
+        val startVel = (-velocityPxPerSec / range).coerceIn(-6f, 6f)
+
+        SpringAnimation(FloatValueHolder(a)).apply {
+            spring = SpringForce(end).apply {
+                // Higher stiffness = faster settle (380f–500f matches Pixel; 250f is slower/floatier)
+                stiffness = 420f
+                // 1f = critically damped (zero bounce); 0.92f = tiny soft settle
+                dampingRatio = 1f
+            }
+            setStartVelocity(startVel)
+            // Crucial: 0.002f minimum visible change prevents premature cutoff or micro-jitter at the end
+            minimumVisibleChange = 0.002f
+            addUpdateListener { _, value, _ ->
+                frame(value.coerceIn(0f, 1f))
+            }
+            addEndListener { _, canceled, _, _ ->
+                if (!canceled) settle(target, keepHome = target == State.APPS)
+            }
             start()
         }
     }
-
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
     private fun fade(target: State, duration: Long) {
         anim?.cancel()
