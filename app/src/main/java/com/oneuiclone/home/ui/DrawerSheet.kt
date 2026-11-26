@@ -64,7 +64,15 @@ class DrawerSheetDrawable(
     private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
     private val path = Path()
-    private val rect = RectF()
+    private val lensRect = RectF()
+    // the cards stacked behind the sheet (like the iOS sheet): narrower, peeking out above its top edge
+    private val stackPaths = Array(STACK_LAYERS) { Path() }
+    private val stackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private companion object {
+        const val STACK_LAYERS = 1          // 2 = two cards behind
+        const val STACK_INSET_DP = 14f      // how much narrower each card is, per side
+        const val STACK_PEEK_DP = 9f        // how far each card peeks out above the one in front
+    }
     private val sheetRect = RectF()
     private val glassPaint = GlassPaint()
     private val toWindow = android.graphics.Matrix()
@@ -85,6 +93,7 @@ class DrawerSheetDrawable(
         val a = (prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100)
         fill.color = (DrawerInk.sheetTint(context) and 0x00FFFFFF) or (a shl 24)
         handle.color = DrawerInk.handle(context)
+        stackPaint.color = (DrawerInk.sheetTint(context) and 0x00FFFFFF) or (0x99 shl 24)
         rim.strokeWidth = maxOf(1f, dp.dp(prefs.drawerSheetBorderSize / 10f))
         rimShader()
         invalidateSelf()
@@ -101,17 +110,26 @@ class DrawerSheetDrawable(
     override fun onBoundsChange(b: android.graphics.Rect) {
         val r = dp.sheetRadius
         val top = b.top + dp.sheetTop.toFloat()
-        path.reset()
-        // rounded on the top two corners only; the sides and bottom run off the screen
-        rect.set(b.left.toFloat(), top, b.right.toFloat(), b.bottom + r)
-        path.addRoundRect(rect, floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f), Path.Direction.CW)
+        smoothTopPath(path, b.left.toFloat(), top, b.right.toFloat(), b.bottom + r, r)
+        for (i in stackPaths.indices) {
+            val n = i + 1
+            smoothTopPath(stackPaths[i],
+                b.left + dp.dp(STACK_INSET_DP) * n, top - dp.dp(STACK_PEEK_DP) * n,
+                b.right - dp.dp(STACK_INSET_DP) * n, b.bottom + r, r * (1f - 0.1f * n))
+        }
         rimShader()
-    }
 
     override fun draw(canvas: Canvas) {
         // 2) the blur (Sheet Blur = strength; 0 = none). The wallpaper isn't drawn by the app at rest (the system
         //    wallpaper shows through the window), so the live backdrop can't blur it: first the pre-blurred
         //    wallpaper copy, then Home's icons and widgets blurred live on top of it.
+        canvas.save()
+        canvas.clipOutPath(path)                        // only the parts peeking out around the sheet
+        for (i in stackPaths.indices.reversed()) {
+            stackPaint.alpha = 0x99 - i * 0x30          // the further back, the fainter
+            canvas.drawPath(stackPaths[i], stackPaint)
+        }
+        canvas.restore()
         val h = host
         if (h != null && prefs.drawerSheetBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
@@ -145,4 +163,20 @@ class DrawerSheetDrawable(
     override fun setColorFilter(colorFilter: ColorFilter?) {}
     @Deprecated("Deprecated in Java")
     override fun getOpacity() = PixelFormat.TRANSLUCENT
+}
+/** A sheet outline with iOS-style continuous top corners; the sides and bottom run off the screen. */
+fun smoothTopPath(p: Path, l: Float, t: Float, r: Float, b: Float, rad: Float) {
+    val e = 1.52866483f * rad
+    p.reset()
+    p.moveTo(l, b)
+    p.lineTo(l, t + e)
+    p.cubicTo(l, t + 1.08849296f * rad, l, t + 0.86840694f * rad, l + 0.07491461f * rad, t + 0.63149379f * rad)
+    p.cubicTo(l + 0.16905956f * rad, t + 0.37282383f * rad, l + 0.37282383f * rad, t + 0.16905956f * rad, l + 0.63149379f * rad, t + 0.07491461f * rad)
+    p.cubicTo(l + 0.86840694f * rad, t, l + 1.08849296f * rad, t, l + e, t)
+    p.lineTo(r - e, t)
+    p.cubicTo(r - 1.08849296f * rad, t, r - 0.86840694f * rad, t, r - 0.63149379f * rad, t + 0.07491461f * rad)
+    p.cubicTo(r - 0.37282383f * rad, t + 0.16905956f * rad, r - 0.16905956f * rad, t + 0.37282383f * rad, r - 0.07491461f * rad, t + 0.63149379f * rad)
+    p.cubicTo(r, t + 0.86840694f * rad, r, t + 1.08849296f * rad, r, t + e)
+    p.lineTo(r, b)
+    p.close()
 }
