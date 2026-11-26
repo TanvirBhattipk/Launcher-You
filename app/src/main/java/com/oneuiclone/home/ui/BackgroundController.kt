@@ -78,6 +78,7 @@ class BackgroundController(
     private var searchAnim: android.animation.ValueAnimator? = null
 
     private fun isApps(k: Kind) = k == Kind.APPS || k == Kind.APPS_FOLDER
+    private val SEARCH_TINT_RGB = 0x121212              // the drawer's tint
 
     private fun radiusOf(k: Kind): Float =
         if (isApps(k)) k.blurFactor * (appsRadiusPx + (searchRadiusPx - appsRadiusPx) * searchMix) else k.blurFactor * maxRadiusPx
@@ -166,6 +167,7 @@ class ScrimView(context: Context) : View(context) {
     /** The light wash over the blurred wallpaper (the sheet's colour). */
     var washColor = 0xFFF2F2F6.toInt()
     var washAlpha = 0f
+    var dimRgb = 0x121212
 
     private val frostedNoisePaint by lazy {
         val size = 128
@@ -183,7 +185,7 @@ class ScrimView(context: Context) : View(context) {
         override fun onDraw(canvas: Canvas) {
         if (curveAlpha > 0f) canvas.drawColor(((curveAlpha * 255).roundToInt() shl 24) or 0xA5A5A5)
         if (washAlpha > 0f) canvas.drawColor(((washAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24) or (washColor and 0x00FFFFFF))
-        if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24) or 0x121212)
+        if (dimAlpha > 0f) canvas.drawColor(((dimAlpha.coerceAtMost(1f) * 255).roundToInt() shl 24) or dimRgb)
         
         // Add Acrylic Frost Texture
         val progress = maxOf(curveAlpha.coerceAtMost(1f), dimAlpha.coerceAtMost(1f), washAlpha.coerceAtMost(1f))
