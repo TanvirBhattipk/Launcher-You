@@ -38,6 +38,7 @@ class StateController(
     var onTransitionStart: ((toApps: Boolean) -> Unit)? = null
 
     private var anim: ValueAnimator? = null
+    private var springAnim: SpringAnimation? = null
     /** How far the Apps screen is open: 0 = Home, 1 = Apps. */
     private var a = 0f
     /** Progress of the swipe in hand, 0…1 toward its target. */
@@ -47,7 +48,7 @@ class StateController(
     /** The swipe in hand has begun to show (it wasn't just a quick flick that went nowhere). */
     private var visible = false
     private var dragStartMs = 0L
-    val isTransitioning get() = anim?.isRunning == true || dragging
+val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == true || dragging
 
     private fun prepare() {
         apps.visibility = View.VISIBLE
@@ -59,14 +60,8 @@ class StateController(
     /** A swipe starts. */
     fun begin(towardApps: Boolean) {
         anim?.cancel()
+        springAnim?.cancel()
         toApps = towardApps
-        dragging = true
-        visible = false
-        dragStartMs = SystemClock.uptimeMillis()
-        f = 0f
-        onTransitionStart?.invoke(towardApps)
-    }
-
     /**
      * The finger moves: [progress] (0…1 of the swipe's distance) is what decides on release, while the screens follow
      * the finger itself, [distancePx] from where it went down, exactly.
@@ -88,13 +83,13 @@ class StateController(
      * way the rest is animated from where it is.
      * @param velocity Samsung-px/ms, positive toward the target screen.
      */
-    fun release(velocity: Float) {
+fun release(velocity: Float) {
         dragging = false
-        // it takes a longer swipe than before and speed doesn't count: a quick flick that goes only a short way falls back
         val commit = f > COMMIT_AT && velocity > -1f
         f = 0f
         if (!visible && !commit) return                      // nothing was shown: nothing to undo
-        run(if (commit) (if (toApps) State.APPS else State.HOME) else state)
+        val targetState = if (commit) (if (toApps) State.APPS else State.HOME) else state
+        run(targetState, velocityPxPerSec = velocity * 1000f)
     }
 
     /** [duration] 0 or less: the drawer's own open/close; otherwise a crossfade over that long (search). */
@@ -105,8 +100,9 @@ class StateController(
         if (duration <= 0L) run(target) else fade(target, duration)
     }
 
-    fun setImmediate(target: State) {
+fun setImmediate(target: State) {
         anim?.cancel()
+        springAnim?.cancel()
         toApps = target == State.APPS
         settle(target)
     }
@@ -125,9 +121,9 @@ class StateController(
         home.alpha = 1f
         homeBlur(blurP)
 
-        // Drawer rises from bottom and fades in more gradually over the drag
+        // Drawer rises from bottom immediately at full opacity without a delayed fade-in
         apps.translationY = apps.height * (1f - p)
-        apps.alpha = smooth(((p - 0.12f) / 0.68f).coerceIn(0f, 1f))
+        apps.alpha = 1f
     }
 
     private fun homeBlur(x: Float) {
@@ -137,11 +133,13 @@ class StateController(
     }
 
 private fun run(target: State, velocityPxPerSec: Float = 0f) {
+        anim?.cancel()
+        springAnim?.cancel()
         val end = if (target == State.APPS) 1f else 0f
         val range = apps.height.toFloat().coerceAtLeast(1f)
-        val startVel = (-velocityPxPerSec / range).coerceIn(-6f, 6f)
+        val startVel = (-velocityPxPerSec / range).coerceIn(-8f, 8f)
 
-        SpringAnimation(FloatValueHolder(a)).apply {
+        springAnim = SpringAnimation(FloatValueHolder(a)).apply {
             spring = SpringForce(end).apply {
                 stiffness = 420f
                 dampingRatio = 1f
@@ -152,6 +150,7 @@ private fun run(target: State, velocityPxPerSec: Float = 0f) {
                 frame(value.coerceIn(0f, 1f))
             }
             addEndListener { _, canceled, _, _ ->
+                springAnim = null
                 if (!canceled) settle(target, keepHome = target == State.APPS)
             }
             start()
