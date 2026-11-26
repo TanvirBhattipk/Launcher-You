@@ -100,24 +100,26 @@ class AppsSearch(
         return ((p.coerceIn(0, 100) / 100f) * 255f).roundToInt().coerceIn(0, 255)
     }
 
-    // Text: #212124 by day, #F1F1F4 at night
-    private val inkRgb: Int
-        get() = if (isNight()) 0xF1F1F4 else 0x212124
+    // Always use dark mode settings for surface (0x00)
+    private val surfaceRgb: Int
+        get() = 0x00
 
+    // Always use white borders (0xFF)
+    private val borderRgb: Int
+        get() = 0xFF 
+
+    // Always use white text (0xFFFFFFFF)
     private val primaryInk: Int
-        get() = 0xFF000000.toInt() or inkRgb
+        get() = 0xFFFFFFFF.toInt()
 
     private val secondaryInk: Int
-        get() = primaryInk
+        get() = 0xCCFFFFFF.toInt()
 
     private val hintInk: Int
-        get() = primaryInk
+        get() = 0x99FFFFFF.toInt()
 
     private val dividerLineColor: Int
-        get() = 0x26000000 or inkRgb
-
-    private val rippleColor: Int
-        get() = 0x1F000000 or inkRgb
+        get() = 0x33FFFFFF.toInt()
 
     private val searchBarFillColor: Int
         get() = YunoGlass.barFill(prefs.appSearchBarOpacity)
@@ -129,15 +131,8 @@ class AppsSearch(
     private val searchBarBorderWidth: Float
         get() = maxOf(1f, dp.dp(prefs.appSearchBorderSize / 10f))
         
-    /** The drawer's tint, nudged slightly darker by day / lighter at night; alpha = Cards "Background Opacity". */
     private val cardFillColor: Int
-        get() {
-            val tint = DrawerInk.sheetTint(context) or 0xFF000000.toInt()
-            val shifted = androidx.core.graphics.ColorUtils.blendARGB(
-                tint, if (isNight()) 0xFFFFFFFF.toInt() else 0xFF000000.toInt(), 0.10f)
-            val a = prefs.appSearchCardsBgOpacity.coerceIn(0, 100) * 255 / 100
-            return (shifted and 0x00FFFFFF) or (a shl 24)
-        }
+        get() = YunoGlass.fill(false, prefs.appSearchCardsBgOpacity)
 
     private val cardBorderColor: Int
      get() = YunoGlass.border(prefs.appSearchCardsBorderOpacity)
@@ -150,11 +145,6 @@ class AppsSearch(
 
     private val backdropDimMaxAlpha: Int
         get() = prefs.appSearchBgOpacity.coerceIn(0, 100) * 255 / 100   // App Search opacity slider
-
-    private val searchBackdropRect = RectF()
-    private val searchBackdropPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val searchGlassPaint = GlassPaint()
-    private val searchToWindow = Matrix()
 
     private val field = EditText(context)
     private val pill = FrameLayout(context)
@@ -179,9 +169,9 @@ class AppsSearch(
     // Cards
     private val appsCard = GlassCard(context, flatBottom = false)
     private val appsRow = LinearLayout(context)
-    private val contactsCard = GlassCard(context, flatBottom = false, surface = false)
+    private val contactsCard = GlassCard(context, flatBottom = false)
     private val contactsListLayout = LinearLayout(context)
-    private val suggestionsCard = GlassCard(context, flatBottom = false, surface = false)
+    private val suggestionsCard = GlassCard(context, flatBottom = false)
     private val suggestionsListLayout = LinearLayout(context)
     private val mic = MicGlyph(context, secondaryInk)
     // iOS-style sections: the title (and "Show More") sits above each card
@@ -213,7 +203,7 @@ class AppsSearch(
     private lateinit var origin: Origin
     private var pillGlass: WidgetGlass? = null
 
-       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean, private val surface: Boolean = true) : LinearLayout(ctx) {
+       private inner class GlassCard(ctx: Context, private val flatBottom: Boolean, private val chrome: Boolean = true) : LinearLayout(ctx) {
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val glassPaint = GlassPaint()
@@ -237,6 +227,7 @@ class AppsSearch(
         }
 
         override fun onDraw(canvas: Canvas) {
+            if (!chrome) { super.onDraw(canvas); return }          // no glass, fill or border
             val radius = dp.dp(20f)
             rect.set(0f, 0f, width.toFloat(), height.toFloat())
 
@@ -262,11 +253,9 @@ class AppsSearch(
                     canvas.drawPath(cardPath, glassPaint.paint)
                 }
             }
-            // Only the Apps card has a visible surface. Contacts and Suggestions remain
-            // transparent, but still receive the same live background blur.
-            if (surface) canvas.drawPath(cardPath, fillPaint)
+            canvas.drawPath(cardPath, fillPaint)
 
-            if (surface && strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
+            if (strokePaint.strokeWidth > 0f && android.graphics.Color.alpha(strokePaint.color) > 0) {
                 val inset = strokePaint.strokeWidth / 2f
                 val strokeRect = RectF(rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset)
                 val cr = maxOf(0f, radius - inset)
@@ -312,7 +301,6 @@ class AppsSearch(
         }
     }
     fun refreshBackdrop() {
-        invalidate()
         pill.invalidate()
         appsCard.invalidate(); contactsCard.invalidate(); suggestionsCard.invalidate()
     }
@@ -373,7 +361,6 @@ class AppsSearch(
     }
 
     init {
-        setWillNotDraw(false)
         isClickable = true
         pill.background = GlassPill()
         field.apply {
@@ -439,14 +426,14 @@ class AppsSearch(
         content.addView(calcBox, cardParams(top = 0))
 
         // Top Hits: the app row
-        appsCard.setPadding(dp.dpi(TITLE_INSET_DP), dp.dpi(14f), dp.dpi(TITLE_INSET_DP), dp.dpi(12f))
+        appsCard.setPadding(dp.dpi(8f), dp.dpi(14f), dp.dpi(8f), dp.dpi(12f))
         appsRow.orientation = LinearLayout.HORIZONTAL
         appsRow.gravity = Gravity.TOP
         appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         content.addView(appsSection, cardParams(top = 0))
 
         // Suggestions
-        suggestionsCard.setPadding(dp.dpi(TITLE_INSET_DP), 0, dp.dpi(TITLE_INSET_DP), 0)
+        suggestionsCard.setPadding(dp.dpi(16f), 0, dp.dpi(16f), 0)
         suggestionsListLayout.orientation = LinearLayout.VERTICAL
         suggestionsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
         suggestionsListLayout.dividerDrawable = insetDivider(dp.dpi(40f), 0)
@@ -454,7 +441,7 @@ class AppsSearch(
         content.addView(suggestionsSection, cardParams(top = dp.dpi(18f)))
 
         // Contacts
-        contactsCard.setPadding(dp.dpi(TITLE_INSET_DP), dp.dpi(4f), dp.dpi(TITLE_INSET_DP), dp.dpi(4f))
+        contactsCard.setPadding(dp.dpi(16f), dp.dpi(4f), dp.dpi(16f), dp.dpi(4f))
         contactsListLayout.orientation = LinearLayout.VERTICAL
         contactsListLayout.showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
         contactsListLayout.dividerDrawable = insetDivider(dp.dpi(56f), 0)
@@ -504,7 +491,7 @@ class AppsSearch(
         return android.graphics.drawable.InsetDrawable(line, startInsetPx, 0, endInsetPx, 0)
     }
 
-    private fun sectionHeader(title: String, showAll: Boolean, horizontalPadDp: Float = TITLE_INSET_DP, onShowAll: ((View) -> Unit)?): View {
+    private fun sectionHeader(title: String, showAll: Boolean, horizontalPadDp: Float = 6f, onShowAll: ((View) -> Unit)?): View {
         return LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -635,15 +622,10 @@ class AppsSearch(
     }
 
     private fun reveal(v: View) {
+        if (opening) return
         v.animate().cancel()
         v.alpha = 0f
-        v.translationY = dp.dp(5f)
-        v.animate()
-            .alpha(1f)
-            .translationY(0f)
-            .setDuration(if (opening) 170L else FADE_MS)
-            .setInterpolator(Easing.BASIC)
-            .start()
+        v.animate().alpha(1f).setDuration(FADE_MS).setInterpolator(Easing.BASIC).start()
     }
 
     private fun showApps(list: List<AppInfo>) {
@@ -671,8 +653,7 @@ class AppsSearch(
                     isSingleLine = true
                     ellipsize = TextUtils.TruncateAt.END
                     gravity = Gravity.CENTER_HORIZONTAL
-                    maxWidth = iconPx
-                }, LinearLayout.LayoutParams(iconPx, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp.dpi(5f)
                 })
             }
@@ -909,7 +890,7 @@ class AppsSearch(
     private fun avatarColor(name: String) = AVATAR_COLORS[(name.hashCode() and 0x7FFFFFFF) % AVATAR_COLORS.size]
 
     private fun rowRipple() = android.graphics.drawable.RippleDrawable(
-        android.content.res.ColorStateList.valueOf(rippleColor), null, null
+        android.content.res.ColorStateList.valueOf(0x22FFFFFF), null, null // Forced light ripple
     )
 
     private fun firstEnterable(box: ViewGroup): View? {
@@ -977,33 +958,6 @@ class AppsSearch(
     /** Cards run down to the keyboard (or the gesture bar when there's no keyboard). */
     private fun contentBottom(): Int = maxOf(dp.insets.bottom, ime) + dp.dpi(8f)
 
-    /** Draw the App Search backdrop with the exact drawer-sheet tint and blur strength.
-     * The same `f` progress drives the search bar and this layer, so the tint/blur
-     * leave in lockstep with the rest of the closing transition.
-     */
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val progress = f.coerceIn(0f, 1f)
-        if (progress <= 0f || width <= 0 || height <= 0) return
-
-        // Blur the live Home surface (icons/widgets included), not the wallpaper
-        // snapshot. LiveBackdrop captures the content behind this overlay; the
-        // translucent tint is drawn afterward so the Home screen remains visible.
-        searchBackdropRect.set(0f, 0f, width.toFloat(), height.toFloat())
-        if (prefs.drawerSheetBlur > 0) {
-            val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
-            val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
-            backdrop?.draw(
-                canvas, this, searchBackdropRect, 0f,
-                dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth
-            )
-        }
-
-        val alpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
-        searchBackdropPaint.color = (alpha shl 24) or backdropDimColor
-        canvas.drawRect(searchBackdropRect, searchBackdropPaint)
-    }
-
     private fun layoutPill() {
         if (!::origin.isInitialized) return
         val h = dp.searchBarHeight
@@ -1014,7 +968,8 @@ class AppsSearch(
         }
 
         val progress = f.coerceIn(0f, 1f)
-        invalidate()
+        val dimAlpha = (backdropDimMaxAlpha * progress).roundToInt().coerceIn(0, 255)
+setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barY()
@@ -1031,9 +986,7 @@ class AppsSearch(
         glyph.color = secondaryInk
         field.setTextColor(primaryInk)
         field.setHintTextColor(hintInk)
-        clearBtn.setInk(primaryInk, isNight())
-        mic.ink = secondaryInk
-        mic.invalidate()
+        clearBtn.setNight(true) // Force night mode style for clear button
         pill.elevation = dp.dp(24f)
         pill.outlineAmbientShadowColor = 0x4D000000
         pill.outlineSpotShadowColor = 0xA6000000.toInt()
@@ -1159,8 +1112,7 @@ class AppsSearch(
     private fun animateTo(to: Float, end: (() -> Unit)? = null) {
         anim?.cancel()
         anim = ValueAnimator.ofFloat(f, to).apply {
-            duration = if (to < f) CLOSE_MS else
-                ((OPEN_BAR_MS * abs(to - f)).toLong().coerceAtLeast(120L))
+            duration = ((if (to > f) OPEN_BAR_MS else CLOSE_MS) * abs(to - f)).toLong().coerceAtLeast(120L)
             interpolator = Easing.IME
             addUpdateListener { f = it.animatedValue as Float; layoutPill() }
             if (end != null) addListener(object : AnimatorListenerAdapter() {
@@ -1180,12 +1132,10 @@ class AppsSearch(
         private const val MAX_APPS = 4
         private const val MAX_WEB = 4
         const val OPEN_MS = 425L
-        /** Left/right inset of the section titles; the rows under them use the same one. */
-        private const val TITLE_INSET_DP = 6f
-        private const val OPEN_BAR_MS = 230L
+        private const val OPEN_BAR_MS = 360L
         private const val CLOSE_MS = 240L
         private const val BAR_SLIDE_DP = 36f
-        const val OPEN_RISE_DP = 28f
+        const val OPEN_RISE_DP = 48f
         private const val FADE_MS = 150L
         private const val KEYBOARD_RETRY_MS = 1500L
         private val R_ENTERABLE = com.oneuiclone.home.R.id.search_enterable
@@ -1200,9 +1150,9 @@ class AppsSearch(
             strokeCap = Paint.Cap.ROUND
             strokeWidth = 1.7f * context.resources.displayMetrics.density
         }
-        fun setInk(ink: Int, night: Boolean) {
+        fun setNight(night: Boolean) {
             bgPaint.color = if (night) 0x52FFFFFF else 0x26000000
-            xPaint.color = ink
+            xPaint.color = 0xFFFFFFFF.toInt() // Forced white x button
             invalidate()
         }
         override fun onDraw(canvas: Canvas) {
@@ -1216,8 +1166,6 @@ class AppsSearch(
     }
 
     private class MicGlyph(context: Context, ink: Int) : View(context) {
-        var ink: Int = ink
-            set(v) { field = v; stroke.color = v; fill.color = v }
         private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = ink
             style = Paint.Style.STROKE
@@ -1236,7 +1184,7 @@ class AppsSearch(
 
     private class ChevronGlyph(context: Context, ink: Int) : View(context) {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = ink
+            color = 0xFFFFFFFF.toInt() // Forced white chevron
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
@@ -1264,8 +1212,8 @@ class AppsSearch(
 
     private class ActionCircleButton(context: Context, private val kind: Int, night: Boolean) : View(context) {
         companion object { const val PHONE = 0; const val VIDEO = 1 }
-        private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (night) 0x22FFFFFF else 0x14000000 }
-        private val fgColor = if (night) 0xFFF1F1F4.toInt() else 0xFF212124.toInt()
+        private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x22FFFFFF } // Forced dark mode background
+        private val fgColor = 0xFFFFFFFF.toInt() // Forced white action buttons
         private val fg = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = fgColor
             style = Paint.Style.FILL
