@@ -122,7 +122,7 @@ class AppsSearch(
         get() = 0x33FFFFFF.toInt()
 
     private val searchBarFillColor: Int
-        get() = YunoGlass.barFill(prefs.appSearchBarOpacity)
+        get() = (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or backdropDimColor
         
     private val searchBarBorderColor: Int
         get() = YunoGlass.border(prefs.appSearchBorderOpacity)
@@ -283,16 +283,13 @@ class AppsSearch(
                 rect.set(bounds)
                 val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
                 val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
-                val live = backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), amount, depth) == true
-                val g = barGlass
-                if (!live && g != null) {
-                    toWindow.reset(); pill.transformMatrixToGlobal(toWindow)
-                    if (glassPaint.aimLens(g, toWindow, rect, pillBg.cornerRadius, amount, depth)) {
-                        glassPaint.paint.colorFilter = YunoGlass.saturation
-                        glassPaint.paint.alpha = 255
-                        canvas.drawRoundRect(rect, pillBg.cornerRadius, pillBg.cornerRadius, glassPaint.paint)
-                    }
-                }
+                backdrop?.draw(canvas, pill, rect, pillBg.cornerRadius, dp.dp(prefs.appSearchBarBlur.toFloat()), amount, depth)
+            }
+            super.draw(canvas)
+            val w = searchBarBorderWidth
+            rect.set(bounds); rect.inset(w / 2f, w / 2f)
+            rim.draw(canvas, rect, pillBg.cornerRadius, w, YunoGlass.rimPeak(prefs.appSearchBorderOpacity))
+        }
             }
             super.draw(canvas)
             val w = searchBarBorderWidth
@@ -978,7 +975,7 @@ setBackgroundColor((dimAlpha shl 24) or backdropDimColor)
         pillBg.setColor(searchBarFillColor)
         pillBg.setStroke(searchBarBorderWidth.toInt(), searchBarBorderColor)
 
-        pillGlass = barGlass ?: origin.glass
+        pillGlass = null
         appsCard.syncWithBar()
         contactsCard.syncWithBar()
         suggestionsCard.syncWithBar()
