@@ -86,15 +86,6 @@ class DrawerSheetDrawable(
     }
 
     override fun draw(canvas: Canvas) {
-        // 1) the deep shadow that lifts the sheet off the background: only what falls outside the sheet shows
-        canvas.save()
-        canvas.clipOutPath(path)
-        shadow.setShadowLayer(dp.dp(64f), 0f, -dp.dp(14f), 0x8C000000.toInt())
-        canvas.drawPath(path, shadow)
-        shadow.setShadowLayer(dp.dp(18f), 0f, -dp.dp(3f), 0x66000000)
-        canvas.drawPath(path, shadow)
-        canvas.restore()
-
         // 2) the blur (Sheet Blur = strength; 0 = none). The wallpaper isn't drawn by the app at rest (the system
         //    wallpaper shows through the window), so the live backdrop can't blur it: first the pre-blurred
         //    wallpaper copy, then Home's icons and widgets blurred live on top of it.
