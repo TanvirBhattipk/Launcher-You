@@ -185,8 +185,12 @@ if (prefs.appSearchBgBlur > 0) {
             backdrop?.draw(canvas, this, backdropRect, r, backdropBlurRadius, amount, depth, pagePath)
             canvas.restoreToCount(layer)
         }
-        val a = (backdropDimMaxAlpha * p).roundToInt().coerceIn(0, 255)
-        canvas.drawColor((a shl 24) or backdropDimColor)
+        val ta = (backdropDimMaxAlpha * p).roundToInt().coerceIn(0, 255)
+        pageTintPaint.color = (ta shl 24) or backdropDimColor
+        canvas.save()
+        canvas.translate(0f, pageOffsetY)              // the tint slides with the cards and the bar
+        canvas.drawRect(0f, 0f, w, h, pageTintPaint)
+        canvas.restore()
     }
    
     private val field = EditText(context)
@@ -330,26 +334,39 @@ if (prefs.appSearchBgBlur > 0) {
     var isOpen = false; private set
     private var f = 0f
     private var anim: ValueAnimator? = null
-    private var contentSpring: androidx.dynamicanimation.animation.SpringAnimation? = null
-    private var barSpring: androidx.dynamicanimation.animation.SpringAnimation? = null
-    private fun slideSpring(v: View): androidx.dynamicanimation.animation.SpringAnimation =
-        androidx.dynamicanimation.animation.SpringAnimation(
-            v, androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_Y, 0f).apply {
-            spring.stiffness = SLIDE_STIFFNESS      // higher = faster
-            spring.dampingRatio = SLIDE_DAMPING     // lower = more bounce at the end
-            start()
-        }
     private var kb = 0f
     private var kbTarget = 0f
     private var kbAnim: ValueAnimator? = null
     private var ime = 0
     private var imeAnimating = false
-
     private val openTextStart = dp.dp(16f + 20f + 10f)
     private val openTextSize = 16f * resources.displayMetrics.scaledDensity
     private val keyboardPrefs = context.getSharedPreferences("keyboard", Context.MODE_PRIVATE)
     private val keyboardKey = "ime_height_${dp.widthPx}x${dp.heightPx}"
+    /** Px the search UI sits below its place at f = 0: it rises by this much on open and drops by it on close. */
+    private var slideDist = 0f
+    /** The same offset, applied to the page tint so it travels with the cards and the bar. */
+    private var pageOffsetY = 0f
+    private val pageTintPaint = Paint()
+    private var fSpring: androidx.dynamicanimation.animation.SpringAnimation? = null
+    /** Search-open progress 0…1 for whoever draws the wallpaper scrim behind the page. */
+    var onSearchProgress: ((Float) -> Unit)? = null
 
+    /** Opening: f springs from 0 to 1, fast and smooth; everything below follows f. */
+    private fun springOpen() {
+        anim?.cancel(); fSpring?.cancel()
+        fSpring = androidx.dynamicanimation.animation.SpringAnimation(
+            androidx.dynamicanimation.animation.FloatValueHolder(f)).apply {
+            setStartValue(f)
+            spring = androidx.dynamicanimation.animation.SpringForce(1f).apply {
+                stiffness = SLIDE_STIFFNESS
+                dampingRatio = SLIDE_DAMPING
+            }
+            setMinimumVisibleChange(0.002f)
+            addUpdateListener { _, value, _ -> f = value; layoutPill() }
+            start()
+        }
+    }
     private val main = Handler(Looper.getMainLooper())
     private val net = Executors.newSingleThreadExecutor { r -> Thread(r, "web-suggest") }
     private var pendingFetch: Runnable? = null
@@ -999,12 +1016,19 @@ if (prefs.appSearchBgBlur > 0) {
             pill.layoutParams = lp
         }
 
-        val progress = f.coerceIn(0f, 1f).let { if (isOpen) it else it * it }
-pageProgress = progress
+        val a = f.coerceIn(0f, 1f)
+        val slide = (1f - f) * slideDist               // px down: rises on open, drops on close
+        pageProgress = a
+        pageOffsetY = slide
         invalidate()
+        onSearchProgress?.invoke(a)
 
         pill.x = dp.searchBarSide.toFloat()
-        pill.y = barY()
+        pill.y = barY()                                // this sets translationY = y - top ...
+        pill.translationY += slide                     // ... so the slide is added on top of it, never replaces it
+        pill.alpha = a
+        content.alpha = a
+        content.translationY = if (CARDS_SLIDE) slide else 0f
         updateContentInset()
         pillBg.cornerRadius = h / 2f
         pillBg.setColor(searchBarFillColor)
@@ -1076,28 +1100,14 @@ pageProgress = progress
         loadFavorites()
         visibility = VISIBLE
         kb = rememberedKeyboard(); kbTarget = kb
+        slideDist = dp.dp(OPEN_RISE_DP)
         f = 0f
         layoutPill()
         updateContentInset()
         opening = true
         filter("")
         opening = false
-        contentSpring?.cancel(); barSpring?.cancel()
-        content.animate().cancel(); pill.animate().cancel()
-        content.alpha = 0f
-        content.animate().alpha(1f).setDuration(OPEN_FADE_MS).setInterpolator(Easing.IME).start()   // quick fade
-        // the search bar and the cards share the same spring; turn CARDS_SLIDE off if the cards ever stutter
-        pill.alpha = 0f
-        pill.animate().alpha(1f).setDuration(OPEN_FADE_MS).setInterpolator(Easing.IME).start()   // same fade as the cards
-        pill.translationY = dp.dp(OPEN_RISE_DP)                                                   // same rise as the cards
-        barSpring = slideSpring(pill)
-        if (CARDS_SLIDE) {
-            content.translationY = dp.dp(OPEN_RISE_DP)
-            contentSpring = slideSpring(content)
-        } else {
-            content.translationY = 0f
-        }
-        animateTo(1f)
+        springOpen()
         field.isCursorVisible = true
         field.requestFocus()
         keyboardComing = false
@@ -1138,23 +1148,9 @@ pageProgress = progress
         net.shutdownNow()
         context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(field.windowToken, 0)
         field.isCursorVisible = false
-        contentSpring?.cancel(); barSpring?.cancel()
-        // slide down and fade out together; the cards and the bar are gone by the time they reach CLOSE_TO_SCREEN of the screen height
-        val closeTo = height * CLOSE_TO_SCREEN
-        val slideIn = android.view.animation.AccelerateInterpolator(1.3f)
-        content.animate().cancel(); pill.animate().cancel()
-        content.animate()
-            .translationY((closeTo - content.top).coerceAtLeast(0f))
-            .alpha(0f)
-            .setDuration(CLOSE_MS)
-            .setInterpolator(slideIn)
-            .start()
-pill.animate()
-            .translationY((closeTo - pill.y).coerceAtLeast(0f))
-            .alpha(0f)
-            .setDuration(CLOSE_MS)
-            .setInterpolator(slideIn)
-            .start()
+        fSpring?.cancel()
+        // slide down and fade out together: cards, bar and tint all follow f, gone at CLOSE_TO_SCREEN of the screen height
+        slideDist = (height * CLOSE_TO_SCREEN - barY()).coerceAtLeast(0f)
         if (field.length() > 0) field.animate().alpha(0f).setDuration(110).withEndAction {
             field.text = null
             field.animate().alpha(1f).setDuration(150).start()
@@ -1163,10 +1159,10 @@ pill.animate()
     }
 
     private fun animateTo(to: Float, end: (() -> Unit)? = null) {
-        anim?.cancel()
+        anim?.cancel(); fSpring?.cancel()
         anim = ValueAnimator.ofFloat(f, to).apply {
-            duration = ((if (to > f) OPEN_BAR_MS else CLOSE_MS) * abs(to - f)).toLong().coerceAtLeast(120L)
-            interpolator = Easing.IME
+            duration = ((if (to > f) OPEN_BAR_MS else CLOSE_MS) * abs(to - f)).toLong().coerceAtLeast(60L)
+            interpolator = if (to > f) Easing.IME else android.view.animation.AccelerateInterpolator(1.3f)
             addUpdateListener { f = it.animatedValue as Float; layoutPill() }
             if (end != null) addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
