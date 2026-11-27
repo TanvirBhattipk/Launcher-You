@@ -102,7 +102,7 @@ class AppsSearch(
 
     // Text: #212124 by day, #F1F1F4 at night
     private val inkRgb: Int
-        get() = if (isNight()) 0xF1F1F4 else 0x212124
+        get() = if (isNight()) 0xF2F2F4 else 0x212124
 
     private val primaryInk: Int
         get() = 0xFF000000.toInt() or inkRgb
@@ -119,9 +119,12 @@ class AppsSearch(
     private val rippleColor: Int
         get() = 0x1F000000 or inkRgb
 
-    /** Search bar: the same shade surface colour as the card; alpha still from the bar's own opacity. */
+       /** Pixel's search bar / Top Hits colour (sampled from the Pixel screenshot) by day, #212124 at night. */
+    private val pixelSurface: Int
+        get() = if (isNight()) 0x212124 else 0xD4D5E7
+
     private val searchBarFillColor: Int
-        get() = (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or (SearchInk.surface(context) and 0x00FFFFFF)
+        get() = (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or pixelSurface
 
     private val searchBarBorderColor: Int
         get() = YunoGlass.border(prefs.appSearchBorderOpacity)
@@ -134,7 +137,7 @@ class AppsSearch(
     private val cardFillColor: Int
         get() {
             val a = prefs.appSearchCardsBgOpacity.coerceIn(0, 100) * 255 / 100
-            return (SearchInk.surface(context) and 0x00FFFFFF) or (a shl 24)
+            return pixelSurface or (a shl 24)
         }
 
     private val cardBorderColor: Int
@@ -144,13 +147,13 @@ class AppsSearch(
         get() = maxOf(1f, dp.dp(prefs.appSearchCardsBorderSize / 10f))
         
     private val backdropDimColor: Int
-        get() = SearchInk.page(context) and 0x00FFFFFF      // the shade's background colour
+                get() = DrawerInk.sheetTint(context) and 0x00FFFFFF      // the drawer sheet's tint: light by day, dark at night
 
     private val backdropDimMaxAlpha: Int
-        get() = prefs.drawerSheetOpacity.coerceIn(0, 100) * 255 / 100   // same as the drawer sheet
-
+               get() = prefs.appSearchBgOpacity.coerceIn(0, 100) * 255 / 100   // App Search's own slider
+    
     private val backdropBlurRadius: Float
-        get() = dp.dp(prefs.drawerSheetBlur.toFloat())
+        get() = dp.dp(prefs.appSearchBgBlur.toFloat())
 
     private val backdropGlassPaint = GlassPaint()
     private val backdropToWindow = android.graphics.Matrix()
@@ -165,7 +168,7 @@ class AppsSearch(
         val p = pageProgress
         if (p <= 0.003f || width == 0 || height == 0) return
         val w = width.toFloat(); val h = height.toFloat()
-        if (prefs.drawerSheetBlur > 0) {
+if (prefs.appSearchBgBlur > 0) {
             val amount = dp.dp(YunoGlass.LENS_AMOUNT_DP)
             val depth = dp.dp(YunoGlass.LENS_DEPTH_DP)
             val r = dp.sheetRadius
@@ -179,7 +182,7 @@ class AppsSearch(
                 backdropGlassPaint.paint.alpha = 255
                 canvas.drawPath(pagePath, backdropGlassPaint.paint)
             }
-            backdrop?.draw(canvas, this, backdropRect, r, dp.dp(prefs.drawerSheetBlur.toFloat()), amount, depth, pagePath)
+            backdrop?.draw(canvas, this, backdropRect, r, backdropBlurRadius, amount, depth, pagePath)
             canvas.restoreToCount(layer)
         }
         val a = (backdropDimMaxAlpha * p).roundToInt().coerceIn(0, 255)
@@ -390,7 +393,7 @@ class AppsSearch(
             setHintTextColor(hintInk)
             setTextColor(primaryInk)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, openTextSize)
-            typeface = Fonts.ui(context, 400)
+            typeface = Fonts.ui(context, 700)
             isSingleLine = true
             imeOptions = EditorInfo.IME_ACTION_GO or EditorInfo.IME_FLAG_NO_EXTRACT_UI
             setPadding(openTextStart.roundToInt(), 0, dp.dpi(44f), 0)
@@ -1139,17 +1142,17 @@ pageProgress = progress
     }
 
     companion object {
-        const val MORPH_MS = 300L
+        const val MORPH_MS = 200L
         private val MARKS = Regex("\\p{Mn}+")
         private const val KEY_CONTACTS_DECLINED = "contacts_declined"
         private const val INVITE_ID = -1L
-        private const val MAX_APPS = 4
+        private const val MAX_APPS = 5
         private const val MAX_WEB = 4
-        const val OPEN_MS = 425L
+        const val OPEN_MS = 280L
         /** Side inset of the section titles; the rows under them use the same one. */
         private const val TITLE_INSET_DP = 6f
-        private const val OPEN_BAR_MS = 360L
-        private const val CLOSE_MS = 240L
+        private const val OPEN_BAR_MS = 230L
+        private const val CLOSE_MS = 170L
         private const val BAR_SLIDE_DP = 36f
         const val OPEN_RISE_DP = 48f
         private const val FADE_MS = 150L
