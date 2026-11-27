@@ -477,7 +477,7 @@ if (prefs.appSearchBgBlur > 0) {
         content.addView(calcBox, cardParams(top = 0))
 
         // Top Hits: the app row
-        appsCard.setPadding(dp.dpi(TITLE_INSET_DP), dp.dpi(0f), dp.dpi(TITLE_INSET_DP), dp.dpi(0f))
+        appsCard.setPadding(dp.dpi(TITLE_INSET_DP), dp.dpi(14f), dp.dpi(TITLE_INSET_DP), dp.dpi(12f))
         appsRow.orientation = LinearLayout.HORIZONTAL
         appsRow.gravity = Gravity.TOP
         appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
