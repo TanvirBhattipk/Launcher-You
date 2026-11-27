@@ -70,10 +70,10 @@ class BackgroundController(
             field = v
             searchAnim?.cancel()
             searchAnim = android.animation.ValueAnimator.ofFloat(searchMix, if (v) 1f else 0f).apply {
-                // leaving search: start fading at once (decelerate) and finish with the page; entering keeps its ease
-                duration = if (v) 300 else 200
+                // leaving search: the tint is gone by the time Home is revealed (the page itself is out in ~170ms)
+                duration = if (v) 300 else 110
                 interpolator = if (v) android.view.animation.AccelerateDecelerateInterpolator()
-                               else android.view.animation.DecelerateInterpolator(1.4f)
+                               else android.view.animation.LinearInterpolator()
                 addUpdateListener { searchMix = it.animatedValue as Float; apply() }
                 start()
             }
@@ -133,11 +133,16 @@ class BackgroundController(
         val q = 1f - p
         val blur = p * factor(kind) + q * factor(from)
         // the App Search tint belongs to the search page itself: it must not follow the Home/Apps crossfade progress
-        val dim = maxOf(p * dimOf(kind) + q * dimOf(from), searchMix * searchDim * 255f / 0xA6 * appsBlurScale)
-        // the App Search page darkens with the drawer's tint (light by day, dark at night) instead of a fixed near-black
+        // the scrim's colour follows whichever dim is actually showing: no mid-fade shift toward black
+        val drawerDim = p * dimOf(kind) + q * dimOf(from)
+        // the App Search tint belongs to the search page itself: it must not follow the Home/Apps crossfade progress
+        val searchDimPart = searchMix * searchDim * 255f / 0xA6 * appsBlurScale
+        val dim = maxOf(drawerDim, searchDimPart)
+        val tintShare = if (drawerDim + searchDimPart <= 0f) 0f else searchDimPart / (drawerDim + searchDimPart)
         scrim.dimRgb = ColorUtils.blendARGB(
-            0xFF000000.toInt() or SEARCH_BASE_RGB, SearchInk.page(activity), searchMix
+            0xFF000000.toInt() or SEARCH_BASE_RGB, SearchInk.page(activity), tintShare
         ) and 0x00FFFFFF
+        // the App Search page darkens with the drawer's tint (light by day, dark at night) instead of a fixed near-black
         scrim.washColor = DrawerInk.wash(activity)
         scrim.washAlpha = p * washOf(kind) + q * washOf(from)
         if (wallpaper.available) {
