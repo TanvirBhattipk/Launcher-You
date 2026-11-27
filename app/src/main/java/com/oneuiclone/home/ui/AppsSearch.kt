@@ -1005,7 +1005,6 @@ pageProgress = progress
 
         pill.x = dp.searchBarSide.toFloat()
         pill.y = barY()
-        pill.alpha = f.coerceIn(0f, 1f)
         updateContentInset()
         pillBg.cornerRadius = h / 2f
         pillBg.setColor(searchBarFillColor)
@@ -1088,7 +1087,9 @@ pageProgress = progress
         content.alpha = 0f
         content.animate().alpha(1f).setDuration(OPEN_FADE_MS).setInterpolator(Easing.IME).start()   // quick fade
         // the search bar and the cards share the same spring; turn CARDS_SLIDE off if the cards ever stutter
-        pill.translationY = dp.dp(BAR_SLIDE_DP)
+        pill.alpha = 0f
+        pill.animate().alpha(1f).setDuration(OPEN_FADE_MS).setInterpolator(Easing.IME).start()   // same fade as the cards
+        pill.translationY = dp.dp(OPEN_RISE_DP)                                                   // same rise as the cards
         barSpring = slideSpring(pill)
         if (CARDS_SLIDE) {
             content.translationY = dp.dp(OPEN_RISE_DP)
@@ -1148,8 +1149,9 @@ pageProgress = progress
             .setDuration(CLOSE_MS)
             .setInterpolator(slideIn)
             .start()
-        pill.animate()
+pill.animate()
             .translationY((closeTo - pill.y).coerceAtLeast(0f))
+            .alpha(0f)
             .setDuration(CLOSE_MS)
             .setInterpolator(slideIn)
             .start()
