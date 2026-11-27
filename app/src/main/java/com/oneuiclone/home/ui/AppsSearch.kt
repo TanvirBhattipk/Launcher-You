@@ -686,7 +686,9 @@ if (prefs.appSearchBgBlur > 0) {
         appsRow.removeAllViews()
         enterTarget = null
         val iconPx = dp.searchIconSizePx                       // Home's icon size, fixed
+        val lastIdx = list.take(MAX_APPS).lastIndex
         list.take(MAX_APPS).forEachIndexed { i, a ->
+            val g = when (i) { 0 -> Gravity.START; lastIdx -> Gravity.END; else -> Gravity.CENTER_HORIZONTAL }
             val holder = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
@@ -694,7 +696,8 @@ if (prefs.appSearchBgBlur > 0) {
                 setTag(R_ENTERABLE, true)
                 val hiddenIcon = IconView(context, dp).apply { configureIcon(this, a) }
                 setOnClickListener { onLaunch(hiddenIcon, a) }
-                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f), LinearLayout.LayoutParams(iconPx, iconPx))
+                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f),
+                LinearLayout.LayoutParams(iconPx, iconPx).apply { gravity = g })
                 addView(TextView(context).apply {
                     text = a.label
                     setTextColor(primaryInk)
