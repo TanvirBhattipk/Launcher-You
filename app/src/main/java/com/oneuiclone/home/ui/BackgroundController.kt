@@ -56,6 +56,11 @@ class BackgroundController(
     var appsDim = 0.4f
     /** 0 = the Apps screen's background blurs but is not darkened (the drawer sheet); 1 = darkened as set. */
     var appsDimScale = 1f
+    /** true while the search closes onto Home: the drawer's own tint must not show through that crossfade. */
+    var suppressDrawerTint = false
+
+    /** How much of the drawer's own tint/dim shows: it gives way to the search tint, and stays off while search closes onto Home. */
+    private fun drawerFactor() = if (suppressDrawerTint) 0f else 1f - searchMix
     var searchTintAlpha = 0.6f
     
     /** Pixel-style: the Apps screen's wallpaper is washed with the sheet's light colour (0..1 at full blur) instead of darkened. */
@@ -89,10 +94,10 @@ class BackgroundController(
         if (isApps(k)) k.blurFactor * (appsRadiusPx + (searchRadiusPx - appsRadiusPx) * searchMix) else k.blurFactor * maxRadiusPx
 
     private fun washOf(k: Kind): Float =
-        if (isApps(k)) appsWash * (1f - searchMix) * appsBlurScale else 0f
+        if (isApps(k)) appsWash * drawerFactor() * appsBlurScale else 0f
 
     private fun dimOf(k: Kind): Float =
-        if (isApps(k)) (if (darkenApps) appsDim else 0f) * (1f - searchMix) * 255f / 0xA6 * appsBlurScale * appsDimScale else k.dim
+        if (isApps(k)) (if (darkenApps) appsDim else 0f) * drawerFactor() * 255f / 0xA6 * appsBlurScale * appsDimScale else k.dim
 
     private fun factor(k: Kind) = if (k == Kind.APPS || k == Kind.APPS_FOLDER) k.blurFactor * appsBlurScale else k.blurFactor
 
