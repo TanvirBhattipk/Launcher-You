@@ -201,6 +201,7 @@ private val drawerStiffness = 380f                      // higher = faster
         springRunning = false
         apps.removeCallbacks(springTick)
         prepare()
+        background.suppressDrawerTint = false                   // ADD
 
         // a tap/button open: the sheet is already visible 90% of the way down and only travels the rest
         if (target == State.APPS && !fromDrag) {
@@ -253,18 +254,17 @@ private val drawerStiffness = 380f                      // higher = faster
         apps.postOnAnimation(springTick)
     }
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
-    private fun fade(target: State, duration: Long) {
+private fun fade(target: State, duration: Long) {
         anim?.cancel()
         springAnim?.cancel()
         toApps = target == State.APPS
         prepare()
+        background.suppressDrawerTint = target == State.HOME    // ADD
         apps.translationY = 0f
         home.scaleX = 1f; home.scaleY = 1f
-        // Home's icons and widgets stay on screen the whole time and only their blur follows the fade, exactly as at
-        // rest in the Apps state; fading them out and snapping them back in at the end made them pop in late.
         home.alpha = 1f
         homeBlur(ramp(a))
-        background.appsDimScale = 1f      // the search crossfade keeps the drawer's usual darkening
+        background.appsDimScale = 1f
         val end = if (toApps) 1f else 0f
         anim = ValueAnimator.ofFloat(a, end).apply {
             this.duration = max(100L, (duration * abs(end - a)).toLong())
@@ -286,6 +286,7 @@ private val drawerStiffness = 380f                      // higher = faster
     }
 
     private fun settle(target: State, keepHome: Boolean = false) {
+        background.suppressDrawerTint = false                   // ADD
         val showApps = target == State.APPS
         home.setLayerType(View.LAYER_TYPE_NONE, null)
         apps.setLayerType(View.LAYER_TYPE_NONE, null)
