@@ -87,7 +87,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private val barGlass = com.oneuiclone.home.ui.WidgetGlass()        // App Search bar
     private val cardGlass = com.oneuiclone.home.ui.WidgetGlass()       // App Search cards
     private val sheetGlass = com.oneuiclone.home.ui.WidgetGlass()      // App drawer sheet
-    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass, sheetGlass)
+    private val searchPageGlass = com.oneuiclone.home.ui.WidgetGlass()     // App Search page: its own blur slider
+    private val glasses = listOf(widgetGlass, folderGlass, pillGlass, drawerBarGlass, barGlass, cardGlass, sheetGlass, searchPageGlass)
     private val drawerBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim, appsScroll) }
     private val searchBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(wallpaper, scrim) }
     private val sheetBackdrop = com.oneuiclone.home.ui.LiveBackdrop { listOf(homeLayer) }   // only Home's icons/widgets; the wallpaper comes from sheetGlass
@@ -96,7 +97,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         val d = activity.resources.displayMetrics.density
         widgetGlass.radiusPx = prefs.blurWidget * d; folderGlass.radiusPx = prefs.blurFolder * d
         pillGlass.radiusPx = prefs.homePillBgBlur * d; drawerBarGlass.radiusPx = prefs.drawerSearchBarBlur * d
-        barGlass.radiusPx = prefs.appSearchBarBlur * d; cardGlass.radiusPx = prefs.appSearchCardsBgBlur * d; sheetGlass.radiusPx = prefs.drawerSheetBlur * d
+        barGlass.radiusPx = prefs.appSearchBarBlur * d; cardGlass.radiusPx = prefs.appSearchCardsBgBlur * d; sheetGlass.radiusPx = prefs.drawerSheetBlur * d; searchPageGlass.radiusPx = prefs.appSearchBgBlur * d
         wallpaper.onLoaded = {
             glasses.forEach { it.rebuild(wallpaper) }
             syncBlurredWallpaper()
@@ -120,7 +121,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         com.oneuiclone.home.ui.LiquidGlass.enabled = false
         widgetGlass.setRadius(prefs.blurWidget * d, wallpaper); folderGlass.setRadius(prefs.blurFolder * d, wallpaper)
         pillGlass.setRadius(prefs.homePillBgBlur * d, wallpaper); drawerBarGlass.setRadius(prefs.drawerSearchBarBlur * d, wallpaper)
-        barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper); cardGlass.setRadius(prefs.appSearchCardsBgBlur * d, wallpaper); sheetGlass.setRadius(prefs.drawerSheetBlur * d, wallpaper)
+        barGlass.setRadius(prefs.appSearchBarBlur * d, wallpaper); cardGlass.setRadius(prefs.appSearchCardsBgBlur * d, wallpaper); sheetGlass.setRadius(prefs.drawerSheetBlur * d, wallpaper); searchPageGlass.setRadius(prefs.appSearchBgBlur * d, wallpaper)
         if (::appsScroll.isInitialized) (appsScroll.background as? com.oneuiclone.home.ui.DrawerSheetDrawable)?.refreshColors()
         background.appsDim = prefs.drawerBgOpacity / 100f
         background.searchDim = prefs.appSearchBgOpacity / 100f
@@ -2408,8 +2409,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             onSwipeUp = { closeSearch(lift = true) },
             onDismiss = { closeSearch() },
             barGlass = barGlass,
-            cardGlass = cardGlass,
-            backdrop = searchBackdrop,
+            cardGlass = searchPageGlass, 
+            backdrop = sheetBackdrop, 
         ) {
             searchPill.animate().cancel(); searchPill.alpha = 1f
             homeSearch.visibility = View.VISIBLE
