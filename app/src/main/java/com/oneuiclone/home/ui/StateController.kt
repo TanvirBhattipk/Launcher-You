@@ -105,7 +105,7 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         f = 0f
         if (!visible && !commit) return                      // nothing was shown: nothing to undo
         val targetState = if (commit) (if (toApps) State.APPS else State.HOME) else state
-        run(targetState, velocityPxPerSec = velocity * 1000f)
+        run(targetState, velocityPxPerSec = velocity * 1000f, fromDrag = true)
     }
 
     /** [duration] 0 or less: the drawer's own open/close; otherwise a crossfade over that long (search). */
@@ -175,8 +175,11 @@ fun setImmediate(target: State) {
     }
 
 private val drawerStiffness = 380f                      // higher = faster
-    private val drawerDamping = 2f * 1.0f * kotlin.math.sqrt(drawerStiffness)      // closing: no bounce
-    private val drawerDampingOpen = 2f * 0.72f * kotlin.math.sqrt(drawerStiffness) // opening: overshoots a little at the top
+// fast and smooth: stiff spring, light damping on open (a small settle at the top), critical on close
+    private val openStiffness = 700f
+    private val closeStiffness = 560f
+    private val openDamping = 2f * 0.80f * kotlin.math.sqrt(openStiffness)
+    private val closeDamping = 2f * 1.00f * kotlin.math.sqrt(closeStiffness)
     private var springTargetState: State? = null
     private var springTargetProgress = 0f
     private var springVel = 0f
@@ -184,19 +187,33 @@ private val drawerStiffness = 380f                      // higher = faster
     private var springLastMs = 0L
     private val springTick = Runnable { stepDrawerSpring() }
 
-    private fun run(target: State, velocityPxPerSec: Float = 0f) {
+    /** Progress at which the sheet's top edge sits [OPEN_FROM_SCREEN] of the way down the screen. */
+    private fun openStartProgress(): Float {
+        val h = apps.height.toFloat()
+        val top = sheetTop()
+        val t = (h - top).coerceAtLeast(1f)
+        return (1f - (h * OPEN_FROM_SCREEN - top) / t).coerceIn(0f, 1f)
+    }
+
+    private fun run(target: State, velocityPxPerSec: Float = 0f, fromDrag: Boolean = false) {
         anim?.cancel()
         springAnim?.cancel()
         springRunning = false
         apps.removeCallbacks(springTick)
         prepare()
 
+        // a tap/button open: the sheet is already visible 90% of the way down and only travels the rest
+        if (target == State.APPS && !fromDrag) {
+            val start = openStartProgress()
+            if (a < start) { a = start; frame(start) }
+        }
+
         springTargetState = target
         state = target                                  // the swipe counts as done as soon as it's released
         springTargetProgress = if (target == State.APPS) 1f else 0f
-        // velocity is positive toward the swipe's target; progress `a` rises when opening and falls when closing
         val dir = if (toApps) 1f else -1f
         springVel = (dir * velocityPxPerSec / travel()).coerceIn(-8f, 8f)
+        if (target == State.APPS && !fromDrag) springVel = maxOf(springVel, OPEN_KICK)
         springRunning = true
         springLastMs = android.view.animation.AnimationUtils.currentAnimationTimeMillis()
         apps.postOnAnimation(springTick)
@@ -209,13 +226,19 @@ private val drawerStiffness = 380f                      // higher = faster
             return
         }
         val now = android.view.animation.AnimationUtils.currentAnimationTimeMillis()
-        val dt = ((now - springLastMs).coerceIn(1L, 32L)) / 1000f
+        var remaining = ((now - springLastMs).coerceIn(1L, 32L)) / 1000f
         springLastMs = now
 
-        val displacement = a - springTargetProgress
-        val damp = if (targetState == State.APPS) drawerDampingOpen else drawerDamping
-        springVel += (-drawerStiffness * displacement - damp * springVel) * dt
-        val nextA = a + springVel * dt
+        val opening = targetState == State.APPS
+        val k = if (opening) openStiffness else closeStiffness
+        val c = if (opening) openDamping else closeDamping
+        var nextA = a
+        while (remaining > 0f) {                        // small fixed steps: stays smooth and stable after a slow frame
+            val h = minOf(remaining, 0.008f)
+            springVel += (-k * (nextA - springTargetProgress) - c * springVel) * h
+            nextA += springVel * h
+            remaining -= h
+        }
 
         if (kotlin.math.abs(springTargetProgress - nextA) < 0.004f && kotlin.math.abs(springVel) < 0.05f) {
             springRunning = false
@@ -302,6 +325,10 @@ private val drawerStiffness = 380f                      // higher = faster
         const val COMMIT_AT = 0.65f
         /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */
         const val QUICK_MS = 120L
-        const val REVEAL_DP = 36f
+        const val REVEAL_DP = 50f
+        /** Where the sheet's top edge starts when opened by a tap: this share of the screen height from the top (0.90 = 90%). */
+        const val OPEN_FROM_SCREEN = 0.90f
+        /** Initial push (progress per second) on a tap open. */
+        const val OPEN_KICK = 3f
     }
 }
