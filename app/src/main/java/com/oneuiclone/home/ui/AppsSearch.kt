@@ -363,7 +363,7 @@ if (prefs.appSearchBgBlur > 0) {
                 dampingRatio = SLIDE_DAMPING
             }
             setMinimumVisibleChange(0.002f)
-            addUpdateListener { _, value, _ -> f = value; layoutPill() }
+            addUpdateListener { _, value, _ -> f = value; applyProgress() }
             start()
         }
     }
@@ -1007,45 +1007,47 @@ if (prefs.appSearchBgBlur > 0) {
     /** Cards run down to the keyboard (or the gesture bar when there's no keyboard). */
     private fun contentBottom(): Int = maxOf(dp.insets.bottom, ime) + dp.dpi(8f)
 
-    private fun layoutPill() {
-        if (!::origin.isInitialized) return
-        val h = dp.searchBarHeight
-        val lp = pill.layoutParams
-        if (lp.width != dp.searchBarWidth || lp.height != h) {
-            lp.width = dp.searchBarWidth; lp.height = h
-            pill.layoutParams = lp
-        }
+private fun layoutPill() { applyTheme(); applyProgress() }
 
-        val a = f.coerceIn(0f, 1f)
-        val slide = (1f - f) * slideDist               // px down: rises on open, drops on close
-        pageProgress = a
-        pageOffsetY = slide
-        invalidate()
-        onSearchProgress?.invoke(a)
+private fun applyProgress() {
+    if (!::origin.isInitialized) return
+    val a = f.coerceIn(0f, 1f)
+    val slide = (1f - f) * slideDist
+    pageProgress = a
+    pageOffsetY = slide
+    invalidate()
+    onSearchProgress?.invoke(a)
+    pill.x = dp.searchBarSide.toFloat()
+    pill.y = barY()
+    pill.translationY += slide
+    pill.alpha = a
+    content.alpha = a
+    content.translationY = if (CARDS_SLIDE) slide else 0f
+}
 
-        pill.x = dp.searchBarSide.toFloat()
-        pill.y = barY()                                // this sets translationY = y - top ...
-        pill.translationY += slide                     // ... so the slide is added on top of it, never replaces it
-        pill.alpha = a
-        content.alpha = a
-        content.translationY = if (CARDS_SLIDE) slide else 0f
-        updateContentInset()
-        pillBg.cornerRadius = h / 2f
-        pillBg.setColor(searchBarFillColor)
-        pillBg.setStroke(searchBarBorderWidth.toInt(), searchBarBorderColor)
-
-        pillGlass = null
-        appsCard.syncWithBar()
-        contactsCard.syncWithBar()
-        suggestionsCard.syncWithBar()
-        glyph.color = secondaryInk
-        field.setTextColor(primaryInk)
-        field.setHintTextColor(hintInk)
-        clearBtn.setInk(primaryInk, isNight())
-        mic.ink = secondaryInk
-        pill.elevation = 0f
+private fun applyTheme() {
+    if (!::origin.isInitialized) return
+    val h = dp.searchBarHeight
+    val lp = pill.layoutParams
+    if (lp.width != dp.searchBarWidth || lp.height != h) {
+        lp.width = dp.searchBarWidth; lp.height = h
+        pill.layoutParams = lp
     }
-
+    updateContentInset()
+    pillBg.cornerRadius = h / 2f
+    pillBg.setColor(searchBarFillColor)
+    pillBg.setStroke(searchBarBorderWidth.toInt(), searchBarBorderColor)
+    pillGlass = null
+    appsCard.syncWithBar()
+    contactsCard.syncWithBar()
+    suggestionsCard.syncWithBar()
+    glyph.color = secondaryInk
+    field.setTextColor(primaryInk)
+    field.setHintTextColor(hintInk)
+    clearBtn.setInk(primaryInk, isNight())
+    mic.ink = secondaryInk
+    pill.elevation = 0f
+}
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         contactsListLayout.dividerDrawable = insetDivider(dp.dpi(56f), 0)
@@ -1083,7 +1085,7 @@ if (prefs.appSearchBgBlur > 0) {
         kbAnim = ValueAnimator.ofFloat(kb, h).apply {
             this.duration = duration
             interpolator = Easing.IME
-            addUpdateListener { kb = it.animatedValue as Float; layoutPill() }
+            addUpdateListener { kb = it.animatedValue as Float; applyProgress() }
             start()
         }
     }
@@ -1107,11 +1109,12 @@ if (prefs.appSearchBgBlur > 0) {
         opening = true
         filter("")
         opening = false
+        content.setLayerType(LAYER_TYPE_HARDWARE, null); pill.setLayerType(LAYER_TYPE_HARDWARE, null)
         springOpen()
         field.isCursorVisible = true
         field.requestFocus()
         keyboardComing = false
-        askForKeyboard()
+        main.postDelayed({ if (isOpen) askForKeyboard() }, 140)
         main.postDelayed(noKeyboard, 2500)
     }
 
@@ -1163,7 +1166,7 @@ if (prefs.appSearchBgBlur > 0) {
         anim = ValueAnimator.ofFloat(f, to).apply {
             duration = ((if (to > f) OPEN_BAR_MS else CLOSE_MS) * abs(to - f)).toLong().coerceAtLeast(60L)
             interpolator = if (to > f) Easing.IME else android.view.animation.AccelerateInterpolator(1.3f)
-            addUpdateListener { f = it.animatedValue as Float; layoutPill() }
+            addUpdateListener { f = it.animatedValue as Float; animateTo() }
             if (end != null) addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
                 override fun onAnimationCancel(animation: Animator) { cancelled = true }
