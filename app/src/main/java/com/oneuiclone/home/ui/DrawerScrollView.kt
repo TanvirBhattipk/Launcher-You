@@ -33,6 +33,7 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private val maxStretch = 0.30f
     private val reach = dp.dp(160f)                             // pull (px) at which most of the stretch has been reached
     private val maxPull = dp.dp(220f)
+    private val topSheetShift = 0.15f                           // how much of the top bounce the sheet itself dips (0 = only the icons stretch)
     private val stiffness = 200f
     private val damping = 2f * 0.8f * sqrt(stiffness)
 
@@ -117,7 +118,10 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { touching = true; topPull = 0f; closed = false; downY = ev.y }
+             MotionEvent.ACTION_DOWN -> {
+                touching = true; topPull = 0f; closed = false; downY = ev.y
+                if (pull > 0f) { pull = 0f; vel = 0f; applyStretch() }   // a top bounce still springing: drop it so a swipe down closes cleanly
+            }
             MotionEvent.ACTION_UP -> {
                 touching = false; start()
                 if (downY < dp.sheetTop && ev.y < dp.sheetTop && abs(ev.y - downY) < tapSlop) onTapOutside?.invoke()
@@ -150,6 +154,14 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
                 applyStretch()
                 start()
             }
+            // ... and one arriving at the top bounces too (a finger pulling down there still closes the drawer)
+            val overTop = scrollY + deltaY
+            if (overTop < 0 && scrollRangeY > 0) {
+                pull = (pull - overTop * 2.5f).coerceIn(0f, maxPull * 0.5f)
+                vel = 0f
+                applyStretch()
+                start()
+            }
         }
         return super.overScrollBy(deltaX, deltaY, scrollX, scrollY, scrollRangeX, scrollRangeY, maxOverScrollX, maxOverScrollY, isTouchEvent)
     }
@@ -178,12 +190,13 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     }
 
     /** The list scaled away from the edge that is pulled (the top row stays at the top when pulled there). */
-    private fun applyStretch() {
+ private fun applyStretch() {
         val c = getChildAt(0) ?: return
-        if (pull == 0f) { c.scaleY = 1f; return }
+        if (pull == 0f) { c.scaleY = 1f; translationY = 0f; return }
         val s = maxStretch * (1f - exp(-abs(pull) / reach))
         c.pivotY = if (pull > 0f) scrollY.toFloat() else (scrollY + height).toFloat()
         c.scaleY = 1f + s
+        translationY = if (pull > 0f) pull * topSheetShift else 0f      // the sheet dips with the top bounce
     }
     override fun dispatchDraw(canvas: Canvas) {
         // the sheet drawer has no search bar for the list to blur under: it simply clips at the sheet's handle
