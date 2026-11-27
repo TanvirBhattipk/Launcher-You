@@ -614,11 +614,16 @@ if (prefs.appSearchBgBlur > 0) {
             l.startsWith(query) -> 0
             l.split(' ', '-', '.').any { it.startsWith(query) } || ini.startsWith(query) -> 1
             l.contains(query) -> 2
+            query.length <= 2 && inOrder(query, l) -> 3
             else -> return@mapNotNull null
         }
         Triple(a, tier, scores[a.key] ?: 0.0)
     }.sortedWith(compareBy<Triple<AppInfo, Int, Double>> { it.second }.thenByDescending { it.third }).take(MAX_APPS).map { it.first }
-
+    private fun inOrder(q: String, s: String): Boolean {
+    var i = 0
+    for (c in s) if (i < q.length && c == q[i]) i++
+    return i == q.length
+}
     private fun render() {
         val empty = field.text.isNullOrBlank()
         clearBtn.visibility = if (empty) GONE else VISIBLE
@@ -677,7 +682,7 @@ if (prefs.appSearchBgBlur > 0) {
         v.alpha = 1f
         v.translationY = 0f
     }
-
+    private var shownHl = false
     private fun showApps(list: List<AppInfo>) {
         val keys = list.take(MAX_APPS).map { it.key }
         if (keys == shownApps && appsRow.childCount == keys.size) return
@@ -688,16 +693,19 @@ if (prefs.appSearchBgBlur > 0) {
         val iconPx = dp.searchIconSizePx                       // Home's icon size, fixed
         val lastIdx = list.take(MAX_APPS).lastIndex
         list.take(MAX_APPS).forEachIndexed { i, a ->
-            val g = when (i) { 0 -> Gravity.START; lastIdx -> Gravity.END; else -> Gravity.CENTER_HORIZONTAL }
             val holder = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
                 isClickable = true
+                setPadding(0, dp.dpi(8f), 0, dp.dpi(8f))
+if (hl && i == 0) background = android.graphics.drawable.GradientDrawable().apply {
+    cornerRadius = dp.dpi(16f).toFloat()
+    setColor((primaryInk and 0x00FFFFFF) or (0x24 shl 24))
+}
                 setTag(R_ENTERABLE, true)
                 val hiddenIcon = IconView(context, dp).apply { configureIcon(this, a) }
                 setOnClickListener { onLaunch(hiddenIcon, a) }
-                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f),
-                LinearLayout.LayoutParams(iconPx, iconPx).apply { gravity = g })
+                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f) 
                 addView(TextView(context).apply {
                     text = a.label
                     setTextColor(primaryInk)
@@ -1200,7 +1208,7 @@ private fun applyTheme() {
         private val AVATAR_COLORS = intArrayOf(0xFF7B8591.toInt(), 0xFF6E7885.toInt(), 0xFF64707D.toInt(), 0xFF737D8A.toInt())
         private const val CARDS_SLIDE = true
         private const val SLIDE_STIFFNESS = 700f
-        private const val SLIDE_DAMPING = 0.50f
+        private const val SLIDE_DAMPING = 0.45f
         private const val CLOSE_MS = 130L            // as fast as possible: slide and fade finish together
         /** The cards and the bar slide down to this share of the screen height (0.90 = 90%) while fading out. */
         private const val CLOSE_TO_SCREEN = 0.90f
