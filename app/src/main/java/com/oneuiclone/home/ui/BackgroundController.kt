@@ -58,6 +58,14 @@ class BackgroundController(
     var appsDimScale = 1f
     /** true while the search closes onto Home: the drawer's own tint must not show through that crossfade. */
     var suppressDrawerTint = false
+    /** true = AppsSearch drives the search tint itself every frame (same curve as the cards and the bar). */
+    var searchDrivenExternally = false
+
+    fun setSearchProgress(p: Float) {
+        searchAnim?.cancel()
+        searchMix = p.coerceIn(0f, 1f)
+        apply()
+    }
 
     /** How much of the drawer's own tint/dim shows: it gives way to the search tint, and stays off while search closes onto Home. */
     private fun drawerFactor() = if (suppressDrawerTint) 0f else 1f - searchMix
@@ -73,6 +81,7 @@ class BackgroundController(
         set(v) {
             if (field == v) return
             field = v
+            if (searchDrivenExternally) return
             searchAnim?.cancel()
             searchAnim = android.animation.ValueAnimator.ofFloat(searchMix, if (v) 1f else 0f).apply {
                 // leaving search: the tint is gone by the time Home is revealed (the page itself is out in ~170ms)
