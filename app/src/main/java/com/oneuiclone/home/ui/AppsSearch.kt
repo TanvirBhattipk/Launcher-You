@@ -1186,7 +1186,6 @@ pageProgress = progress
         /** Side inset of the section titles; the rows under them use the same one. */
         private const val TITLE_INSET_DP = 6f
         private const val OPEN_BAR_MS = 230L
-        private const val CLOSE_MS = 170L
         private const val BAR_SLIDE_DP = 36f
         const val OPEN_RISE_DP = 48f
         private const val FADE_MS = 150L
