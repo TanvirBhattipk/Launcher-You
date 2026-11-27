@@ -364,6 +364,7 @@ if (prefs.appSearchBgBlur > 0) {
             }
             setMinimumVisibleChange(0.002f)
             addUpdateListener { _, value, _ -> f = value; applyProgress() }
+            addEndListener { _, _, _, _ -> content.setLayerType(LAYER_TYPE_NONE, null); pill.setLayerType(LAYER_TYPE_NONE, null) }
             start()
         }
     }
@@ -1158,6 +1159,7 @@ private fun applyTheme() {
             field.text = null
             field.animate().alpha(1f).setDuration(150).start()
         }.start()
+        setLayerType(LAYER_TYPE_HARDWARE, null)
         animateTo(0f) { onClose() }
     }
 
