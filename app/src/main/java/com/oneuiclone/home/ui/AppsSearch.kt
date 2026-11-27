@@ -1159,8 +1159,7 @@ private fun applyTheme() {
             field.text = null
             field.animate().alpha(1f).setDuration(150).start()
         }.start()
-        setLayerType(LAYER_TYPE_HARDWARE, null)
-        animateTo(0f) { onClose() }
+        animateTo(0f) { content.setLayerType(LAYER_TYPE_NONE, null); pill.setLayerType(LAYER_TYPE_NONE, null); onClose() }
     }
 
     private fun animateTo(to: Float, end: (() -> Unit)? = null) {
