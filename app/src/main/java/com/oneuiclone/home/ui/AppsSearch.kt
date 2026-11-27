@@ -121,7 +121,7 @@ class AppsSearch(
 
        /** Pixel's search bar / Top Hits colour (sampled from the Pixel screenshot) by day, #212124 at night. */
     private val pixelSurface: Int
-        get() = if (isNight()) 0x212124 else 0xD4D5E7
+        get() = if (isNight()) 0x212124 else 0xF1F1F4
 
     private val searchBarFillColor: Int
         get() = (YunoGlass.barFill(prefs.appSearchBarOpacity) and 0xFF000000.toInt()) or pixelSurface
