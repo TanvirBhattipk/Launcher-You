@@ -683,29 +683,33 @@ if (prefs.appSearchBgBlur > 0) {
         v.translationY = 0f
     }
     private var shownHl = false
+
     private fun showApps(list: List<AppInfo>) {
         val keys = list.take(MAX_APPS).map { it.key }
-        if (keys == shownApps && appsRow.childCount == keys.size) return
+        val hl = !field.text.isNullOrBlank()
+        if (keys == shownApps && shownHl == hl && appsRow.childCount == keys.size) return
+        shownHl = hl
         val old = shownApps
         shownApps = keys
         appsRow.removeAllViews()
         enterTarget = null
         val iconPx = dp.searchIconSizePx                       // Home's icon size, fixed
-        val lastIdx = list.take(MAX_APPS).lastIndex
         list.take(MAX_APPS).forEachIndexed { i, a ->
             val holder = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
                 isClickable = true
-                setPadding(0, dp.dpi(8f), 0, dp.dpi(8f))
-if (hl && i == 0) background = android.graphics.drawable.GradientDrawable().apply {
-    cornerRadius = dp.dpi(16f).toFloat()
-    setColor((primaryInk and 0x00FFFFFF) or (0x24 shl 24))
-}
                 setTag(R_ENTERABLE, true)
+                setPadding(0, dp.dpi(8f), 0, dp.dpi(8f))
+                if (hl && i == 0) {
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        cornerRadius = dp.dpi(16f).toFloat()
+                        setColor((primaryInk and 0x00FFFFFF) or (0x24 shl 24))
+                    }
+                }
                 val hiddenIcon = IconView(context, dp).apply { configureIcon(this, a) }
                 setOnClickListener { onLaunch(hiddenIcon, a) }
-                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f) 
+                addView(BitmapIconView(context, hiddenIcon.icon ?: a.drawerIcon, iconPx * 0.24f), LinearLayout.LayoutParams(iconPx, iconPx))
                 addView(TextView(context).apply {
                     text = a.label
                     setTextColor(primaryInk)
