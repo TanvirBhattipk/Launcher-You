@@ -176,16 +176,17 @@ fun setImmediate(target: State) {
 
 private val drawerStiffness = 380f                      // higher = faster
 // fast and smooth: stiff spring, light damping on open (a small settle at the top), critical on close
+    // tap / button open: fast and smooth, tiny settle
     private val openStiffness = 700f
-    private val closeStiffness = 560f
     private val openDamping = 2f * 0.80f * kotlin.math.sqrt(openStiffness)
+    // swipe-up open: softer, so it overshoots the top and bounces back
+    private val swipeOpenStiffness = 520f
+    private val swipeOpenDamping = 2f * 0.50f * kotlin.math.sqrt(swipeOpenStiffness)
+    // closing: no bounce
+    private val closeStiffness = 560f
     private val closeDamping = 2f * 1.00f * kotlin.math.sqrt(closeStiffness)
-    private var springTargetState: State? = null
-    private var springTargetProgress = 0f
-    private var springVel = 0f
-    private var springRunning = false
-    private var springLastMs = 0L
-    private val springTick = Runnable { stepDrawerSpring() }
+    private var springK = openStiffness
+    private var springC = openDamping
 
     /** Progress at which the sheet's top edge sits [OPEN_FROM_SCREEN] of the way down the screen. */
     private fun openStartProgress(): Float {
@@ -212,6 +213,11 @@ private val drawerStiffness = 380f                      // higher = faster
         springTargetState = target
         state = target                                  // the swipe counts as done as soon as it's released
         springTargetProgress = if (target == State.APPS) 1f else 0f
+            when {
+            target != State.APPS -> { springK = closeStiffness; springC = closeDamping }
+            fromDrag -> { springK = swipeOpenStiffness; springC = swipeOpenDamping }
+            else -> { springK = openStiffness; springC = openDamping }
+        }
         val dir = if (toApps) 1f else -1f
         springVel = (dir * velocityPxPerSec / travel()).coerceIn(-8f, 8f)
         if (target == State.APPS && !fromDrag) springVel = maxOf(springVel, OPEN_KICK)
@@ -229,14 +235,11 @@ private val drawerStiffness = 380f                      // higher = faster
         val now = android.view.animation.AnimationUtils.currentAnimationTimeMillis()
         var remaining = ((now - springLastMs).coerceIn(1L, 32L)) / 1000f
         springLastMs = now
-
-        val opening = targetState == State.APPS
-        val k = if (opening) openStiffness else closeStiffness
-        val c = if (opening) openDamping else closeDamping
+        
         var nextA = a
         while (remaining > 0f) {                        // small fixed steps: stays smooth and stable after a slow frame
             val h = minOf(remaining, 0.008f)
-            springVel += (-k * (nextA - springTargetProgress) - c * springVel) * h
+            springVel += (-springK * (nextA - springTargetProgress) - springC * springVel) * h
             nextA += springVel * h
             remaining -= h
         }
@@ -250,7 +253,7 @@ private val drawerStiffness = 380f                      // higher = faster
             return
         }
 
-        frame(nextA.coerceIn(0f, 1.08f))                // past 1 = the overshoot at the top
+        frame(nextA.coerceIn(0f, 1.10f))                // past 1 = the overshoot at the top                // past 1 = the overshoot at the top
         apps.postOnAnimation(springTick)
     }
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
