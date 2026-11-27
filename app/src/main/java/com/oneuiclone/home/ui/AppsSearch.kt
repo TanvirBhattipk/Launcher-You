@@ -330,6 +330,7 @@ if (prefs.appSearchBgBlur > 0) {
     var isOpen = false; private set
     private var f = 0f
     private var anim: ValueAnimator? = null
+    private var contentSpring: androidx.dynamicanimation.animation.SpringAnimation? = null
     private var kb = 0f
     private var kbTarget = 0f
     private var kbAnim: ValueAnimator? = null
@@ -1074,9 +1075,17 @@ pageProgress = progress
         opening = true
         filter("")
         opening = false
+        contentSpring?.cancel()
+        content.animate().cancel()
         content.alpha = 0f
         content.translationY = dp.dp(OPEN_RISE_DP)
-        content.animate().alpha(1f).translationY(0f).setDuration(OPEN_MS).setInterpolator(Easing.IME).start()
+        content.animate().alpha(1f).setDuration(OPEN_FADE_MS).setInterpolator(Easing.IME).start()   // quick fade
+        contentSpring = androidx.dynamicanimation.animation.SpringAnimation(
+            content, androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_Y, 0f).apply {
+            spring.stiffness = 650f          // higher = faster
+            spring.dampingRatio = 0.72f      // lower = more bounce at the end
+            start()
+        }
         animateTo(1f)
         field.isCursorVisible = true
         field.requestFocus()
@@ -1118,6 +1127,7 @@ pageProgress = progress
         net.shutdownNow()
         context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(field.windowToken, 0)
         field.isCursorVisible = false
+        contentSpring?.cancel()
         content.animate().alpha(0f).translationY(dp.dp(OPEN_RISE_DP)).setDuration(CLOSE_MS).setInterpolator(Easing.IME).start()
         if (field.length() > 0) field.animate().alpha(0f).setDuration(110).withEndAction {
             field.text = null
@@ -1156,6 +1166,7 @@ pageProgress = progress
         private const val BAR_SLIDE_DP = 36f
         const val OPEN_RISE_DP = 48f
         private const val FADE_MS = 150L
+        private const val OPEN_FADE_MS = 120L
         private const val KEYBOARD_RETRY_MS = 1500L
         private val R_ENTERABLE = com.oneuiclone.home.R.id.search_enterable
         private val AVATAR_COLORS = intArrayOf(0xFF7B8591.toInt(), 0xFF6E7885.toInt(), 0xFF64707D.toInt(), 0xFF737D8A.toInt())
