@@ -2418,8 +2418,11 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             removeSearch(s)
             if (search === s) search = null
             if (state.state == StateController.State.HOME && !state.isTransitioning) restoreAppsChrome()
+        }                                   // end of AppsSearch(...) constructor
+        var lastSent = -1f
+        s.onSearchProgress = { p ->
+            if (kotlin.math.abs(p - lastSent) >= 0.02f || p == 0f || p == 1f) { lastSent = p; background.setSearchProgress(p) }
         }
-        s.onSearchProgress = { background.setSearchProgress(it) }
         root.addView(s, root.indexOfChild(overlay), FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         search = s
         searchFromHome = fromHome
