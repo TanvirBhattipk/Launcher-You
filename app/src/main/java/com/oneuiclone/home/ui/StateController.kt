@@ -178,10 +178,10 @@ private val drawerStiffness = 380f                      // higher = faster
 // fast and smooth: stiff spring, light damping on open (a small settle at the top), critical on close
     // tap / button open: fast and smooth, tiny settle
     private val openStiffness = 700f
-    private val openDamping = 2f * 0.80f * kotlin.math.sqrt(openStiffness)
+    private val openDamping = 2f * 0.72f * kotlin.math.sqrt(openStiffness)
     // swipe-up open: softer, so it overshoots the top and bounces back
     private val swipeOpenStiffness = 520f
-    private val swipeOpenDamping = 2f * 0.50f * kotlin.math.sqrt(swipeOpenStiffness)
+    private val swipeOpenDamping = 2f * 0.72f * kotlin.math.sqrt(swipeOpenStiffness)
     // closing: no bounce
     private val closeStiffness = 560f
     private val closeDamping = 2f * 1.00f * kotlin.math.sqrt(closeStiffness)
