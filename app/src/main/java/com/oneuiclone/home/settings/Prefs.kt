@@ -51,12 +51,12 @@ var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edi
     var blurFolder: Int get() = sp.getInt("blur_folder", 50); set(v) = sp.edit().putInt("blur_folder", v).apply()
     var blurWidget: Int get() = sp.getInt("blur_widget", 40); set(v) = sp.edit().putInt("blur_widget", v).apply()
     // Card 1: App Drawer
-    var drawerBgOpacity: Int get() = sp.getInt("drawer_bg_opacity", 0); set(v) = sp.edit().putInt("drawer_bg_opacity", v).apply()
-    var drawerBgBlur: Int get() = sp.getInt("drawer_bg_blur", 0); set(v) = sp.edit().putInt("drawer_bg_blur", v).apply()
-    var drawerSearchBarOpacity: Int get() = sp.getInt("drawer_search_bar_opacity", 50); set(v) = sp.edit().putInt("drawer_search_bar_opacity", v).apply()
-    var drawerSearchBarBlur: Int get() = sp.getInt("drawer_search_bar_blur", 40); set(v) = sp.edit().putInt("drawer_search_bar_blur", v).apply()
-    var drawerSearchBorderSize: Int get() = sp.getInt("drawer_search_border_size", 10); set(v) = sp.edit().putInt("drawer_search_border_size", v).apply()
-    var drawerSearchBorderOpacity: Int get() = sp.getInt("drawer_search_border_opacity", 20); set(v) = sp.edit().putInt("drawer_search_border_opacity", v).apply()
+    var drawerBgOpacity: Int get() = sp.getInt("drawer_bg_opacity", 70); set(v) = sp.edit().putInt("drawer_bg_opacity", v).apply()
+    var drawerBgBlur: Int get() = sp.getInt("drawer_bg_blur", 40); set(v) = sp.edit().putInt("drawer_bg_blur", v).apply()
+    var drawerSearchBarOpacity: Int get() = sp.getInt("drawer_search_bar_opacity", 40); set(v) = sp.edit().putInt("drawer_search_bar_opacity", v).apply()
+    var drawerSearchBarBlur: Int get() = sp.getInt("drawer_search_bar_blur", 0); set(v) = sp.edit().putInt("drawer_search_bar_blur", v).apply()
+    var drawerSearchBorderSize: Int get() = sp.getInt("drawer_search_border_size", 0); set(v) = sp.edit().putInt("drawer_search_border_size", v).apply()
+    var drawerSearchBorderOpacity: Int get() = sp.getInt("drawer_search_border_opacity", 0); set(v) = sp.edit().putInt("drawer_search_border_opacity", v).apply()
 
     // App Drawer sheet (the rounded sheet the drawer's apps sit on)
     var drawerSheetOpacity: Int get() = sp.getInt("drawer_sheet_opacity", 65); set(v) = sp.edit().putInt("drawer_sheet_opacity", v).apply()
@@ -65,21 +65,21 @@ var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edi
     var drawerSheetBorderOpacity: Int get() = sp.getInt("drawer_sheet_border_opacity", 4); set(v) = sp.edit().putInt("drawer_sheet_border_opacity", v).apply()
 
     // Card 2: Home Search Pill
-    var homePillBgOpacity: Int get() = sp.getInt("home_pill_bg_opacity", 40); set(v) = sp.edit().putInt("home_pill_bg_opacity", v).apply()
+    var homePillBgOpacity: Int get() = sp.getInt("home_pill_bg_opacity", 30); set(v) = sp.edit().putInt("home_pill_bg_opacity", v).apply()
     var homePillBgBlur: Int get() = sp.getInt("home_pill_bg_blur", 30); set(v) = sp.edit().putInt("home_pill_bg_blur", v).apply()
     var homePillBorderSize: Int get() = sp.getInt("home_pill_border_size", 5); set(v) = sp.edit().putInt("home_pill_border_size", v).apply()
-    var homePillBorderOpacity: Int get() = sp.getInt("home_pill_border_opacity", 10); set(v) = sp.edit().putInt("home_pill_border_opacity", v).apply()
+    var homePillBorderOpacity: Int get() = sp.getInt("home_pill_border_opacity", 5); set(v) = sp.edit().putInt("home_pill_border_opacity", v).apply()
 
     // Card 3: App Search (Overlay)
-    var appSearchBgOpacity: Int get() = sp.getInt("app_search_bg_opacity", 65); set(v) = sp.edit().putInt("app_search_bg_opacity", v).apply()
+    var appSearchBgOpacity: Int get() = sp.getInt("app_search_bg_opacity", 70); set(v) = sp.edit().putInt("app_search_bg_opacity", v).apply()
     var appSearchBgBlur: Int get() = sp.getInt("app_search_bg_blur", 40); set(v) = sp.edit().putInt("app_search_bg_blur", v).apply()
-    var appSearchBarOpacity: Int get() = sp.getInt("app_search_bar_opacity", 80); set(v) = sp.edit().putInt("app_search_bar_opacity", v).apply()
+    var appSearchBarOpacity: Int get() = sp.getInt("app_search_bar_opacity", 50); set(v) = sp.edit().putInt("app_search_bar_opacity", v).apply()
     var appSearchBarBlur: Int get() = sp.getInt("app_search_bar_blur", 0); set(v) = sp.edit().putInt("app_search_bar_blur", v).apply()
     var appSearchBorderSize: Int get() = sp.getInt("app_search_border_size", 0); set(v) = sp.edit().putInt("app_search_border_size", v).apply()
     var appSearchBorderOpacity: Int get() = sp.getInt("app_search_border_opacity", 0); set(v) = sp.edit().putInt("app_search_border_opacity", v).apply()
 
     // Card 4: App Search Cards
-    var appSearchCardsBgOpacity: Int get() = sp.getInt("app_search_cards_bg_opacity", 80); set(v) = sp.edit().putInt("app_search_cards_bg_opacity", v).apply()
+    var appSearchCardsBgOpacity: Int get() = sp.getInt("app_search_cards_bg_opacity", 0); set(v) = sp.edit().putInt("app_search_cards_bg_opacity", v).apply()
     var appSearchCardsBgBlur: Int get() = sp.getInt("app_search_cards_bg_blur", 0); set(v) = sp.edit().putInt("app_search_cards_bg_blur", v).apply()
     var appSearchCardsBorderSize: Int get() = sp.getInt("app_search_cards_border_size", 0); set(v) = sp.edit().putInt("app_search_cards_border_size", v).apply()
     var appSearchCardsBorderOpacity: Int get() = sp.getInt("app_search_cards_border_opacity", 0); set(v) = sp.edit().putInt("app_search_cards_border_opacity", v).apply()
