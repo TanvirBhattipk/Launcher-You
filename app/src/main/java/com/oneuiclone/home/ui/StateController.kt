@@ -187,6 +187,12 @@ private val drawerStiffness = 380f                      // higher = faster
     private val closeDamping = 2f * 1.00f * kotlin.math.sqrt(closeStiffness)
     private var springK = openStiffness
     private var springC = openDamping
+    private var springTargetState: State? = null
+    private var springTargetProgress = 0f
+    private var springVel = 0f
+    private var springRunning = false
+    private var springLastMs = 0L
+    private val springTick = Runnable { stepDrawerSpring() }
 
     /** Progress at which the sheet's top edge sits [OPEN_FROM_SCREEN] of the way down the screen. */
     private fun openStartProgress(): Float {
