@@ -52,7 +52,7 @@ var blurAppDrawer: Int get() = sp.getInt("blur_app_drawer", 50); set(v) = sp.edi
     var blurWidget: Int get() = sp.getInt("blur_widget", 40); set(v) = sp.edit().putInt("blur_widget", v).apply()
     // Card 1: App Drawer
     var drawerBgOpacity: Int get() = sp.getInt("drawer_bg_opacity", 0); set(v) = sp.edit().putInt("drawer_bg_opacity", v).apply()
-    var drawerBgBlur: Int get() = sp.getInt("drawer_bg_blur", .; set(v) = sp.edit().putInt("drawer_bg_blur", v).apply()
+    var drawerBgBlur: Int get() = sp.getInt("drawer_bg_blur",0) .; set(v) = sp.edit().putInt("drawer_bg_blur", v).apply()
     var drawerSearchBarOpacity: Int get() = sp.getInt("drawer_search_bar_opacity", 50); set(v) = sp.edit().putInt("drawer_search_bar_opacity", v).apply()
     var drawerSearchBarBlur: Int get() = sp.getInt("drawer_search_bar_blur", 40); set(v) = sp.edit().putInt("drawer_search_bar_blur", v).apply()
     var drawerSearchBorderSize: Int get() = sp.getInt("drawer_search_border_size", 10); set(v) = sp.edit().putInt("drawer_search_border_size", v).apply()
