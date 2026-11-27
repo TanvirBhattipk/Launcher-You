@@ -70,11 +70,9 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
         apps.removeCallbacks(springTick)
         toApps = towardApps
         dragging = true
-        visible = true
+        visible = false                                 // nothing shows until the finger has really travelled (REVEAL_DP)
         dragStartMs = SystemClock.uptimeMillis()
         f = 0f
-        prepare()
-        onTransitionStart?.invoke(towardApps)
     }
 
     /**
@@ -83,11 +81,16 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
      */
     fun drag(progress: Float, distancePx: Float) {
         f = progress.coerceIn(0f, 1f)
+        val dead = home.resources.displayMetrics.density * REVEAL_DP
         if (!visible) {
+            if (distancePx < dead) return               // a short, accidental swipe: nothing moves, nothing blurs
             visible = true
             prepare()
+            onTransitionStart?.invoke(toApps)
         }
-        val shown = (distancePx / travel()).coerceIn(0f, 1f)
+        // the first REVEAL_DP are eaten, then the gap closes smoothly so the sheet ends up exactly under the finger
+        val lag = dead * (1f - smooth((distancePx - dead) / (2f * dead)))
+        val shown = ((distancePx - lag) / travel()).coerceIn(0f, 1f)
         frame(if (toApps) shown else 1f - shown)
     }
     /**
@@ -299,5 +302,6 @@ private val drawerStiffness = 380f                      // higher = faster
         const val COMMIT_AT = 0.65f
         /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */
         const val QUICK_MS = 120L
+        const val REVEAL_DP = 36f
     }
 }
