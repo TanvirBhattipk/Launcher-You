@@ -1167,7 +1167,7 @@ private fun applyTheme() {
         anim = ValueAnimator.ofFloat(f, to).apply {
             duration = ((if (to > f) OPEN_BAR_MS else CLOSE_MS) * abs(to - f)).toLong().coerceAtLeast(60L)
             interpolator = if (to > f) Easing.IME else android.view.animation.AccelerateInterpolator(1.3f)
-            addUpdateListener { f = it.animatedValue as Float; animateTo() }
+            addUpdateListener { f = it.animatedValue as Float; applyProgress() }
             if (end != null) addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
                 override fun onAnimationCancel(animation: Animator) { cancelled = true }
