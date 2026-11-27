@@ -331,6 +331,14 @@ if (prefs.appSearchBgBlur > 0) {
     private var f = 0f
     private var anim: ValueAnimator? = null
     private var contentSpring: androidx.dynamicanimation.animation.SpringAnimation? = null
+    private var barSpring: androidx.dynamicanimation.animation.SpringAnimation? = null
+    private fun slideSpring(v: View): androidx.dynamicanimation.animation.SpringAnimation =
+        androidx.dynamicanimation.animation.SpringAnimation(
+            v, androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_Y, 0f).apply {
+            spring.stiffness = SLIDE_STIFFNESS      // higher = faster
+            spring.dampingRatio = SLIDE_DAMPING     // lower = more bounce at the end
+            start()
+        }
     private var kb = 0f
     private var kbTarget = 0f
     private var kbAnim: ValueAnimator? = null
@@ -1075,16 +1083,18 @@ pageProgress = progress
         opening = true
         filter("")
         opening = false
-        contentSpring?.cancel()
-        content.animate().cancel()
+        contentSpring?.cancel(); barSpring?.cancel()
+        content.animate().cancel(); pill.animate().cancel()
         content.alpha = 0f
-        content.translationY = dp.dp(OPEN_RISE_DP)
         content.animate().alpha(1f).setDuration(OPEN_FADE_MS).setInterpolator(Easing.IME).start()   // quick fade
-        contentSpring = androidx.dynamicanimation.animation.SpringAnimation(
-            content, androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_Y, 0f).apply {
-            spring.stiffness = 650f          // higher = faster
-            spring.dampingRatio = 0.72f      // lower = more bounce at the end
-            start()
+        // the search bar and the cards share the same spring; turn CARDS_SLIDE off if the cards ever stutter
+        pill.translationY = dp.dp(BAR_SLIDE_DP)
+        barSpring = slideSpring(pill)
+        if (CARDS_SLIDE) {
+            content.translationY = dp.dp(OPEN_RISE_DP)
+            contentSpring = slideSpring(content)
+        } else {
+            content.translationY = 0f
         }
         animateTo(1f)
         field.isCursorVisible = true
@@ -1127,8 +1137,22 @@ pageProgress = progress
         net.shutdownNow()
         context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(field.windowToken, 0)
         field.isCursorVisible = false
-        contentSpring?.cancel()
-        content.animate().alpha(0f).translationY(dp.dp(OPEN_RISE_DP)).setDuration(CLOSE_MS).setInterpolator(Easing.IME).start()
+        contentSpring?.cancel(); barSpring?.cancel()
+        // slide down and fade out together; the cards and the bar are gone by the time they reach CLOSE_TO_SCREEN of the screen height
+        val closeTo = height * CLOSE_TO_SCREEN
+        val slideIn = android.view.animation.AccelerateInterpolator(1.3f)
+        content.animate().cancel(); pill.animate().cancel()
+        content.animate()
+            .translationY((closeTo - content.top).coerceAtLeast(0f))
+            .alpha(0f)
+            .setDuration(CLOSE_MS)
+            .setInterpolator(slideIn)
+            .start()
+        pill.animate()
+            .translationY((closeTo - pill.y).coerceAtLeast(0f))
+            .setDuration(CLOSE_MS)
+            .setInterpolator(slideIn)
+            .start()
         if (field.length() > 0) field.animate().alpha(0f).setDuration(110).withEndAction {
             field.text = null
             field.animate().alpha(1f).setDuration(150).start()
@@ -1170,6 +1194,12 @@ pageProgress = progress
         private const val KEYBOARD_RETRY_MS = 1500L
         private val R_ENTERABLE = com.oneuiclone.home.R.id.search_enterable
         private val AVATAR_COLORS = intArrayOf(0xFF7B8591.toInt(), 0xFF6E7885.toInt(), 0xFF64707D.toInt(), 0xFF737D8A.toInt())
+        private const val CARDS_SLIDE = true
+        private const val SLIDE_STIFFNESS = 750f
+        private const val SLIDE_DAMPING = 0.80f
+        private const val CLOSE_MS = 130L            // as fast as possible: slide and fade finish together
+        /** The cards and the bar slide down to this share of the screen height (0.90 = 90%) while fading out. */
+        private const val CLOSE_TO_SCREEN = 0.90f
     }
 
     private class ClearButton(context: Context) : View(context) {
