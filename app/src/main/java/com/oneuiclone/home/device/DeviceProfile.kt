@@ -108,13 +108,13 @@ class DeviceProfile(
     // ---- apps screen ----
     val appsSidePadding = pageSidePadding                          // matches Home's horizontal icon columns symmetrically
     /** Side margin of the search bar: its ends line up with the outer edges of the first and last icon columns. */
-    val searchBarSide: Int get() = appsBarSide
-    val searchBarWidth: Int get() = appsBarWidth
+    val searchBarSide = dpi(18f)
+    val searchBarWidth = widthPx - 2 * searchBarSide
     val searchBarHeight = dpi(48f)                                 // search_bar_wrapper_height
     val searchBarRadius = dp(32f)                                   // search_bar_bg_radius
     val searchBarBottomMargin = (heightPx * 0.022f).roundToInt() + insets.bottom
     /** The Apps search bar sits at the top, a little way under the status bar. */
-    val searchBarTop: Int get() = appsBarTop
+    val searchBarTop = insets.top + (heightPx * 0.028f).roundToInt()
     // The App drawer is a bottom sheet (Pixel style): rounded top corners, a drag handle, the suggested row, an
     // "All apps" header and the grid. A search bar sits under the handle (appsBarTop); the same bar values are used by the search page.
     /** Top edge of the sheet: flush under the status bar (raise the 0f, e.g. 4f, for a small gap). */
