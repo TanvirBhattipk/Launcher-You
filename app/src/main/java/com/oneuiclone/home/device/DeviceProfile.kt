@@ -116,7 +116,7 @@ class DeviceProfile(
     /** The Apps search bar sits at the top, a little way under the status bar. */
     val searchBarTop = insets.top + (heightPx * 0.028f).roundToInt()
     // The App drawer is a bottom sheet (Pixel style): rounded top corners, a drag handle, the suggested row, an
-    // "All apps" header and the grid. It has no search bar; the search bar values above are still used by the search page.
+    // "All apps" header and the grid. A search bar sits under the handle (appsBarTop); the same bar values are used by the search page.
     /** Top edge of the sheet: ~12.3 % down the screen, never closer than a little under the status bar. */
     val sheetTop = maxOf(insets.top + dpi(0f), (heightPx * 0.08f).roundToInt())
     /** Radius of the sheet's two top corners. */
@@ -125,8 +125,10 @@ class DeviceProfile(
     val sheetHandleHeight = dp(4f)
     /** Distance from the sheet's top edge to the middle of the drag handle. */
     val sheetHandleCenterY = dp(17f)
-    /** Where the apps list starts (and clips): just under the drag handle. */
-    val appsListTop = sheetTop + dpi(30f)
+    /** Top of the drawer's search bar: just under the drag handle. */
+    val appsBarTop = sheetTop + dpi(30f)
+    /** Where the apps list starts (and clips): just under the drawer's search bar. */
+    val appsListTop = appsBarTop + searchBarHeight + dpi(12f)
     val appsIndicatorHeight = (heightPx * 0.044f).roundToInt()     // apps_page_indicator_height_ratio
     private val appsGridTop = appsListTop + dpi(6f) + dpi(appsTopPadDp)
     // rows apps rows fill the sheet and part of one more peeks in at the bottom, so it is clear the list scrolls
