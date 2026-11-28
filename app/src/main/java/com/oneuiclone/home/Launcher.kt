@@ -139,7 +139,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     lateinit var workspace: PagedView; private set
     lateinit var indicator: PageIndicator; private set
     lateinit var hotseat: CellLayout; private set
-    lateinit var appsScroll: android.widget.ScrollView; private set
+    lateinit var appsScroll: com.oneuiclone.home.ui.DrawerScrollView; private set
     private lateinit var appsGrid: CellLayout
     lateinit var searchPill: com.oneuiclone.home.ui.DrawerSearchBar; private set
     lateinit var homeSearch: HomeSearchButton; private set
