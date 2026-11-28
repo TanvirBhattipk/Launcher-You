@@ -362,7 +362,7 @@ private fun fade(target: State, duration: Long) {
         /** Share of the swipe after which the blur is complete. */
         const val BLUR_FULL_AT = 0.6f
         /** How far a swipe has to go (0…1 of its distance, about 185dp) to open or close. */
-        const val COMMIT_AT = 0.65f
+        const val COMMIT_AT = 0.8f
         /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */
         const val QUICK_MS = 120L
         const val REVEAL_DP = 80f
