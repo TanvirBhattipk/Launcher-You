@@ -141,7 +141,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     lateinit var hotseat: CellLayout; private set
     lateinit var appsScroll: android.widget.ScrollView; private set
     private lateinit var appsGrid: CellLayout
-    lateinit var searchPill: SearchPill; private set
+    lateinit var searchPill: com.oneuiclone.home.ui.DrawerSearchBar; private set
     lateinit var homeSearch: HomeSearchButton; private set
     private lateinit var updatePill: HomeSearchButton
     private var updateAnnounced = false
@@ -453,11 +453,13 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         appsScroll.setOnScrollChangeListener { _, _, _, _, _ -> scrollbar.onScrolled(); searchPill.invalidate() }
         // The drawer is a sheet with no search bar. The pill and the menu button are still created (the search page
         // morphs from / to them) but are not added to the drawer, so nothing is drawn or touched there.
-        searchPill = SearchPill(activity, dp, activity.getString(R.string.search_hint))
-        searchPill.glassTransparency = homeSearch.glassTransparency
-        searchPill.glass = barGlass
-        searchPill.backdrop = drawerBackdrop
-        searchPill.setOnClickListener { openSearch() }
+        searchPill = com.oneuiclone.home.ui.DrawerSearchBar(activity, dp, activity.getString(R.string.search_hint)).apply {
+            setOnClickListener { openSearchFromDrawer() }
+        }
+        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.searchBarWidth, dp.searchBarHeight).apply {
+            leftMargin = dp.searchBarSide
+            topMargin = dp.appsBarTop
+        })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
             glassTransparency = homeSearch.glassTransparency
             glass = barGlass
@@ -2413,7 +2415,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
             cardGlass = searchPageGlass, 
             backdrop = sheetBackdrop, 
         ) {
-            searchPill.animate().cancel(); searchPill.alpha = 1f
+            if (!searchFromHome) { searchPill.animate().cancel(); searchPill.alpha = 1f }   // from Home: restoreAppsChrome() brings it back
             homeSearch.visibility = View.VISIBLE
             removeSearch(s)
             if (search === s) search = null
@@ -2442,9 +2444,19 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
 
     fun onContactsPermission(granted: Boolean) { search?.onContactsPermission(granted) }
 
+    /** The drawer's search bar: the sheet drops away while App Search opens; closing the search lands on Home. */
+    private fun openSearchFromDrawer() {
+        if (search != null || state.state != StateController.State.APPS || state.isTransitioning) return
+        openSearch(fromHome = false)
+        searchFromHome = true                                       // swipe down / back from the search goes to Home
+        val drop = dp.heightPx * 0.12f
+        for (v in listOf<View>(appsScroll, searchPill, moreButton)) v.animate().translationY(drop)   // slide down while fading
+    }
+
     private fun restoreAppsChrome() {
         appsScroll.animate().cancel(); appsScroll.alpha = 1f; appsScroll.translationY = 0f
         moreButton.animate().cancel(); moreButton.alpha = 1f; moreButton.translationY = 0f
+        searchPill.animate().cancel(); searchPill.alpha = 1f; searchPill.translationY = 0f
     }
 
     private fun removeSearch(s: View) {
