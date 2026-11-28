@@ -456,8 +456,8 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         searchPill = com.oneuiclone.home.ui.DrawerSearchBar(activity, dp, activity.getString(R.string.search_hint)).apply {
             setOnClickListener { openSearchFromDrawer() }
         }
-        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.searchBarWidth, dp.searchBarHeight).apply {
-            leftMargin = dp.searchBarSide
+        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.appsBarWidth, dp.searchBarHeight).apply {
+            leftMargin = dp.appsBarSide
             topMargin = dp.appsBarTop
         })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
