@@ -456,16 +456,15 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         searchPill = com.oneuiclone.home.ui.DrawerSearchBar(activity, dp, activity.getString(R.string.search_hint)).apply {
             setOnClickListener { openSearchFromDrawer() }
         }
-        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.appsBarWidth, dp.searchBarHeight)
-            appsScroll.onStretch = { dip, s ->
+        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.appsBarWidth, dp.searchBarHeight).apply {
+            leftMargin = dp.appsBarSide
+            topMargin = dp.appsBarTop
+        })
+        appsScroll.onStretch = { dip, s ->
             searchPill.translationY = dip                 // dips with the sheet
             searchPill.pivotY = 0f
             searchPill.scaleY = 1f + s * 0.5f             // and stretches a little with the icons
         }
-                .apply {
-            leftMargin = dp.appsBarSide
-            topMargin = dp.appsBarTop
-        })
         moreButton = SearchPill(activity, dp, "", menuIcon = true).apply {
             glassTransparency = homeSearch.glassTransparency
             glass = barGlass
