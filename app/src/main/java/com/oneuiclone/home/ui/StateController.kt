@@ -365,7 +365,7 @@ private fun fade(target: State, duration: Long) {
         const val COMMIT_AT = 0.65f
         /** A swipe shows nothing until it has lasted this long (ms), unless it is already a long one. */
         const val QUICK_MS = 120L
-        const val REVEAL_DP = 50f
+        const val REVEAL_DP = 80f
         /** Where the sheet's top edge starts when opened by a tap: this share of the screen height from the top (0.90 = 90%). */
         const val OPEN_FROM_SCREEN = 0.90f
         /** Initial push (progress per second) on a tap open. */
