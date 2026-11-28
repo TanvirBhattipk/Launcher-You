@@ -81,8 +81,8 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     private var closed = false
     // Progressive blur under the search bar: blur radius is MAX_BLUR_DP at the very top of the screen and eases down
     // to 0 (sharp) at blurEndY, with no tint. Built from a few blurred copies of the list, cross-faded per pixel.
-    private val blurEndY = dp.searchBarTop + dp.searchBarHeight * 0.95f        // blur reaches 0% at 95% of the search bar's height
-        private val barBottomY = (dp.searchBarTop + dp.searchBarHeight).toFloat()
+    private val blurEndY = dp.appsBarTop + dp.searchBarHeight * 0.95f        // blur reaches 0% at 95% of the search bar's height
+        private val barBottomY = (dp.appsBarTop + dp.searchBarHeight).toFloat()
     private val fadeStartY = (barBottomY + dp.appsGrid.top) / 2f   // icons fully visible below this: the middle of the gap between the bar and the first row
     private val fadeEndY = 2f * barBottomY - fadeStartY            // icons fully gone from here up, so 50% lands exactly on the bar's bottom edge
     private val blurNode = RenderNode("drawerProgressiveBlur")
