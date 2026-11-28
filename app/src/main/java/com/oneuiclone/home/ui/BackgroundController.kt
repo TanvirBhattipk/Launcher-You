@@ -68,8 +68,7 @@ class BackgroundController(
     }
 
     /** How much of the drawer's own tint/dim shows: it gives way to the search tint, and stays off while search closes onto Home. */
-    private fun drawerFactor() = if (suppressDrawerTint) 0f else 1f - searchMix
-    var searchTintAlpha = 0.6f
+    private fun drawerFactor() = if 
     
     /** Pixel-style: the Apps screen's wallpaper is washed with the sheet's light colour (0..1 at full blur) instead of darkened. */
     var appsWash = 0f
@@ -146,17 +145,9 @@ class BackgroundController(
         val p = progress
         val q = 1f - p
         val blur = p * factor(kind) + q * factor(from)
-        // the App Search tint belongs to the search page itself: it must not follow the Home/Apps crossfade progress
-        // the scrim's colour follows whichever dim is actually showing: no mid-fade shift toward black
-        val drawerDim = p * dimOf(kind) + q * dimOf(from)
-        // the App Search tint belongs to the search page itself: it must not follow the Home/Apps crossfade progress
-        val searchDimPart = searchMix * searchDim * 255f / 0xA6 * appsBlurScale
-        val dim = maxOf(drawerDim, searchDimPart)
-        val tintShare = if (drawerDim + searchDimPart <= 0f) 0f else searchDimPart / (drawerDim + searchDimPart)
-        scrim.dimRgb = ColorUtils.blendARGB(
-            0xFF000000.toInt() or SEARCH_BASE_RGB, SearchInk.page(activity), tintShare
-        ) and 0x00FFFFFF
-        // the App Search page darkens with the drawer's tint (light by day, dark at night) instead of a fixed near-black
+        // behind the search page: the same darkening as behind the drawer sheet
+        val dim = p * dimOf(kind) + q * dimOf(from)
+        scrim.dimRgb = SEARCH_BASE_RGB
         scrim.washColor = DrawerInk.wash(activity)
         scrim.washAlpha = p * washOf(kind) + q * washOf(from)
         if (wallpaper.available) {
