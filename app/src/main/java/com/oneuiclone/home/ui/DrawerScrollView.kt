@@ -77,6 +77,9 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
 
     /** Called once per gesture when the list is pulled down past its top: the Apps screen closes. */
     var onPullToClose: (() -> Unit)? = null
+    /** Called on every top-bounce frame with the sheet's dip (px) and the stretch (0…maxStretch), so views sitting on the sheet (the search bar) move with it. */
+    var onStretch: ((dip: Float, stretch: Float) -> Unit)? = null
+    private var stretchReported = false
     private var topPull = 0f
     private var closed = false
     // Progressive blur under the search bar: blur radius is MAX_BLUR_DP at the very top of the screen and eases down
@@ -190,13 +193,20 @@ class DrawerScrollView(context: Context, private val dp: DeviceProfile) : Scroll
     }
 
     /** The list scaled away from the edge that is pulled (the top row stays at the top when pulled there). */
- private fun applyStretch() {
+    private fun applyStretch() {
         val c = getChildAt(0) ?: return
-        if (pull == 0f) { c.scaleY = 1f; translationY = 0f; return }
+        if (pull == 0f) {
+            c.scaleY = 1f; translationY = 0f
+            if (stretchReported) { stretchReported = false; onStretch?.invoke(0f, 0f) }
+            return
+        }
         val s = maxStretch * (1f - exp(-abs(pull) / reach))
         c.pivotY = if (pull > 0f) scrollY.toFloat() else (scrollY + height).toFloat()
         c.scaleY = 1f + s
-        translationY = if (pull > 0f) pull * topSheetShift else 0f      // the sheet dips with the top bounce
+        val dip = if (pull > 0f) pull * topSheetShift else 0f           // the sheet dips with the top bounce
+        translationY = dip
+        stretchReported = true
+        onStretch?.invoke(dip, if (pull > 0f) s else 0f)
     }
     override fun dispatchDraw(canvas: Canvas) {
         // the sheet drawer has no search bar for the list to blur under: it simply clips at the sheet's handle
