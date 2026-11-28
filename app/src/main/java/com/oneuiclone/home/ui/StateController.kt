@@ -53,6 +53,31 @@ class StateController(
     /** The swipe in hand has begun to show (it wasn't just a quick flick that went nowhere). */
     private var visible = false
     private var dragStartMs = 0L
+    private var tintAnim: ValueAnimator? = null
+    private var tintDriven = false
+
+    /** Closing: the wallpaper tint and Home's blur fade on their own timer, not on the sheet's spring. */
+    private fun startCloseTint() {
+        tintAnim?.cancel()
+        val from = ramp(a.coerceIn(0f, 1f))
+        tintDriven = true
+        tintAnim = ValueAnimator.ofFloat(from, 0f).apply {
+            duration = (CLOSE_TINT_MS * from).toLong().coerceAtLeast(60L)
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener {
+                val r = it.animatedValue as Float
+                background.set(BackgroundController.Kind.APPS, r)
+                homeBlur(r)
+            }
+            start()
+        }
+    }
+
+    private fun stopTint() {
+        tintAnim?.cancel()
+        tintAnim = null
+        tintDriven = false
+    }
 val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == true || dragging
 
     private fun prepare() {
@@ -64,6 +89,7 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
 
 /** A swipe starts. */
     fun begin(towardApps: Boolean) {
+        stopTint()
         anim?.cancel()
         springAnim?.cancel()
         springRunning = false
@@ -117,6 +143,7 @@ val isTransitioning get() = anim?.isRunning == true || springAnim?.isRunning == 
     }
 
 fun setImmediate(target: State) {
+        stopTint()
         anim?.cancel()
         springAnim?.cancel()
         springRunning = false
@@ -144,9 +171,9 @@ fun setImmediate(target: State) {
         a = p
         val r = ramp(p.coerceIn(0f, 1f))
         background.appsDimScale = 1f
-        background.set(BackgroundController.Kind.APPS, r)
+        if (!tintDriven) background.set(BackgroundController.Kind.APPS, r)
         home.alpha = 1f
-        homeBlur(r)
+        if (!tintDriven) homeBlur(r)
 
         // the sheet's top edge is exactly under the finger: it starts at the screen's bottom edge, no gap, no lag
         if (p > 1f) {
@@ -264,6 +291,7 @@ private val drawerStiffness = 380f                      // higher = faster
     }
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
 private fun fade(target: State, duration: Long) {
+    stopTint()
         anim?.cancel()
         springAnim?.cancel()
         toApps = target == State.APPS
@@ -295,7 +323,9 @@ private fun fade(target: State, duration: Long) {
     }
 
     private fun settle(target: State, keepHome: Boolean = false) {
+        stopTint()
         background.suppressDrawerTint = false                   // ADD
+        if (target == State.HOME) startCloseTint()
         val showApps = target == State.APPS
         home.setLayerType(View.LAYER_TYPE_NONE, null)
         apps.setLayerType(View.LAYER_TYPE_NONE, null)
@@ -340,5 +370,7 @@ private fun fade(target: State, duration: Long) {
         const val OPEN_FROM_SCREEN = 0.90f
         /** Initial push (progress per second) on a tap open. */
         const val OPEN_KICK = 3f
+                /** How long the tint takes to fade out on a swipe down / close (ms). Lower = faster. */
+        const val CLOSE_TINT_MS = 220L
     }
 }
