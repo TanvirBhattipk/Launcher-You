@@ -456,7 +456,13 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
         searchPill = com.oneuiclone.home.ui.DrawerSearchBar(activity, dp, activity.getString(R.string.search_hint)).apply {
             setOnClickListener { openSearchFromDrawer() }
         }
-        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.appsBarWidth, dp.searchBarHeight).apply {
+        appsLayer.addView(searchPill, FrameLayout.LayoutParams(dp.appsBarWidth, dp.searchBarHeight)
+            appsScroll.onStretch = { dip, s ->
+            searchPill.translationY = dip                 // dips with the sheet
+            searchPill.pivotY = 0f
+            searchPill.scaleY = 1f + s * 0.5f             // and stretches a little with the icons
+        }
+                .apply {
             leftMargin = dp.appsBarSide
             topMargin = dp.appsBarTop
         })
@@ -2456,7 +2462,7 @@ class Launcher(val activity: LauncherActivity) : AppRepository.Listener {
     private fun restoreAppsChrome() {
         appsScroll.animate().cancel(); appsScroll.alpha = 1f; appsScroll.translationY = 0f
         moreButton.animate().cancel(); moreButton.alpha = 1f; moreButton.translationY = 0f
-        searchPill.animate().cancel(); searchPill.alpha = 1f; searchPill.translationY = 0f
+        searchPill.animate().cancel(); searchPill.alpha = 1f; searchPill.translationY = 0f; searchPill.scaleY = 1f
     }
 
     private fun removeSearch(s: View) {
