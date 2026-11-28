@@ -179,7 +179,7 @@ fun setImmediate(target: State) {
         if (p > 1f) {
             apps.translationY = 0f
             apps.pivotY = apps.height.toFloat()
-            apps.scaleY = 1f + (p - 1f)
+            apps.scaleY = 1f + (p - 1f) * STRETCH_AMOUNT
         } else {
             apps.translationY = travel() * (1f - p)
             apps.scaleY = 1f
@@ -286,7 +286,7 @@ private val drawerStiffness = 380f                      // higher = faster
             return
         }
 
-        frame(nextA.coerceIn(0f, 1.10f))                // past 1 = the overshoot at the top                // past 1 = the overshoot at the top
+        frame(nextA.coerceIn(0f, 1.02f))                // past 1 = the overshoot at the top                // past 1 = the overshoot at the top
         apps.postOnAnimation(springTick)
     }
     /** Search: Home and the Apps screen only crossfade (the search page does the moving). */
@@ -372,5 +372,6 @@ private fun fade(target: State, duration: Long) {
         const val OPEN_KICK = 3f
                 /** How long the tint takes to fade out on a swipe down / close (ms). Lower = faster. */
         const val CLOSE_TINT_MS = 220L
+          const val STRETCH_AMOUNT = 0.25f
     }
 }
