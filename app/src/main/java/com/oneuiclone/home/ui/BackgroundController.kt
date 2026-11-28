@@ -68,7 +68,7 @@ class BackgroundController(
     }
 
     /** How much of the drawer's own tint/dim shows: it gives way to the search tint, and stays off while search closes onto Home. */
-    private fun drawerFactor() = if 
+    private fun drawerFactor() = if (suppressDrawerTint) 0f else 1f - searchMix
     
     /** Pixel-style: the Apps screen's wallpaper is washed with the sheet's light colour (0..1 at full blur) instead of darkened. */
     var appsWash = 0f
