@@ -1197,7 +1197,7 @@ private fun applyTheme() {
         private val MARKS = Regex("\\p{Mn}+")
         private const val KEY_CONTACTS_DECLINED = "contacts_declined"
         private const val INVITE_ID = -1L
-        private const val MAX_APPS = 5
+        private const val MAX_APPS = 4
         private const val MAX_WEB = 4
         const val OPEN_MS = 280L
         /** Side inset of the section titles; the rows under them use the same one. */
