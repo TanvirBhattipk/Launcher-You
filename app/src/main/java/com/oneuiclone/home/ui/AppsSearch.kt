@@ -1026,7 +1026,7 @@ if (prefs.appSearchBgBlur > 0) {
 
     /** The bar sits at the top, exactly where the drawer's search bar is, so opening search doesn't move it. */
     private fun barY(): Float = dp.searchBarTop.toFloat()
-    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(14f)
+    private fun contentTop() = dp.searchBarTop + dp.searchBarHeight + dp.dpi(16f)
     /** Cards run down to the keyboard (or the gesture bar when there's no keyboard). */
     private fun contentBottom(): Int = maxOf(dp.insets.bottom, ime) + dp.dpi(8f)
 
