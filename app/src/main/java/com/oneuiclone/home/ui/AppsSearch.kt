@@ -1219,7 +1219,7 @@ private fun applyTheme() {
         private val AVATAR_COLORS = intArrayOf(0xFF7B8591.toInt(), 0xFF6E7885.toInt(), 0xFF64707D.toInt(), 0xFF737D8A.toInt())
         private const val CARDS_SLIDE = true
         private const val SLIDE_STIFFNESS = 700f
-        private const val SLIDE_DAMPING = 0.65f
+        private const val SLIDE_DAMPING = 0.40f
         private const val CLOSE_MS = 130L            // as fast as possible: slide and fade finish together
         /** The cards and the bar slide down to this share of the screen height (0.90 = 90%) while fading out. */
         private const val CLOSE_TO_SCREEN = 0.90f
