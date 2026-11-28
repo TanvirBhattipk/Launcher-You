@@ -477,10 +477,17 @@ if (prefs.appSearchBgBlur > 0) {
         content.addView(calcBox, cardParams(top = 0))
 
         // Top Hits: the app row
-        appsCard.setPadding(dp.dpi(TITLE_INSET_DP), dp.dpi(14f), dp.dpi(TITLE_INSET_DP), dp.dpi(12f))
+        appsCard.setPadding(0, dp.dpi(14f), 0, dp.dpi(12f))
         appsRow.orientation = LinearLayout.HORIZONTAL
         appsRow.gravity = Gravity.TOP
-        appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        // the outer icons' edges line up with the title ("Top Hits") and "Show More": solve the row's side margin for that
+        val rowN = MAX_APPS.toFloat()
+        val rowInset = dp.dpi(TITLE_INSET_DP).toFloat()
+        val rowMargin = ((rowInset + dp.searchIconSizePx / 2f - dp.searchBarWidth / (2f * rowN)) / (1f - 1f / rowN)).roundToInt()
+        appsCard.addView(appsRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            leftMargin = rowMargin
+            rightMargin = rowMargin
+        })
         content.addView(appsSection, cardParams(top = 0))
 
         // Suggestions
@@ -1030,7 +1037,7 @@ private fun applyProgress() {
     val a = f.coerceIn(0f, 1f)
     val slide = (1f - f) * slideDist
     pageProgress = a
-    pageOffsetY = maxOf(0f, slide)   // tint never goes past its resting place: no bounce; the bar and cards still overshoot
+    pageOffsetY = 0f
     invalidate()
     onSearchProgress?.invoke(a)
     pill.x = dp.searchBarSide.toFloat()
