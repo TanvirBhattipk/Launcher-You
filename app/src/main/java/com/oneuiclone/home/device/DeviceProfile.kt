@@ -125,10 +125,15 @@ class DeviceProfile(
     val sheetHandleHeight = dp(4f)
     /** Distance from the sheet's top edge to the middle of the drag handle. */
     val sheetHandleCenterY = dp(17f)
-    /** Top of the drawer's search bar: just under the drag handle. */
-    val appsBarTop = sheetTop + dpi(30f)
-    /** Where the apps list starts (and clips): just under the drawer's search bar. */
-    val appsListTop = appsBarTop + searchBarHeight + dpi(12f)
+    /** Space (dp) above and below the drawer's search bar: handle → bar and bar → first row are the same. */
+    private val barGapDp = 16f
+    /** Top of the drawer's search bar: the gap under the drag handle. */
+    val appsBarTop = sheetTop + (sheetHandleCenterY + sheetHandleHeight / 2f + dp(barGapDp)).roundToInt()
+    /** The drawer's search bar spans from the outer edge of the first icon to the outer edge of the last one in a row. */
+    val appsBarSide = appsSidePadding + (((widthPx - 2 * appsSidePadding) / appsCols - iconSizePx) / 2f).roundToInt()
+    val appsBarWidth = widthPx - 2 * appsBarSide
+    /** Where the apps list starts (and clips): the same gap under the search bar (the grid adds its own 6dp below this). */
+    val appsListTop = appsBarTop + searchBarHeight + dpi(barGapDp - 6f)
     val appsIndicatorHeight = (heightPx * 0.044f).roundToInt()     // apps_page_indicator_height_ratio
     private val appsGridTop = appsListTop + dpi(6f) + dpi(appsTopPadDp)
     // rows apps rows fill the sheet and part of one more peeks in at the bottom, so it is clear the list scrolls
